@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='stempy',
-    version='0.0.1',
+    use_scm_version=True,
     setup_requires=['setuptools_scm'],
     description='A package for the ingestion of 4D STEM data.',
     long_description='A package for the ingestion of 4D STEM data.',
