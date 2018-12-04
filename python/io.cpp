@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <vector>
 
 #include <stempy/reader.h>
@@ -14,7 +15,8 @@ PYBIND11_MODULE(_io, m)
     .def_readwrite("rows", &Header::rows)
     .def_readwrite("columns", &Header::columns)
     .def_readwrite("version", &Header::version)
-    .def_readwrite("timestamp", &Header::timestamp);
+    .def_readwrite("timestamp", &Header::timestamp)
+    .def_readwrite("image_numbers", &Header::imageNumbers);
 
   py::class_<Stream>(m , "_stream", py::buffer_protocol())
     .def_readwrite("header", &Stream::header)
