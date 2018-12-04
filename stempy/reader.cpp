@@ -27,7 +27,13 @@ istream & StreamReader::read(T& value){
 
 template<typename T>
 istream & StreamReader::read(T* value, streamsize size){
-    return m_stream.read(reinterpret_cast<char*>(value), size);
+    m_stream.read(reinterpret_cast<char*>(value), size);
+
+    if (m_stream.eof()) {
+      throw EofException();
+    }
+
+    return m_stream;
 }
 
 Header StreamReader::readHeader() {
@@ -51,11 +57,21 @@ Header StreamReader::readHeader() {
 
 Stream StreamReader::read() {
   Stream s;
-  s.header = readHeader();
 
-  auto dataSize = s.header.rows*s.header.columns*s.header.imagesInBlock;
-  s.data.reset(new uint16_t[dataSize]);
-  read(s.data.get(), dataSize*sizeof(uint16_t));
+  // Check that we have a block to read
+  auto c = m_stream.peek();
+  if (c != EOF) {
+    try {
+      s.header = readHeader();
+
+      auto dataSize = s.header.rows*s.header.columns*s.header.imagesInBlock;
+      s.data.reset(new uint16_t[dataSize]);
+      read(s.data.get(), dataSize*sizeof(uint16_t));
+    }
+    catch (EofException& e) {
+      throw invalid_argument("Unexpected EOF while processing stream.");
+    }
+  }
 
   return s;
 }

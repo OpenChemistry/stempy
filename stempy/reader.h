@@ -8,6 +8,11 @@
 
 namespace stempy {
 
+struct EofException : public std::exception
+{
+  const char* what () const throw () { return "EOF Exception"; }
+};
+
 struct Header {
   uint32_t imagesInBlock, rows, columns, version, timestamp;
   std::vector<uint32_t> imageNumbers;
