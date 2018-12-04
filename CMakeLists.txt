@@ -30,4 +30,3 @@ set_target_properties(reader
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 add_subdirectory(python)
-
