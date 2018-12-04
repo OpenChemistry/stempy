@@ -40,7 +40,7 @@ Header StreamReader::readHeader() {
   read(header.version);
   read(header.timestamp);
   // Skip over 6 - 10 - reserved
-  m_stream.seekg(5*4, m_stream.cur);
+  m_stream.seekg(5*sizeof(uint32_t), m_stream.cur);
 
   // Now get the image numbers
   header.imageNumbers.resize(header.imagesInBlock);
