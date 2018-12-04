@@ -11,7 +11,9 @@ set(CMAKE_CXX_EXTENSIONS False)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(reader SHARED
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+add_library(reader
   stempy/reader.cpp
 )
 
