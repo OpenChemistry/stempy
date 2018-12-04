@@ -18,21 +18,21 @@ PYBIND11_MODULE(_io, m)
     .def_readwrite("timestamp", &Header::timestamp)
     .def_readwrite("image_numbers", &Header::imageNumbers);
 
-  py::class_<Stream>(m , "_stream", py::buffer_protocol())
-    .def_readwrite("header", &Stream::header)
-    .def_buffer([](Stream& s) {
+  py::class_<Block>(m , "_block", py::buffer_protocol())
+    .def_readwrite("header", &Block::header)
+    .def_buffer([](Block& b) {
        return py::buffer_info(
-          s.data.get(),                                                 /* Pointer to buffer */
+          b.data.get(),                                                 /* Pointer to buffer */
           sizeof(uint16_t),                                             /* Size of one scalar */
           py::format_descriptor<uint16_t>::format(),                    /* Python struct-style format descriptor */
           3,                                                            /* Number of dimensions */
-          { s.header.imagesInBlock, s.header.rows, s.header.columns },  /* Buffer dimensions */
-          { sizeof(uint16_t) * s.header.rows * s.header.columns,
-            sizeof(uint16_t) * s.header.rows,                           /* Strides (in bytes) for each index */
+          { b.header.imagesInBlock, b.header.rows, b.header.columns },  /* Buffer dimensions */
+          { sizeof(uint16_t) * b.header.rows * b.header.columns,
+            sizeof(uint16_t) * b.header.rows,                           /* Strides (in bytes) for each index */
             sizeof(uint16_t) });
     });
 
   py::class_<StreamReader>(m, "_reader")
     .def(py::init<const std::string &>())
-    .def("read", (Stream (StreamReader::*)())&StreamReader::read);
+    .def("read", (Block (StreamReader::*)())&StreamReader::read);
 }

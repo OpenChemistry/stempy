@@ -55,25 +55,25 @@ Header StreamReader::readHeader() {
   return header;
 }
 
-Stream StreamReader::read() {
-  Stream s;
+Block StreamReader::read() {
+  Block b;
 
   // Check that we have a block to read
   auto c = m_stream.peek();
   if (c != EOF) {
     try {
-      s.header = readHeader();
+      b.header = readHeader();
 
-      auto dataSize = s.header.rows*s.header.columns*s.header.imagesInBlock;
-      s.data.reset(new uint16_t[dataSize]);
-      read(s.data.get(), dataSize*sizeof(uint16_t));
+      auto dataSize = b.header.rows*b.header.columns*b.header.imagesInBlock;
+      b.data.reset(new uint16_t[dataSize]);
+      read(b.data.get(), dataSize*sizeof(uint16_t));
     }
     catch (EofException& e) {
       throw invalid_argument("Unexpected EOF while processing stream.");
     }
   }
 
-  return s;
+  return b;
 }
 
 }

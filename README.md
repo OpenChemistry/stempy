@@ -17,12 +17,12 @@ Python 3.6.7 (default, Oct 22 2018, 11:32:17)
 Type "help", "copyright", "credits" or "license" for more information.
 >>> from stempy import io
 >>> r = io.reader('/data/4dstem/smallScanningDiffraction/data0000.dat')
->>> s = r.read()
->>> s.header.images_in_block
+>>> b = r.read()
+>>> b.header.images_in_block
 32
->>> d.header.image_numbers
+>>> b.header.image_numbers
 [1, 33, 65, 97, 129, 161, 193, 225, 257, 289, 321, 353, 385, 417, 449, 481, 513, 545, 577, 609, 641, 673, 705, 737, 769, 801, 833, 865, 897, 929, 961, 993]
->>> s.data[0]
+>>> b.data[0]
 array([[   0,    0,    0, ...,    0,    0,    0],
        [   0,    0,    0, ...,    0,    0,    0],
        [   0,    0,    0, ...,    0,    0,    0],

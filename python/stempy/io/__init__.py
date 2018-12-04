@@ -5,12 +5,12 @@ from collections import namedtuple
 class Reader(_reader):
 
     def read(self):
-        s = super(Reader, self).read()
-        stream = namedtuple('Stream', ['header', 'data'])
-        stream.header = s.header
-        stream.data = np.array(s, copy = False)
+        b = super(Reader, self).read()
+        block = namedtuple('Block', ['header', 'data'])
+        block.header = b.header
+        block.data = np.array(b, copy = False)
 
-        return stream
+        return block
 
 def reader(path):
     return Reader(path)

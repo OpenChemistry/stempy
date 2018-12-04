@@ -18,7 +18,7 @@ struct Header {
   std::vector<uint32_t> imageNumbers;
 };
 
-struct Stream {
+struct Block {
   Header header;
   std::unique_ptr<uint16_t[]> data;
 };
@@ -28,7 +28,7 @@ class StreamReader {
 public:
   StreamReader(const std::string &path);
 
-  Stream read();
+  Block read();
 
 private:
   std::ifstream m_stream;
