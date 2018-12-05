@@ -40,17 +40,24 @@ Header StreamReader::readHeader() {
 
   Header header;
 
-  read(header.imagesInBlock);
-  read(header.rows);
-  read(header.columns);
-  read(header.version);
-  read(header.timestamp);
+  uint32_t headerData[1024];
+  read(headerData, 1024*sizeof(uint32_t));
+
+  int index = 0;
+  header.imagesInBlock = headerData[index++];
+  header.rows = headerData[index++];
+  header.columns = headerData[index++];
+  header.version = headerData[index++];
+  header.timestamp =  headerData[index++];
   // Skip over 6 - 10 - reserved
-  m_stream.seekg(5*sizeof(uint32_t), m_stream.cur);
+  index += 5;
 
   // Now get the image numbers
   header.imageNumbers.resize(header.imagesInBlock);
-  read(header.imageNumbers.data(), sizeof(uint32_t)*header.imagesInBlock);
+  auto imageNumbersSize = sizeof(uint32_t)*header.imagesInBlock;
+  copy(headerData + index,
+       headerData + index + header.imagesInBlock,
+       header.imageNumbers.data());
 
   return header;
 }
