@@ -13,17 +13,26 @@ int main (int argc, char *argv[])
   }
 
   stempy::StreamReader reader(argv[1]);
-  auto stream = reader.read();
 
-  cout << "Version: " << stream.header.version << endl;
-  cout << "Images in block: " <<  stream.header.imagesInBlock << endl;
-  cout << "Rows: " <<  stream.header.rows << endl;
-  cout << "Columns: " <<  stream.header.columns << endl;
-  cout << "Image numbers: ";
+  int count = 0;
+  while (true) {
+    auto stream = reader.read();
 
-  for (auto n : stream.header.imageNumbers) {
-    cout << n << " ";
+    if (stream.header.version == 0) {
+      break;
+    }
+    cout << "Block count: " << ++count << endl;
+    cout << "Version: " << stream.header.version << endl;
+    cout << "Images in block: " <<  stream.header.imagesInBlock << endl;
+    cout << "Rows: " <<  stream.header.rows << endl;
+    cout << "Columns: " <<  stream.header.columns << endl;
+    cout << "Image numbers: ";
+
+    for (auto n : stream.header.imageNumbers) {
+      cout << n << " ";
+    }
+    cout << endl;
+
   }
-  cout << endl;
 
 }
