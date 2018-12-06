@@ -3,6 +3,15 @@ import numpy as np
 from collections import namedtuple
 
 class Reader(_reader):
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        b = self.read()
+        if b is None:
+            raise StopIteration
+        else:
+            return b
 
     def read(self):
         b = super(Reader, self).read()
