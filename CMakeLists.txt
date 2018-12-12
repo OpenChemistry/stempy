@@ -13,18 +13,20 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-add_library(reader
+add_library(stem
   stempy/reader.cpp
+  stempy/mask.cpp
+  stempy/image.cpp
 )
 
-add_executable(stem
+add_executable(stemcli
   stempy/main.cpp
 )
 
-target_link_libraries(stem
-  PRIVATE reader)
+target_link_libraries(stemcli
+  PRIVATE stem)
 
-set_target_properties(reader
+set_target_properties(stem
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"

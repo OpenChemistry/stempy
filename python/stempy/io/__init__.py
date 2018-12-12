@@ -21,6 +21,7 @@ class Reader(_reader):
             return None
 
         block = namedtuple('Block', ['header', 'data'])
+        block._block = b
         block.header = b.header
         block.data = np.array(b, copy = False)
 

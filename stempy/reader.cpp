@@ -10,6 +10,12 @@ using namespace std;
 
 namespace stempy {
 
+Block::Block(const Header& header) :
+  header(header),
+  data(new uint16_t[header.rows*header.columns*header.imagesInBlock],
+      std::default_delete<uint16_t[]>())
+{}
+
 StreamReader::StreamReader(const std::string& path)
 {
   m_stream.open (path, ios::in | ios::binary);
@@ -63,24 +69,25 @@ Header StreamReader::readHeader() {
 }
 
 Block StreamReader::read() {
-  Block b;
+
 
   // Check that we have a block to read
   auto c = m_stream.peek();
   if (c != EOF) {
     try {
-      b.header = readHeader();
+      auto header = readHeader();
+      Block b(header);
 
       auto dataSize = b.header.rows*b.header.columns*b.header.imagesInBlock;
-      b.data.reset(new uint16_t[dataSize]);
       read(b.data.get(), dataSize*sizeof(uint16_t));
+
+      return b;
     }
     catch (EofException& e) {
       throw invalid_argument("Unexpected EOF while processing stream.");
     }
   }
-
-  return b;
+  return Block();
 }
 
 }

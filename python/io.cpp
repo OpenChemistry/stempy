@@ -11,15 +11,15 @@ using namespace stempy;
 PYBIND11_MODULE(_io, m)
 {
   py::class_<Header>(m, "_header")
-    .def_readwrite("images_in_block", &Header::imagesInBlock)
-    .def_readwrite("rows", &Header::rows)
-    .def_readwrite("columns", &Header::columns)
-    .def_readwrite("version", &Header::version)
-    .def_readwrite("timestamp", &Header::timestamp)
-    .def_readwrite("image_numbers", &Header::imageNumbers);
+    .def_readonly("images_in_block", &Header::imagesInBlock)
+    .def_readonly("rows", &Header::rows)
+    .def_readonly("columns", &Header::columns)
+    .def_readonly("version", &Header::version)
+    .def_readonly("timestamp", &Header::timestamp)
+    .def_readonly("image_numbers", &Header::imageNumbers);
 
   py::class_<Block>(m , "_block", py::buffer_protocol())
-    .def_readwrite("header", &Block::header)
+    .def_readonly("header", &Block::header)
     .def_buffer([](Block& b) {
        return py::buffer_info(
           b.data.get(),                                                 /* Pointer to buffer */
