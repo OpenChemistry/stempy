@@ -20,6 +20,11 @@ namespace stempy {
     Image& operator=(Image&& i) noexcept = default;
   };
 
+  struct STEMValues {
+    uint64_t bright = 0;
+    uint64_t dark = 0;
+  };
+
   struct STEMImage {
     Image bright;
     Image dark;
@@ -31,7 +36,10 @@ namespace stempy {
   };
 
   STEMImage createSTEMImage(std::vector<Block> &blocks, int rows, int colums,  int innerRadius, int outerRadius);
-
+  STEMValues calculateSTEMValues(uint16_t data[], int offset,
+                                 int numberOfPixels,
+                                 uint16_t brightFieldMask[],
+                                 uint16_t darkFieldMask[]);
 }
 
 #endif
