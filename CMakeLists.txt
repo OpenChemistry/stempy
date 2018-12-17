@@ -9,7 +9,15 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS False)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+include_directories(SYSTEM
+  ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ThreadPool
+)
+
+find_package(Threads)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
@@ -18,6 +26,9 @@ add_library(stem
   stempy/mask.cpp
   stempy/image.cpp
 )
+
+target_link_libraries(stem
+  PRIVATE Threads::Threads)
 
 add_executable(stemcli
   stempy/main.cpp

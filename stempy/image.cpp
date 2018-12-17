@@ -21,9 +21,11 @@ STEMImage::STEMImage(uint32_t width, uint32_t height)
 STEMValues calculateSTEMValues(uint16_t data[], int offset,
                                int numberOfPixels,
                                uint16_t brightFieldMask[],
-                               uint16_t darkFieldMask[])
+                               uint16_t darkFieldMask[],
+                               uint32_t imageNumber)
 {
   STEMValues stemValues;
+  stemValues.imageNumber = imageNumber;
   for (int i=0; i<numberOfPixels; i++) {
     auto value = data[offset + i];
 

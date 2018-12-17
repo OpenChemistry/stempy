@@ -23,6 +23,7 @@ namespace stempy {
   struct STEMValues {
     uint64_t bright = 0;
     uint64_t dark = 0;
+    uint32_t imageNumber = -1;
   };
 
   struct STEMImage {
@@ -39,7 +40,8 @@ namespace stempy {
   STEMValues calculateSTEMValues(uint16_t data[], int offset,
                                  int numberOfPixels,
                                  uint16_t brightFieldMask[],
-                                 uint16_t darkFieldMask[]);
+                                 uint16_t darkFieldMask[],
+                                 uint32_t imageNumber=-1);
 }
 
 #endif

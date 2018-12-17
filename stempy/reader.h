@@ -39,6 +39,7 @@ public:
   StreamReader(const std::string &path);
 
   Block read();
+  void process(int streamId, int concurrency=-1, int width=160, int height=160);
 
 private:
   std::ifstream m_stream;

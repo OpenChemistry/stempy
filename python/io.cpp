@@ -34,5 +34,7 @@ PYBIND11_MODULE(_io, m)
 
   py::class_<StreamReader>(m, "_reader")
     .def(py::init<const std::string &>())
-    .def("read", (Block (StreamReader::*)())&StreamReader::read);
+    .def("read", (Block (StreamReader::*)())&StreamReader::read)
+    .def("process", &StreamReader::process, "", py::arg("stream_id"), py::arg("concurrency") = -1,
+        py::arg("width") = 160, py::arg("height") = 160);
 }
