@@ -11,6 +11,7 @@ set(CMAKE_CXX_EXTENSIONS False)
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 include_directories(SYSTEM
@@ -18,17 +19,32 @@ include_directories(SYSTEM
 )
 
 find_package(Threads)
+find_package(SocketIOClientCpp)
+include_directories(
+  ${SocketIOClientCpp_INCLUDE_DIRS}
+)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-add_library(stem
-  stempy/reader.cpp
+set(_src stempy/reader.cpp
   stempy/mask.cpp
-  stempy/image.cpp
-)
+  stempy/image.cpp)
+
+if(SocketIOClientCpp_FOUND)
+  list(APPEND _src stempy/sioclient.cpp)
+endif()
+
+add_library(stem
+  ${_src})
+
+set(_libs Threads::Threads)
+
+if(SocketIOClientCpp_FOUND)
+  list(APPEND _libs sioclient)
+endif()
 
 target_link_libraries(stem
-  PRIVATE Threads::Threads)
+  PRIVATE ${_libs})
 
 add_executable(stemcli
   stempy/main.cpp
@@ -42,6 +58,10 @@ set_target_properties(stem
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
+
+set(SocketIOClientCpp ${SocketIOClientCpp_FOUND})
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 add_subdirectory(python)
