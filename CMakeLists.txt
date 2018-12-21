@@ -9,22 +9,35 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS False)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+include_directories(SYSTEM
+  ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ThreadPool
+)
+
+find_package(Threads)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-add_library(reader
+add_library(stem
   stempy/reader.cpp
-)
-
-add_executable(stem
-  stempy/main.cpp
+  stempy/mask.cpp
+  stempy/image.cpp
 )
 
 target_link_libraries(stem
-  PRIVATE reader)
+  PRIVATE Threads::Threads)
 
-set_target_properties(reader
+add_executable(stemcli
+  stempy/main.cpp
+)
+
+target_link_libraries(stemcli
+  PRIVATE stem)
+
+set_target_properties(stem
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"

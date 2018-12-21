@@ -16,11 +16,21 @@ struct EofException : public std::exception
 struct Header {
   uint32_t imagesInBlock = 0, rows = 0, columns = 0, version = 0, timestamp = 0;
   std::vector<uint32_t> imageNumbers;
+
+  Header() = default;
+  Header(const Header& header) = default;
+  Header(Header&& header) noexcept = default;
 };
 
 struct Block {
   Header header;
-  std::unique_ptr<uint16_t[]> data;
+  std::shared_ptr<uint16_t> data;
+
+  Block() = default;
+  Block(const Block&) = default;
+  Block(const Header& header);
+  Block(Block&& i) noexcept = default;
+  Block& operator=(Block&& i) noexcept = default;
 };
 
 class StreamReader {
@@ -29,6 +39,7 @@ public:
   StreamReader(const std::string &path);
 
   Block read();
+  void process(int streamId, int concurrency=-1, int width=160, int height=160);
 
 private:
   std::ifstream m_stream;
