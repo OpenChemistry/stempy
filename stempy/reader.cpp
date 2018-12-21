@@ -1,6 +1,10 @@
 #include "reader.h"
 #include "image.h"
 #include "mask.h"
+#include "config.h"
+#ifdef SocketIOClientCpp
+#include "sioclient.h"
+#endif
 
 #include <vector>
 #include <fstream>
@@ -94,7 +98,14 @@ Block StreamReader::read() {
   return Block();
 }
 
-void StreamReader::process(int streamId, int concurrency, int width, int height) {
+void StreamReader::process(int streamId, int concurrency, int width, int height,
+    const string& url) {
+// SocketIO support
+#ifdef SocketIOClientCpp
+  SocketIOClient ioClient(url, "stem");
+  ioClient.connect();
+#endif
+
   // Setup threadpool
 
   // Default to half the number of cores
@@ -137,9 +148,9 @@ void StreamReader::process(int streamId, int concurrency, int width, int height)
     }));
   }
 
-
-  uint64_t brightPixels[width*height]  = {0};
-  uint64_t darkPixels[width*height]  = {0};
+  int numberOfPixels = width*height;
+  uint64_t brightPixels[numberOfPixels]  = {0};
+  uint64_t darkPixels[numberOfPixels]  = {0};
   for(auto &&valuesInBlock: results) {
     auto values = valuesInBlock.get();
     for(auto &value: values ) {
@@ -150,6 +161,21 @@ void StreamReader::process(int streamId, int concurrency, int width, int height)
 
   int imageId = 1;
 
+
+#ifdef SocketIOClientCpp
+  auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels]
+                      (const string& eventName, uint64_t* data) {
+    auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
+    msg->insert("streamId", to_string(streamId));
+    msg->insert("imageId", to_string(imageId));
+    // TODO: Can probably get rid this copy
+    msg->insert("data", std::make_shared<std::string>(reinterpret_cast <char *>(data), numberOfPixels*sizeof(uint64_t)));
+    ioClient.emit(eventName, msg);
+  };
+
+  emitMessage("stem.bright", brightPixels);
+  emitMessage("stem.dark", darkPixels);
+#else
   // Write the partial images to files
   std::ostringstream brightFilename, darkFilename;
   brightFilename << "bright-" << std::setw( 3 ) <<  std::setfill('0')  <<
@@ -158,8 +184,9 @@ void StreamReader::process(int streamId, int concurrency, int width, int height)
       << "." << std::setw( 3 ) <<  std::setfill('0')  << imageId << ".bin";
   ofstream brightFile(brightFilename.str(), ios::binary);
   ofstream darkFile(darkFilename.str(), ios::binary);
-  brightFile.write(reinterpret_cast<char*>(brightPixels), width*height*sizeof(uint64_t));
-  darkFile.write(reinterpret_cast<char*>(darkPixels), width*height*sizeof(uint64_t));
+  brightFile.write(reinterpret_cast<char*>(brightPixels), numberOfPixels*sizeof(uint64_t));
+  darkFile.write(reinterpret_cast<char*>(darkPixels), numberOfPixels*sizeof(uint64_t));
+#endif
 }
 
 }

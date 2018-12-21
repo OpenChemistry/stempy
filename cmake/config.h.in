@@ -1,0 +1,7 @@
+#ifndef CONFIG_H_
+#define CONFIG_H_
+
+#cmakedefine SocketIOClientCpp
+
+
+#endif /* CONFIG_H_ */

@@ -39,7 +39,8 @@ public:
   StreamReader(const std::string &path);
 
   Block read();
-  void process(int streamId, int concurrency=-1, int width=160, int height=160);
+  void process(int streamId, int concurrency=-1, int width=160, int height=160,
+      const std::string& url="http://127.0.0.1:5000");
 
 private:
   std::ifstream m_stream;
