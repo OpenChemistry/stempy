@@ -37,6 +37,8 @@ endif()
 add_library(stem
   ${_src})
 
+set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 set(_libs Threads::Threads)
 
 if(SocketIOClientCpp_FOUND)
