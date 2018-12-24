@@ -104,6 +104,10 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
 #ifdef SocketIOClientCpp
   SocketIOClient ioClient(url, "stem");
   ioClient.connect();
+  auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
+  msg->insert("width", to_string(width));
+  msg->insert("height", to_string(height));
+  ioClient.emit("stem.size", msg);
 #endif
 
   // Setup threadpool
