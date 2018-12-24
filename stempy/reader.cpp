@@ -152,6 +152,58 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
     }));
   }
 
+  int imageId = 1;
+
+#ifdef SocketIOClientCpp
+  // We get the first result so we can calculate the number of pixels
+  auto firstResult = results[0].get();
+
+  int numberOfPixels = firstResult.size()*results.size();
+
+  auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels]
+                      (const string& eventName, uint64_t* pixelValues,
+                          uint32_t* pixelIndexes, int numberOfPixes) {
+    auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
+    msg->insert("streamId", to_string(streamId));
+    msg->insert("imageId", to_string(imageId));
+    auto data = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
+    // TODO: Can probably get rid these copies
+    data->insert("values", std::make_shared<std::string>(reinterpret_cast <char *>(pixelValues), numberOfPixels*sizeof(uint64_t)));
+    data->insert("indexes", std::make_shared<std::string>(reinterpret_cast <char *>(pixelIndexes), numberOfPixels*sizeof(uint32_t)));
+    msg->insert("data", data);
+
+    ioClient.emit(eventName, msg);
+  };
+
+  // Values
+  uint64_t brightPixels[numberOfPixels];
+  uint64_t darkPixels[numberOfPixels];
+  uint32_t pixelIndexes[numberOfPixels];
+
+  auto i = 0;
+  auto processResult = [&brightPixels, &darkPixels, &pixelIndexes, &i](vector<STEMValues> &values) {
+    for(auto &value: values) {
+      brightPixels[i] = value.bright;
+      darkPixels[i] = value.dark;
+      pixelIndexes[i] = value.imageNumber - 1;
+      i++;
+    }
+  };
+
+  // First process the block we already removed from results to get the number of pixels
+  processResult(firstResult);
+
+  // Now iterate over the rest
+  for (auto it = std::next(results.begin()); it != results.end(); ++it) {
+    auto &&valuesInBlock = *it;
+    auto values = valuesInBlock.get();
+    processResult(values);
+  }
+
+  emitMessage("stem.bright", brightPixels, pixelIndexes, numberOfPixels);
+  emitMessage("stem.dark", darkPixels, pixelIndexes, numberOfPixels);
+// TODO We can probably remove this block soon.
+#else
   int numberOfPixels = width*height;
   uint64_t brightPixels[numberOfPixels]  = {0};
   uint64_t darkPixels[numberOfPixels]  = {0};
@@ -162,24 +214,6 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       darkPixels[value.imageNumber-1] = value.dark;
     }
   }
-
-  int imageId = 1;
-
-
-#ifdef SocketIOClientCpp
-  auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels]
-                      (const string& eventName, uint64_t* data) {
-    auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
-    msg->insert("streamId", to_string(streamId));
-    msg->insert("imageId", to_string(imageId));
-    // TODO: Can probably get rid this copy
-    msg->insert("data", std::make_shared<std::string>(reinterpret_cast <char *>(data), numberOfPixels*sizeof(uint64_t)));
-    ioClient.emit(eventName, msg);
-  };
-
-  emitMessage("stem.bright", brightPixels);
-  emitMessage("stem.dark", darkPixels);
-#else
   // Write the partial images to files
   std::ostringstream brightFilename, darkFilename;
   brightFilename << "bright-" << std::setw( 3 ) <<  std::setfill('0')  <<
