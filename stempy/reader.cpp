@@ -187,6 +187,9 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   brightFile.write(reinterpret_cast<char*>(brightPixels), numberOfPixels*sizeof(uint64_t));
   darkFile.write(reinterpret_cast<char*>(darkPixels), numberOfPixels*sizeof(uint64_t));
 #endif
+
+  delete[] brightFieldMask;
+  delete[] darkFieldMask;
 }
 
 }
