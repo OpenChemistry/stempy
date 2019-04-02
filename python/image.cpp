@@ -11,8 +11,8 @@ using namespace stempy;
 
 PYBIND11_MODULE(_image, m)
 {
-  py::class_<Image>(m , "_image", py::buffer_protocol())
-    .def_buffer([](Image& i) {
+  py::class_<Image<uint64_t>>(m , "_image_int64", py::buffer_protocol())
+    .def_buffer([](Image<uint64_t>& i) {
        return py::buffer_info(
           i.data.get(),                                                 /* Pointer to buffer */
           sizeof(uint64_t),                                             /* Size of one scalar */
@@ -23,10 +23,24 @@ PYBIND11_MODULE(_image, m)
             sizeof(uint64_t) });
     });
 
+  py::class_<Image<double>>(m , "_image_double", py::buffer_protocol())
+    .def_buffer([](Image<double>& i) {
+       return py::buffer_info(
+          i.data.get(),                                                 /* Pointer to buffer */
+          sizeof(double),                                               /* Size of one scalar */
+          py::format_descriptor<double>::format(),                    /* Python struct-style format descriptor */
+          2,                                                            /* Number of dimensions */
+          { i.width, i.height },  /* Buffer dimensions */
+          { sizeof(double) * i.width,                           /* Strides (in bytes) for each index */
+            sizeof(double) });
+    });
+
+
   py::class_<STEMImage>(m, "_stem_image")
     .def_readonly("bright", &STEMImage::bright)
     .def_readonly("dark", &STEMImage::dark);
 
   m.def("create_stem_image", &createSTEMImage);
+  m.def("calculate_average", &calculateAverage);
 
 }
