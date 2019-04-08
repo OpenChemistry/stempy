@@ -34,12 +34,17 @@ if(SocketIOClientCpp_FOUND)
   list(APPEND _src stempy/sioclient.cpp)
 endif()
 
+set(_libs Threads::Threads)
+
+find_package(VTKm COMPONENTS OpenMP)
+if(VTKm_FOUND)
+  list(APPEND _libs vtkm_cont)
+endif()
+
 add_library(stem
   ${_src})
 
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-set(_libs Threads::Threads)
 
 if(SocketIOClientCpp_FOUND)
   list(APPEND _libs sioclient)
@@ -62,6 +67,7 @@ set_target_properties(stem
 )
 
 set(SocketIOClientCpp ${SocketIOClientCpp_FOUND})
+set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
