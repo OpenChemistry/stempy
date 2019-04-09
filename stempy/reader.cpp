@@ -24,7 +24,8 @@ Block::Block(const Header& header) :
       std::default_delete<uint16_t[]>())
 {}
 
-StreamReader::StreamReader(const std::string& path)
+StreamReader::StreamReader(const std::string& path, uint8_t version)
+  : m_version(version)
 {
   m_stream.open (path, ios::in | ios::binary);
   if (!m_stream.is_open()) {
@@ -50,7 +51,7 @@ istream & StreamReader::read(T* value, streamsize size){
     return m_stream;
 }
 
-Header StreamReader::readHeader() {
+Header StreamReader::readHeaderVersion1() {
 
   Header header;
 
@@ -76,6 +77,28 @@ Header StreamReader::readHeader() {
   return header;
 }
 
+Header StreamReader::readHeaderVersion2() {
+
+  Header header;
+
+  uint32_t firstImageNumber;
+  read(&firstImageNumber, sizeof(uint32_t));
+
+  int index = 0;
+  header.imagesInBlock = 1600;
+  header.rows = 576;
+  header.columns = 576;
+  header.version = 2;
+
+  // Now generate the image numbers
+  header.imageNumbers.reserve(header.imagesInBlock);
+  for(int i=0; i<header.imagesInBlock; i++) {
+    header.imageNumbers.push_back(firstImageNumber + i);
+  }
+
+  return header;
+}
+
 Block StreamReader::read() {
 
 
@@ -83,7 +106,21 @@ Block StreamReader::read() {
   auto c = m_stream.peek();
   if (c != EOF) {
     try {
-      auto header = readHeader();
+      Header header;
+      switch (this->m_version) {
+      case 1:
+        header = readHeaderVersion1();
+        break;
+      case 2:
+        header = readHeaderVersion2();
+        break;
+      default:
+        std::ostringstream ss;
+        ss << "Unexpected version: ";
+        ss << this->m_version;
+        throw invalid_argument(ss.str());
+      }
+
       Block b(header);
 
       auto dataSize = b.header.rows*b.header.columns*b.header.imagesInBlock;

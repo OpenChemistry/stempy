@@ -9,8 +9,9 @@
 
 namespace stempy {
 
+  template <typename T>
   struct Image {
-    std::shared_ptr<uint64_t[]> data;
+    std::shared_ptr<T[]> data;
     uint32_t width = 0;
     uint32_t height = 0;
 
@@ -27,8 +28,8 @@ namespace stempy {
   };
 
   struct STEMImage {
-    Image bright;
-    Image dark;
+    Image<uint64_t> bright;
+    Image<uint64_t> dark;
 
     STEMImage() = default;
     STEMImage(uint32_t width, uint32_t height);
@@ -42,6 +43,8 @@ namespace stempy {
                                  uint16_t brightFieldMask[],
                                  uint16_t darkFieldMask[],
                                  uint32_t imageNumber=-1);
+
+  Image<double> calculateAverage(std::vector<Block> &blocks);
 }
 
 #endif
