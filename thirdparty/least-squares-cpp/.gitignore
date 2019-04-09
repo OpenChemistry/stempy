@@ -1,0 +1,15 @@
+*~
+*.project
+*.cproject
+*.metadata
+*.settings
+*.orig
+*.vscode
+save-commands.json
+build/
+Debug/
+Release/
+lib/
+logs/
+doc/html
+doc/latex
