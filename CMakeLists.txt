@@ -35,7 +35,8 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(_src stempy/reader.cpp
   stempy/mask.cpp
-  stempy/image.cpp)
+  stempy/image.cpp
+  stempy/electron.cpp)
 
 if(SocketIOClientCpp_FOUND)
   list(APPEND _src stempy/sioclient.cpp)

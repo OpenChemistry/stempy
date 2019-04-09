@@ -4,6 +4,7 @@
 
 #include <stempy/image.h>
 #include <stempy/reader.h>
+#include <stempy/electron.h>
 
 namespace py = pybind11;
 
@@ -42,5 +43,6 @@ PYBIND11_MODULE(_image, m)
 
   m.def("create_stem_image", &createSTEMImage);
   m.def("calculate_average", &calculateAverage);
+  m.def("electron_count", &electronCount);
 
 }
