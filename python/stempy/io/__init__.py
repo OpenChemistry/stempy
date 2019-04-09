@@ -1,6 +1,12 @@
-from stempy._io import _reader
-import numpy as np
 from collections import namedtuple
+
+import numpy as np
+
+from stempy._io import _reader
+
+class FileVersion(object):
+    VERSION1 = 1
+    VERSION2 = 2
 
 class Reader(_reader):
     def __iter__(self):
@@ -27,5 +33,5 @@ class Reader(_reader):
 
         return block
 
-def reader(path):
-    return Reader(path)
+def reader(path, version=FileVersion.VERSION1):
+    return Reader(path, version)

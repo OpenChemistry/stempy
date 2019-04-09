@@ -20,6 +20,8 @@ struct Header {
   Header() = default;
   Header(const Header& header) = default;
   Header(Header&& header) noexcept = default;
+  Header& operator=(Header&& header) noexcept = default;
+
 };
 
 struct Block {
@@ -36,7 +38,7 @@ struct Block {
 class StreamReader {
 
 public:
-  StreamReader(const std::string &path);
+  StreamReader(const std::string &path, uint8_t version=1);
 
   Block read();
   void process(int streamId, int concurrency=-1, int width=160, int height=160,
@@ -44,8 +46,10 @@ public:
 
 private:
   std::ifstream m_stream;
+  int m_version;
 
-  Header readHeader();
+  Header readHeaderVersion1();
+  Header readHeaderVersion2();
 
   template<typename T>
   std::istream & read(T& value);
