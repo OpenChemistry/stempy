@@ -11,3 +11,8 @@ def create_stem_image(blocks, width, height,  inner_radius, outer_radius):
     image.dark = np.array(img.dark, copy = False)
 
     return image
+
+def calculate_average(blocks):
+    image =  _image.calculate_average([b._block for b in blocks])
+
+    return np.array(image, copy = False)
