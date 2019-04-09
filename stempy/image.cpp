@@ -76,7 +76,7 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
                                        int numberOfPixels,
                                        uint16_t brightFieldMask[],
                                        uint16_t darkFieldMask[],
-                                       uint32_t imageNumber)
+                                       uint32_t imageNumber = -1)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
@@ -114,8 +114,13 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   for(const Block &block: blocks) {
     auto data = block.data.get();
     for (int i=0; i<block.header.imagesInBlock; i++) {
+#ifdef VTKm
+      auto stemValues = calculateSTEMValuesParallel(data, i*numberOfPixels, numberOfPixels,
+                                                    brightFieldMask, darkFieldMask);
+#else
       auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
                                             brightFieldMask, darkFieldMask);
+#endif
       image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
       image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
     }
