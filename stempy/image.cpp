@@ -60,13 +60,13 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
   vtkm::cont::ArrayHandle<uint16_t> uniqueKeys;
   vtkm::cont::ArrayHandle<uint16_t> sums;
 
-  // Portals so we may view the values
-  auto uniqueKeysPortal = uniqueKeys.GetPortalConstControl();
-  auto sumsPortal = sums.GetPortalConstControl();
-
   // Bright
   vtkm::cont::Algorithm::ReduceByKey(keysBright, input, uniqueKeys, sums,
                                      vtkm::Add());
+
+  // Portals so we may view the values
+  auto uniqueKeysPortal = uniqueKeys.GetPortalConstControl();
+  auto sumsPortal = sums.GetPortalConstControl();
 
   // Find the index of 0xFFFF
   for (vtkm::Id i = 0; i < uniqueKeysPortal.GetNumberOfValues(); ++i) {
@@ -79,6 +79,9 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
   // Dark
   vtkm::cont::Algorithm::ReduceByKey(keysDark, input, uniqueKeys, sums,
                                      vtkm::Add());
+
+  uniqueKeysPortal = uniqueKeys.GetPortalConstControl();
+  sumsPortal = sums.GetPortalConstControl();
 
   // Find the index of 0xFFFF
   for (vtkm::Id i = 0; i < uniqueKeysPortal.GetNumberOfValues(); ++i) {
