@@ -43,6 +43,35 @@ STEMValues calculateSTEMValues(uint16_t data[], int offset,
 }
 
 #ifdef VTKm
+namespace {
+  struct MaskAndAdd
+  {
+    VTKM_EXEC_CONT
+    uint64_t operator()(const vtkm::Pair<uint16_t,uint16_t>& a, const vtkm::Pair<uint16_t,uint16_t>& b) const
+    {
+      return (a.first & a.second) + (b.first & b.second);
+    }
+
+    VTKM_EXEC_CONT
+    uint64_t operator()(uint64_t a, uint64_t b) const
+    {
+      return a + b;
+    }
+
+    VTKM_EXEC_CONT
+    uint64_t operator()(const vtkm::Pair<uint16_t,uint16_t>& a, uint64_t b) const
+    {
+      return (a.first & a.second) + b;
+    }
+
+    VTKM_EXEC_CONT
+    uint64_t operator()(uint64_t a, const vtkm::Pair<uint16_t,uint16_t>& b) const
+    {
+      return a + (b.first & b.second);
+    }
+  };
+}
+
 STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
                                        int numberOfPixels,
                                        uint16_t brightFieldMask[],
@@ -57,39 +86,14 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
   auto keysDark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
   auto input = vtkm::cont::make_ArrayHandle(&data[offset], numberOfPixels);
 
-  vtkm::cont::ArrayHandle<uint16_t> uniqueKeys;
-  vtkm::cont::ArrayHandle<uint16_t> sums;
+  auto inputAndBright = vtkm::cont::make_ArrayHandleZip(input, keysBright);
+  auto inputAndDark = vtkm::cont::make_ArrayHandleZip(input, keysDark);
 
-  // Bright
-  vtkm::cont::Algorithm::ReduceByKey(keysBright, input, uniqueKeys, sums,
-                                     vtkm::Add());
-
-  // Portals so we may view the values
-  auto uniqueKeysPortal = uniqueKeys.GetPortalConstControl();
-  auto sumsPortal = sums.GetPortalConstControl();
-
-  // Find the index of 0xFFFF
-  for (vtkm::Id i = 0; i < uniqueKeysPortal.GetNumberOfValues(); ++i) {
-    if (uniqueKeysPortal.Get(i) == static_cast<uint16_t>(0xFFFF)) {
-      stemValues.bright = sumsPortal.Get(i);
-      break;
-    }
-  }
-
-  // Dark
-  vtkm::cont::Algorithm::ReduceByKey(keysDark, input, uniqueKeys, sums,
-                                     vtkm::Add());
-
-  uniqueKeysPortal = uniqueKeys.GetPortalConstControl();
-  sumsPortal = sums.GetPortalConstControl();
-
-  // Find the index of 0xFFFF
-  for (vtkm::Id i = 0; i < uniqueKeysPortal.GetNumberOfValues(); ++i) {
-    if (uniqueKeysPortal.Get(i) == static_cast<uint16_t>(0xFFFF)) {
-      stemValues.dark = sumsPortal.Get(i);
-      break;
-    }
-  }
+  const uint64_t initialVal = 0;
+  stemValues.bright = vtkm::cont::Algorithm::Reduce(inputAndBright, initialVal,
+                                                    MaskAndAdd{} );
+  stemValues.dark = vtkm::cont::Algorithm::Reduce(inputAndDark, initialVal,
+                                                  MaskAndAdd{} );
 
   return stemValues;
 }
