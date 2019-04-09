@@ -12,7 +12,22 @@ def create_stem_image(blocks, width, height,  inner_radius, outer_radius):
 
     return image
 
+class ImageArray(np.ndarray):
+    def __new__(cls, array, dtype=None, order=None):
+        obj = np.asarray(array, dtype=dtype, order=order).view(cls)
+        obj._image  = None
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self._image = getattr(obj, '_image', None)
+
 def calculate_average(blocks):
     image =  _image.calculate_average([b._block for b in blocks])
+    img = ImageArray(np.array(image, copy = False))
+    img._image = image
+
+    return img
+
 
     return np.array(image, copy = False)
