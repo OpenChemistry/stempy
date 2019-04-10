@@ -46,42 +46,39 @@ STEMValues calculateSTEMValues(uint16_t data[], int offset,
 
 #ifdef VTKm
 namespace {
-  struct MaskAndAdd
+struct MaskAndAdd
+{
+  // Order is "input", "bright", and "dark"
+  using InputType = vtkm::Vec<uint16_t, 3>;
+  // Order is "bright" and "dark"
+  using OutputType = vtkm::Pair<uint64_t, uint64_t>;
+
+  VTKM_EXEC_CONT
+  OutputType operator()(const InputType& a, const InputType& b) const
   {
-    // Order is "input", "bright", and "dark"
-    using InputType = vtkm::Vec<uint16_t, 3>;
-    // Order is "bright" and "dark"
-    using OutputType = vtkm::Pair<uint64_t, uint64_t>;
+    // Cast one of these to uint64_t to ensure no overflow on addition
+    return OutputType(static_cast<uint64_t>(a[0] & a[1]) + (b[0] & b[1]),
+                      static_cast<uint64_t>(a[0] & a[2]) + (b[0] & b[2]));
+  }
 
-    VTKM_EXEC_CONT
-    OutputType operator()(const InputType& a, const InputType& b) const
-    {
-      // Cast one of these to uint64_t to ensure no overflow on addition
-      return OutputType(static_cast<uint64_t>(a[0] & a[1]) + (b[0] & b[1]),
-                        static_cast<uint64_t>(a[0] & a[2]) + (b[0] & b[2]));
-    }
+  VTKM_EXEC_CONT
+  OutputType operator()(const InputType& a, const OutputType& b) const
+  {
+    return OutputType((a[0] & a[1]) + b.first, (a[0] & a[2]) + b.second);
+  }
 
-    VTKM_EXEC_CONT
-    OutputType operator()(const InputType& a,
-                          const OutputType& b) const
-    {
-      return OutputType((a[0] & a[1]) + b.first, (a[0] & a[2]) + b.second);
-    }
+  VTKM_EXEC_CONT
+  OutputType operator()(const OutputType& a, const InputType& b) const
+  {
+    return MaskAndAdd{}(b, a);
+  }
 
-    VTKM_EXEC_CONT
-    OutputType operator()(const OutputType& a,
-                          const InputType& b) const
-    {
-      return MaskAndAdd{}(b, a);
-    }
-
-    VTKM_EXEC_CONT
-    OutputType operator()(const OutputType& a,
-                          const OutputType& b) const
-    {
-      return OutputType(a.first + b.first, a.second + b.second);
-    }
-  };
+  VTKM_EXEC_CONT
+  OutputType operator()(const OutputType& a, const OutputType& b) const
+  {
+    return OutputType(a.first + b.first, a.second + b.second);
+  }
+};
 }
 
 STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
@@ -98,8 +95,8 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 
   // It is important to remember that the order is "input", "bright", "dark"
-  auto vector = vtkm::cont::make_ArrayHandleCompositeVector(input, bright,
-                                                            dark);
+  auto vector =
+    vtkm::cont::make_ArrayHandleCompositeVector(input, bright, dark);
 
   using ResultType = vtkm::Pair<uint64_t, uint64_t>;
   const ResultType initialVal(0, 0);
@@ -129,8 +126,9 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
     auto data = block.data.get();
     for(int i=0; i<block.header.imagesInBlock; i++) {
 #ifdef VTKm
-      auto stemValues = calculateSTEMValuesParallel(data, i*numberOfPixels, numberOfPixels,
-                                                    brightFieldMask, darkFieldMask);
+      auto stemValues =
+        calculateSTEMValuesParallel(data, i * numberOfPixels, numberOfPixels,
+                                    brightFieldMask, darkFieldMask);
 #else
       auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
                                             brightFieldMask, darkFieldMask);
