@@ -47,28 +47,40 @@ STEMValues calculateSTEMValues(uint16_t data[], int offset,
 namespace {
   struct MaskAndAdd
   {
+    using MasksType = vtkm::Pair<uint16_t,uint16_t>;
+    using MasksAndInputType = vtkm::Pair<MasksType, uint16_t>;
+    using OutputType = vtkm::Pair<uint64_t, uint64_t>;
+
     VTKM_EXEC_CONT
-    uint64_t operator()(const vtkm::Pair<uint16_t,uint16_t>& a, const vtkm::Pair<uint16_t,uint16_t>& b) const
+    OutputType operator()(const MasksAndInputType& a,
+                          const MasksAndInputType& b) const
     {
-      return (a.first & a.second) + (b.first & b.second);
+      return OutputType((a.first.first & a.second) +
+                        (b.first.first & b.second),
+                        (a.first.second & a.second) +
+                        (b.first.second & b.second));
     }
 
     VTKM_EXEC_CONT
-    uint64_t operator()(uint64_t a, uint64_t b) const
+    OutputType operator()(const MasksAndInputType& a,
+                          const OutputType& b) const
     {
-      return a + b;
+      return OutputType((a.first.first & a.second) + b.first,
+                        (a.first.second & a.second) + b.second);
     }
 
     VTKM_EXEC_CONT
-    uint64_t operator()(const vtkm::Pair<uint16_t,uint16_t>& a, uint64_t b) const
+    OutputType operator()(const OutputType& a,
+                          const MasksAndInputType& b) const
     {
-      return (a.first & a.second) + b;
+      return MaskAndAdd{}(b, a);
     }
 
     VTKM_EXEC_CONT
-    uint64_t operator()(uint64_t a, const vtkm::Pair<uint16_t,uint16_t>& b) const
+    OutputType operator()(const OutputType& a,
+                          const OutputType& b) const
     {
-      return a + (b.first & b.second);
+      return OutputType(a.first + b.first, a.second + b.second);
     }
   };
 }
@@ -87,14 +99,17 @@ STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
   auto keysDark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
   auto input = vtkm::cont::make_ArrayHandle(&data[offset], numberOfPixels);
 
-  auto inputAndBright = vtkm::cont::make_ArrayHandleZip(input, keysBright);
-  auto inputAndDark = vtkm::cont::make_ArrayHandleZip(input, keysDark);
+  // It is important to remember that "bright" is first and "dark" is second
+  auto brightAndDark = vtkm::cont::make_ArrayHandleZip(keysBright, keysDark);
+  auto inputAndMasks = vtkm::cont::make_ArrayHandleZip(brightAndDark, input);
 
-  const uint64_t initialVal = 0;
-  stemValues.bright = vtkm::cont::Algorithm::Reduce(inputAndBright, initialVal,
-                                                    MaskAndAdd{} );
-  stemValues.dark = vtkm::cont::Algorithm::Reduce(inputAndDark, initialVal,
-                                                  MaskAndAdd{} );
+  using ResultType = vtkm::Pair<uint64_t, uint64_t>;
+  const ResultType initialVal(0, 0);
+  ResultType result =
+    vtkm::cont::Algorithm::Reduce(inputAndMasks, initialVal, MaskAndAdd{});
+
+  stemValues.bright = result.first;
+  stemValues.dark = result.second;
 
   return stemValues;
 }
