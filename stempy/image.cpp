@@ -54,6 +54,12 @@ struct MaskAndAdd
   using OutputType = vtkm::Pair<uint64_t, uint64_t>;
 
   VTKM_EXEC_CONT
+  OutputType operator()(const InputType& a) const
+  {
+    return OutputType(a[0] & a[1], a[0] & a[2]);
+  }
+
+  VTKM_EXEC_CONT
   OutputType operator()(const InputType& a, const InputType& b) const
   {
     // Cast one of these to uint64_t to ensure no overflow on addition
