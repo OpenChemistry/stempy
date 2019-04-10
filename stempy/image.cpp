@@ -1,5 +1,12 @@
 #include "image.h"
+
+#include "config.h"
 #include "mask.h"
+
+#ifdef VTKm
+#include <vtkm/cont/Algorithm.h>
+#include <vtkm/cont/ArrayHandleCompositeVector.h>
+#endif
 
 #include <memory>
 
@@ -37,6 +44,71 @@ STEMValues calculateSTEMValues(uint16_t data[], int offset,
   return stemValues;
 }
 
+#ifdef VTKm
+namespace {
+struct MaskAndAdd
+{
+  // Order is "input", "bright", and "dark"
+  using InputType = vtkm::Vec<uint16_t, 3>;
+  // Order is "bright" and "dark"
+  using OutputType = vtkm::Pair<uint64_t, uint64_t>;
+
+  VTKM_EXEC_CONT
+  OutputType operator()(const InputType& a, const InputType& b) const
+  {
+    // Cast one of these to uint64_t to ensure no overflow on addition
+    return OutputType(static_cast<uint64_t>(a[0] & a[1]) + (b[0] & b[1]),
+                      static_cast<uint64_t>(a[0] & a[2]) + (b[0] & b[2]));
+  }
+
+  VTKM_EXEC_CONT
+  OutputType operator()(const InputType& a, const OutputType& b) const
+  {
+    return OutputType((a[0] & a[1]) + b.first, (a[0] & a[2]) + b.second);
+  }
+
+  VTKM_EXEC_CONT
+  OutputType operator()(const OutputType& a, const InputType& b) const
+  {
+    return MaskAndAdd{}(b, a);
+  }
+
+  VTKM_EXEC_CONT
+  OutputType operator()(const OutputType& a, const OutputType& b) const
+  {
+    return OutputType(a.first + b.first, a.second + b.second);
+  }
+};
+}
+
+STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
+                                       int numberOfPixels,
+                                       uint16_t brightFieldMask[],
+                                       uint16_t darkFieldMask[],
+                                       uint32_t imageNumber = -1)
+{
+  STEMValues stemValues;
+  stemValues.imageNumber = imageNumber;
+
+  auto input = vtkm::cont::make_ArrayHandle(&data[offset], numberOfPixels);
+  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
+  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
+
+  // It is important to remember that the order is "input", "bright", "dark"
+  auto vector =
+    vtkm::cont::make_ArrayHandleCompositeVector(input, bright, dark);
+
+  using ResultType = vtkm::Pair<uint64_t, uint64_t>;
+  const ResultType initialVal(0, 0);
+  ResultType result =
+    vtkm::cont::Algorithm::Reduce(vector, initialVal, MaskAndAdd{});
+
+  stemValues.bright = result.first;
+  stemValues.dark = result.second;
+
+  return stemValues;
+}
+#endif
 
 STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  int innerRadius, int outerRadius)
 {
@@ -53,8 +125,14 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   for(const Block &block: blocks) {
     auto data = block.data.get();
     for(int i=0; i<block.header.imagesInBlock; i++) {
+#ifdef VTKm
+      auto stemValues =
+        calculateSTEMValuesParallel(data, i * numberOfPixels, numberOfPixels,
+                                    brightFieldMask, darkFieldMask);
+#else
       auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
                                             brightFieldMask, darkFieldMask);
+#endif
       image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
       image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
     }
