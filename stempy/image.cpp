@@ -125,9 +125,11 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
   auto darkFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, innerRadius, outerRadius);
 
+#ifdef VTKm
   // Only transfer the mask once.
   auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
+#endif
 
   for(const Block &block: blocks) {
     auto data = block.data.get();
