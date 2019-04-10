@@ -24,34 +24,6 @@ double calculateVariance(std::vector<int16_t>& values, double mean)
   return (variance / (values.size() - 1)) - pow(mean, 2.0);
 }
 
-std::pair<int16_t, int16_t> findMinMax(std::vector<int16_t>& values)
-{
-  auto min = values[0], max = values[0];
-  for (int i = 1; i < values.size(); i++) {
-    if (values[i] < min) {
-      min = values[i];
-    }
-    if (values[i] > max) {
-      max = values[i];
-    }
-  }
-
-  return std::make_pair(min, max);
-}
-
-uint64_t findMax(std::vector<int16_t>& values)
-{
-  auto max = values[0];
-
-  for (int i = 1; i < values.size(); i++) {
-    if (values[i] > max) {
-      max = values[i];
-    }
-  }
-
-  return max;
-}
-
 class GaussianErrorFunction : public lsq::ErrorFunction<double>
 {
 
@@ -119,9 +91,9 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
   auto xrayThreshold = mean + xRayThresholdNSigma * stdDev;
 
   // Now generate a histograms
-  auto minMax = findMinMax(samples);
-  auto minSample = std::ceil(std::get<0>(minMax));
-  auto maxSample = std::ceil(std::get<1>(minMax));
+  auto minMax = std::minmax_element(samples.begin(), samples.end());
+  auto minSample = *minMax.first;
+  auto maxSample = std::ceil(*minMax.second);
   auto maxBin = std::min(static_cast<int>(maxSample),
                          static_cast<int>(mean + xrayThreshold * stdDev));
   auto minBin = std::max(static_cast<int>(minSample),
