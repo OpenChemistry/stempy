@@ -6,6 +6,7 @@
 #ifdef VTKm
 #include <vtkm/cont/Algorithm.h>
 #include <vtkm/cont/ArrayHandleCompositeVector.h>
+#include <vtkm/cont/ArrayHandleView.h>
 #endif
 
 #include <memory>
@@ -87,18 +88,14 @@ struct MaskAndAdd
 };
 }
 
-STEMValues calculateSTEMValuesParallel(uint16_t data[], int offset,
-                                       int numberOfPixels,
-                                       uint16_t brightFieldMask[],
-                                       uint16_t darkFieldMask[],
+template<typename Storage>
+STEMValues calculateSTEMValuesParallel(vtkm::cont::ArrayHandle<uint16_t, Storage> const& input,
+                                       vtkm::cont::ArrayHandle<uint16_t> const& bright,
+                                       vtkm::cont::ArrayHandle<uint16_t> const& dark,
                                        uint32_t imageNumber = -1)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
-
-  auto input = vtkm::cont::make_ArrayHandle(&data[offset], numberOfPixels);
-  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
-  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 
   // It is important to remember that the order is "input", "bright", "dark"
   auto vector =
@@ -128,13 +125,21 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
   auto darkFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, innerRadius, outerRadius);
 
+  // Only transfer the mask once.
+  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
+  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
+
   for(const Block &block: blocks) {
     auto data = block.data.get();
+#ifdef VTKm
+    // Transfer the entire block of data at once.
+    auto dataHandle = vtkm::cont::make_ArrayHandle(data, numberOfPixels * block.header.imagesInBlock);
+#endif
     for(int i=0; i<block.header.imagesInBlock; i++) {
 #ifdef VTKm
-      auto stemValues =
-        calculateSTEMValuesParallel(data, i * numberOfPixels, numberOfPixels,
-                                    brightFieldMask, darkFieldMask);
+     // Use view to the array already transfered
+     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i*numberOfPixels, numberOfPixels);
+     auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
 #else
       auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
                                             brightFieldMask, darkFieldMask);
