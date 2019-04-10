@@ -57,8 +57,8 @@ namespace {
     OutputType operator()(const InputType& a, const InputType& b) const
     {
       // Cast one of these to uint64_t to ensure no overflow on addition
-      return OutputType(static_cast<uint64_t>(a[0] & a[1]) + b[0] & b[1],
-                        static_cast<uint64_t>(a[0] & a[2]) + b[0] & b[2]);
+      return OutputType(static_cast<uint64_t>(a[0] & a[1]) + (b[0] & b[1]),
+                        static_cast<uint64_t>(a[0] & a[2]) + (b[0] & b[2]));
     }
 
     VTKM_EXEC_CONT
