@@ -41,7 +41,6 @@ std::pair<int16_t, int16_t> findMinMax(std::vector<int16_t>& values)
 
 uint64_t findMax(std::vector<int16_t>& values)
 {
-
   auto max = values[0];
 
   for (int i = 1; i < values.size(); i++) {
