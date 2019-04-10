@@ -41,8 +41,15 @@ if(VTKm_FOUND)
   list(APPEND _libs vtkm_cont)
 endif()
 
-add_library(stem
-  ${_src})
+if(TARGET vtkm::cuda)
+  # Compile with CUDA
+  vtkm_compile_as_cuda(cudaSource ${_src})
+  add_library(stem ${cudaSource})
+  target_compile_definitions(stem PRIVATE
+                             "VTKM_DEVICE_ADAPTER=VTKM_DEVICE_ADAPTER_CUDA")
+else()
+  add_library(stem ${_src})
+endif()
 
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -53,9 +60,15 @@ endif()
 target_link_libraries(stem
   PRIVATE ${_libs})
 
-add_executable(stemcli
-  stempy/main.cpp
-)
+if(TARGET vtkm::cuda)
+  # Compile with CUDA
+  vtkm_compile_as_cuda(cudaSource stempy/main.cpp)
+  add_executable(stemcli ${cudaSource})
+  target_compile_definitions(stemcli PRIVATE
+                             "VTKM_DEVICE_ADAPTER=VTKM_DEVICE_ADAPTER_CUDA")
+else()
+  add_executable(stemcli stempy/main.cpp)
+endif()
 
 target_link_libraries(stemcli
   PRIVATE stem)
