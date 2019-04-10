@@ -36,8 +36,9 @@ endif()
 
 set(_libs Threads::Threads)
 
-find_package(VTKm COMPONENTS OpenMP)
-if(VTKm_FOUND)
+option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
+if (stempy_ENABLE_VTKm)
+  find_package(VTKm COMPONENTS OpenMP REQUIRED)
   list(APPEND _libs vtkm_cont)
 endif()
 
