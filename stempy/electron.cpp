@@ -6,6 +6,135 @@
 
 #include <lsq/lsqcpp.h>
 
+#include "config.h"
+
+#ifdef VTKm
+#include <vtkm/cont/ArrayHandle.h>
+#include <vtkm/cont/DataSetBuilderUniform.h>
+#include <vtkm/filter/FilterDataSet.h>
+#include <vtkm/worklet/DispatcherPointNeighborhood.h>
+#include <vtkm/worklet/WorkletPointNeighborhood.h>
+#endif
+
+#ifdef VTKm
+namespace {
+
+struct GetMaximalPixelsPolicy : public vtkm::filter::PolicyBase<GetMaximalPixelsPolicy>
+{
+  using FieldTypeList = vtkm::ListTagBase<vtkm::UInt16>;
+};
+
+struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
+{
+  using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
+
+  using ControlSignature = void(CellSetIn,
+                                FieldInNeighborhood neighborhood,
+                                FieldOut isMaximal);
+
+  using ExecutionSignature = void(_2, _3);
+
+  template <typename NeighIn>
+  VTKM_EXEC void operator()(const NeighIn& neighborhood,
+                            vtkm::UInt16& isMaximal) const
+  {
+    isMaximal = 0;
+
+    auto current = neighborhood.Get(0, 0, 0);
+    for (int i = -1; i < 2; ++i) {
+      for (int j = -1; j < 2; ++j) {
+        if (i == 0 && j == 0)
+          continue;
+        if (current <= neighborhood.Get(i, j, 0))
+          return;
+      }
+    }
+
+    isMaximal = 1;
+  }
+};
+
+class GetMaximalPixels : public vtkm::filter::FilterDataSet<GetMaximalPixels>
+{
+public:
+  template <typename Policy>
+  VTKM_CONT vtkm::cont::DataSet DoExecute(const vtkm::cont::DataSet& input,
+                                          vtkm::filter::PolicyBase<Policy> policy)
+
+  {
+    using DispatcherType = vtkm::worklet::DispatcherPointNeighborhood<IsMaximalPixel>;
+
+    vtkm::cont::ArrayHandle<vtkm::UInt16> inputPixels;
+    vtkm::cont::ArrayHandle<vtkm::UInt16> maximalPixels;
+
+    // Get the coordinate system we are using for the 2D area
+    const vtkm::cont::DynamicCellSet& cells = input.GetCellSet(this->GetActiveCellSetIndex());
+
+    // Get the input pixels
+    input.GetField("inputPixels", vtkm::cont::Field::Association::POINTS).GetData().CopyTo(inputPixels);
+
+    // Execute
+    DispatcherType dispatcher;
+    dispatcher.Invoke(vtkm::filter::ApplyPolicy(cells, policy), inputPixels, maximalPixels);
+
+    // Get the output
+    vtkm::cont::DataSet output;
+    output.AddCellSet(cells);
+    output.AddCoordinateSystem(input.GetCoordinateSystem(this->GetActiveCoordinateSystemIndex()));
+
+    vtkm::cont::Field maximalPixelsField("maximalPixels", vtkm::cont::Field::Association::POINTS, maximalPixels);
+    output.AddField(maximalPixelsField);
+
+    return output;
+  }
+
+  template <typename T, typename StorageType, typename DerivedPolicy>
+  VTKM_CONT bool DoMapField(vtkm::cont::DataSet&,
+                            const vtkm::cont::ArrayHandle<T, StorageType>&,
+                            const vtkm::filter::FieldMetadata&,
+                            vtkm::filter::PolicyBase<DerivedPolicy>)
+  {
+    return false;
+  }
+};
+
+std::vector<std::pair<int, int>> maximalPointsParallel(
+  const std::vector<uint16_t>& frame, int rows, int columns)
+{
+  // Build the data set
+  vtkm::cont::DataSetBuilderUniform builder;
+  vtkm::cont::DataSet data = builder.Create(vtkm::Id2(rows, columns));
+
+  // Set the input pixels
+  auto inputPixelsField =
+    vtkm::cont::make_Field("inputPixels", vtkm::cont::Field::Association::POINTS, frame);
+  data.AddField(inputPixelsField);
+
+  // Execute
+  GetMaximalPixels filter;
+  vtkm::cont::DataSet result = filter.Execute(data, GetMaximalPixelsPolicy{});
+
+  // Get the output
+  vtkm::cont::ArrayHandle<vtkm::UInt16> maximalPixels;
+  result.GetField("maximalPixels", vtkm::cont::Field::Association::POINTS).GetData().CopyTo(maximalPixels);
+
+  // Convert to std::vector<std::pair<int, int>>
+  std::vector<std::pair<int, int>> outputVec;
+  auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
+  for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
+    if (maximalPixelsPortal.Get(i) == 1) {
+      auto row = i / columns;
+      auto column = i % columns;
+      outputVec.push_back(std::make_pair(row, column));
+    }
+  }
+
+  // Done
+  return outputVec;
+}
+} // end namespace
+#endif
+
 namespace stempy {
 
 double calculateMean(std::vector<int16_t>& values)
@@ -229,9 +358,14 @@ std::vector<std::vector<std::pair<int, int>>> electronCount(
         }
       }
 
+#ifdef VTKm
+      events[block.header.imageNumbers[i]] =
+        maximalPointsParallel(frame, block.header.rows, block.header.columns);
+#else
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
         maximalPoints(frame, block.header.rows, block.header.columns);
+#endif
     }
   }
 
