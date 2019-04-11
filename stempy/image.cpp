@@ -88,11 +88,11 @@ struct MaskAndAdd
 };
 }
 
-template<typename Storage>
-STEMValues calculateSTEMValuesParallel(vtkm::cont::ArrayHandle<uint16_t, Storage> const& input,
-                                       vtkm::cont::ArrayHandle<uint16_t> const& bright,
-                                       vtkm::cont::ArrayHandle<uint16_t> const& dark,
-                                       uint32_t imageNumber = -1)
+template <typename Storage>
+STEMValues calculateSTEMValuesParallel(
+  vtkm::cont::ArrayHandle<uint16_t, Storage> const& input,
+  vtkm::cont::ArrayHandle<uint16_t> const& bright,
+  vtkm::cont::ArrayHandle<uint16_t> const& dark, uint32_t imageNumber = -1)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
@@ -135,13 +135,15 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
     auto data = block.data.get();
 #ifdef VTKm
     // Transfer the entire block of data at once.
-    auto dataHandle = vtkm::cont::make_ArrayHandle(data, numberOfPixels * block.header.imagesInBlock);
+    auto dataHandle = vtkm::cont::make_ArrayHandle(
+      data, numberOfPixels * block.header.imagesInBlock);
 #endif
     for(int i=0; i<block.header.imagesInBlock; i++) {
 #ifdef VTKm
-     // Use view to the array already transfered
-     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i*numberOfPixels, numberOfPixels);
-     auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+      // Use view to the array already transfered
+      auto view = vtkm::cont::make_ArrayHandleView(
+        dataHandle, i * numberOfPixels, numberOfPixels);
+      auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
 #else
       auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
                                             brightFieldMask, darkFieldMask);
