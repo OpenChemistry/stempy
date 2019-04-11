@@ -1,0 +1,23 @@
+language: cpp
+
+compiler:
+    - gcc
+    - clang
+
+dist: trusty
+
+sudo: required
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq build-essential cmake clang
+
+install:
+
+script:
+    - mkdir build
+    - cd build
+    - cmake -DBUILD_TESTS=True -DBUILD_EXAMPLES=True ..
+    - make
+    - ./run_tests
+    - ./my_error_function

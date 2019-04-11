@@ -24,6 +24,13 @@ include_directories(
   ${SocketIOClientCpp_INCLUDE_DIRS}
 )
 
+include_directories(
+  SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/least-squares-cpp/include
+)
+
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 
@@ -31,7 +38,8 @@ set(_vtkm_src
   stempy/image.cpp
 )
 set(_src stempy/reader.cpp
-  stempy/mask.cpp)
+  stempy/mask.cpp
+  stempy/electron.cpp)
 
 if(SocketIOClientCpp_FOUND)
   list(APPEND _src stempy/sioclient.cpp)
@@ -39,8 +47,9 @@ endif()
 
 set(_libs Threads::Threads)
 
-find_package(VTKm COMPONENTS OpenMP)
-if(VTKm_FOUND)
+option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
+if (stempy_ENABLE_VTKm)
+  find_package(VTKm COMPONENTS OpenMP REQUIRED)
   list(APPEND _libs vtkm_cont)
 endif()
 
