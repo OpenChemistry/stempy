@@ -26,9 +26,12 @@ include_directories(
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+
+set(_vtkm_src
+  stempy/image.cpp
+)
 set(_src stempy/reader.cpp
-  stempy/mask.cpp
-  stempy/image.cpp)
+  stempy/mask.cpp)
 
 if(SocketIOClientCpp_FOUND)
   list(APPEND _src stempy/sioclient.cpp)
@@ -43,12 +46,10 @@ endif()
 
 if(TARGET vtkm::cuda)
   # Compile with CUDA
-  vtkm_compile_as_cuda(cudaSource ${_src})
-  add_library(stem ${cudaSource})
-  target_compile_definitions(stem PRIVATE
-                             "VTKM_DEVICE_ADAPTER=VTKM_DEVICE_ADAPTER_CUDA")
+  vtkm_compile_as_cuda(cudaSource ${_vtkm_src})
+  add_library(stem ${cudaSource} ${_src})
 else()
-  add_library(stem ${_src})
+  add_library(stem ${_src} ${_vtkm_src})
 endif()
 
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -60,15 +61,7 @@ endif()
 target_link_libraries(stem
   PRIVATE ${_libs})
 
-if(TARGET vtkm::cuda)
-  # Compile with CUDA
-  vtkm_compile_as_cuda(cudaSource stempy/main.cpp)
-  add_executable(stemcli ${cudaSource})
-  target_compile_definitions(stemcli PRIVATE
-                             "VTKM_DEVICE_ADAPTER=VTKM_DEVICE_ADAPTER_CUDA")
-else()
-  add_executable(stemcli stempy/main.cpp)
-endif()
+add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
   PRIVATE stem)
