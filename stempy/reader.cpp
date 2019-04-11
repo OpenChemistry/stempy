@@ -197,25 +197,30 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
 
   int numberOfPixels = firstResult.size()*results.size();
 
-  auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels]
-                      (const string& eventName, uint64_t* pixelValues,
-                          uint32_t* pixelIndexes, int numberOfPixes) {
+  auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels](
+    const string& eventName, const std::vector<uint64_t>& pixelValues,
+    const std::vector<uint32_t>& pixelIndexes, int numberOfPixes) {
     auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
     msg->insert("streamId", to_string(streamId));
     msg->insert("imageId", to_string(imageId));
     auto data = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
     // TODO: Can probably get rid these copies
-    data->insert("values", std::make_shared<std::string>(reinterpret_cast <char *>(pixelValues), numberOfPixels*sizeof(uint64_t)));
-    data->insert("indexes", std::make_shared<std::string>(reinterpret_cast <char *>(pixelIndexes), numberOfPixels*sizeof(uint32_t)));
+    data->insert("values", std::make_shared<std::string>(
+                             reinterpret_cast<const char*>(pixelValues.data()),
+                             numberOfPixels * sizeof(uint64_t)));
+    data->insert("indexes",
+                 std::make_shared<std::string>(
+                   reinterpret_cast<const char*>(pixelIndexes.data()),
+                   numberOfPixels * sizeof(uint32_t)));
     msg->insert("data", data);
 
     ioClient.emit(eventName, msg);
   };
 
   // Values
-  uint64_t brightPixels[numberOfPixels];
-  uint64_t darkPixels[numberOfPixels];
-  uint32_t pixelIndexes[numberOfPixels];
+  std::vector<uint64_t> brightPixels(numberOfPixels);
+  std::vector<uint64_t> darkPixels(numberOfPixels);
+  std::vector<uint32_t> pixelIndexes(numberOfPixels);
 
   auto i = 0;
   auto processResult = [&brightPixels, &darkPixels, &pixelIndexes, &i](vector<STEMValues> &values) {
