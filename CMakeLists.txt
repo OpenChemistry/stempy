@@ -4,6 +4,7 @@ project(stempy)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(InstallLocation)
+include(CMakeDependentOption)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -33,9 +34,12 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+
+set(_vtkm_src
+  stempy/image.cpp
+)
 set(_src stempy/reader.cpp
   stempy/mask.cpp
-  stempy/image.cpp
   stempy/electron.cpp)
 
 if(SocketIOClientCpp_FOUND)
@@ -45,13 +49,27 @@ endif()
 set(_libs Threads::Threads)
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
+cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
+cmake_dependent_option(stempy_ENABLE_OPENMP "Build VTK-m OpenMP backend" ON "stempy_ENABLE_VTKm" ON)
 if (stempy_ENABLE_VTKm)
-  find_package(VTKm COMPONENTS OpenMP REQUIRED)
+  set(_components "")
+  if(stempy_ENABLE_CUDA)
+      list(APPEND _components "CUDA")
+  endif()
+  if(stempy_ENABLE_OPENMP)
+      list(APPEND _components "OpenMP")
+  endif()
+  find_package(VTKm COMPONENTS "${_components}" REQUIRED)
   list(APPEND _libs vtkm_cont)
 endif()
 
-add_library(stem
-  ${_src})
+if(stempy_ENABLE_CUDA AND TARGET vtkm::cuda)
+  # Compile with CUDA
+  vtkm_compile_as_cuda(cudaSource ${_vtkm_src})
+  add_library(stem ${cudaSource} ${_src})
+else()
+  add_library(stem ${_src} ${_vtkm_src})
+endif()
 
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -62,9 +80,7 @@ endif()
 target_link_libraries(stem
   PRIVATE ${_libs})
 
-add_executable(stemcli
-  stempy/main.cpp
-)
+add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
   PRIVATE stem)
