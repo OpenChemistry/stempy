@@ -83,6 +83,10 @@ Header StreamReader::readHeaderVersion2() {
 
   uint32_t firstImageNumber;
   read(&firstImageNumber, sizeof(uint32_t));
+  // HACK!
+  // Our current datasets doesn't seem to have a valid firstImageNumber, so we
+  // reset to zero here!
+  firstImageNumber = 0;
 
   int index = 0;
   header.imagesInBlock = 1600;
