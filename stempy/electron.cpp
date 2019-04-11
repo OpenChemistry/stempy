@@ -21,7 +21,7 @@ namespace {
 
 struct GetMaximalPixelsPolicy : public vtkm::filter::PolicyBase<GetMaximalPixelsPolicy>
 {
-  using FieldTypeList = vtkm::ListTagBase<vtkm::UInt16>;
+  using FieldTypeList = vtkm::ListTagBase<vtkm::UInt8, vtkm::UInt16>;
 };
 
 struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
@@ -36,7 +36,7 @@ struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
 
   template <typename NeighIn>
   VTKM_EXEC void operator()(const NeighIn& neighborhood,
-                            vtkm::UInt16& isMaximal) const
+                            vtkm::UInt8& isMaximal) const
   {
     isMaximal = 0;
 
@@ -65,7 +65,7 @@ public:
     using DispatcherType = vtkm::worklet::DispatcherPointNeighborhood<IsMaximalPixel>;
 
     vtkm::cont::ArrayHandle<vtkm::UInt16> inputPixels;
-    vtkm::cont::ArrayHandle<vtkm::UInt16> maximalPixels;
+    vtkm::cont::ArrayHandle<vtkm::UInt8> maximalPixels;
 
     // Get the coordinate system we are using for the 2D area
     const vtkm::cont::DynamicCellSet& cells = input.GetCellSet(this->GetActiveCellSetIndex());
@@ -115,7 +115,7 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
   vtkm::cont::DataSet result = filter.Execute(data, GetMaximalPixelsPolicy{});
 
   // Get the output
-  vtkm::cont::ArrayHandle<vtkm::UInt16> maximalPixels;
+  vtkm::cont::ArrayHandle<vtkm::UInt8> maximalPixels;
   result.GetField("maximalPixels", vtkm::cont::Field::Association::POINTS).GetData().CopyTo(maximalPixels);
 
   // Convert to std::vector<std::pair<int, int>>
