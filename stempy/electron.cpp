@@ -119,8 +119,9 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
   result.GetField("maximalPixels", vtkm::cont::Field::Association::POINTS).GetData().CopyTo(maximalPixels);
 
   // Convert to std::vector<std::pair<int, int>>
-  std::vector<std::pair<int, int>> outputVec;
   auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
+  std::vector<std::pair<int, int>> outputVec;
+  outputVec.reserve(maximalPixelsPortal.GetNumberOfValues());
   for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
     if (maximalPixelsPortal.Get(i) == 1) {
       auto row = i / columns;
