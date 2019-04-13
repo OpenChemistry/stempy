@@ -54,8 +54,7 @@ struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
 {
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
-  using ControlSignature = void(CellSetIn,
-                                FieldInOutPoint value,
+  using ControlSignature = void(CellSetIn, FieldInOutPoint value,
                                 FieldInPoint background);
 
   using ExecutionSignature = void(_2, _3);
@@ -69,8 +68,7 @@ struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
 
   VTKM_CONT
   SubtractAndThreshold(double lower, double upper)
-    : m_lower(lower),
-      m_upper(upper){};
+    : m_lower(lower), m_upper(upper){};
 
 private:
   double m_lower;
@@ -85,15 +83,18 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
   vtkm::cont::CellSetStructured<2> cellSet("frame");
   cellSet.SetPointDimensions(vtkm::Id2(rows, columns));
 
+  // Input handles
   auto frameHandle = vtkm::cont::make_ArrayHandle(frame);
-  vtkm::cont::ArrayHandle<bool> maximalPixels;
-
   auto darkRefHandle =
     vtkm::cont::make_ArrayHandle(darkReferenceData, rows * columns);
 
+  // Output
+  vtkm::cont::ArrayHandle<bool> maximalPixels;
+
   vtkm::worklet::Invoker invoke;
-  // Background subtraction
-  invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet, frameHandle, darkRefHandle);
+  // Background subtraction and thresholding
+  invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet,
+         frameHandle, darkRefHandle);
   // Find maximal pixels
   invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
 
