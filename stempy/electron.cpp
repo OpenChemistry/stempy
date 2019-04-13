@@ -10,6 +10,7 @@
 
 #ifdef VTKm
 #include <vtkm/cont/ArrayHandle.h>
+#include <vtkm/cont/ArrayHandleView.h>
 #include <vtkm/cont/CellSetStructured.h>
 #include <vtkm/worklet/Invoker.h>
 #include <vtkm/worklet/WorkletMapTopology.h>
@@ -75,18 +76,15 @@ private:
   double m_upper;
 };
 
+template <typename Storage>
 std::vector<std::pair<int, int>> maximalPointsParallel(
-  std::vector<uint16_t>& frame, int rows, int columns,
-  double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
+  vtkm::cont::ArrayHandle<uint16_t, Storage>& frameHandle, int rows,
+  int columns, const vtkm::cont::ArrayHandle<double>& darkRefHandle,
+  double backgroundThreshold, double xRayThreshold)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet("frame");
   cellSet.SetPointDimensions(vtkm::Id2(rows, columns));
-
-  // Input handles
-  auto frameHandle = vtkm::cont::make_ArrayHandle(frame);
-  auto darkRefHandle =
-    vtkm::cont::make_ArrayHandle(darkReferenceData, rows * columns);
 
   // Output
   vtkm::cont::ArrayHandle<bool> maximalPixels;
@@ -323,20 +321,29 @@ std::vector<std::vector<std::pair<int, int>>> electronCount(
 
   // Matrix to hold electron events.
   std::vector<std::vector<std::pair<int, int>>> events(scanRows * scanColumns);
-  int frameIndex = 0;
   for (const Block& block : blocks) {
     auto data = block.data.get();
-    for (int i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart = data + i * block.header.rows * block.header.columns;
-      std::vector<uint16_t> frame(
-        frameStart, frameStart + block.header.rows * block.header.columns);
-
+    const auto numberOfPixels = block.header.rows * block.header.columns;
 #ifdef VTKm
+    auto darkRefHandle =
+      vtkm::cont::make_ArrayHandle(darkReference.data.get(), numberOfPixels);
+    // Transfer the entire block of data at once.
+    // Make a deep copy since we will modify it.
+    auto dataHandle = vtkm::cont::make_ArrayHandle(
+      data, block.header.imagesInBlock * numberOfPixels, vtkm::CopyFlag::On);
+#endif
+    for (int i = 0; i < block.header.imagesInBlock; i++) {
+#ifdef VTKm
+      // Use view to the array already transfered
+      auto frameView = vtkm::cont::make_ArrayHandleView(
+        dataHandle, i * numberOfPixels, numberOfPixels);
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, block.header.rows, block.header.columns,
-        darkReference.data.get(), backgroundThreshold, xRayThreshold);
+        frameView, block.header.rows, block.header.columns, darkRefHandle,
+        backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.rows * block.header.columns; j++) {
+      auto frameStart = data + i * numberOfPixels;
+      std::vector<uint16_t> frame(frameStart, frameStart + numberOfPixels);
+      for (int j = 0; j < numberOfPixels; j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
         // Threshold the electron events
