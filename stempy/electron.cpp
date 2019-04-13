@@ -23,33 +23,57 @@ struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
   using ControlSignature = void(CellSetIn,
+                                FieldInNeighborhood darkRefNeighborhood,
                                 FieldInNeighborhood neighborhood,
                                 FieldOut isMaximal);
 
-  using ExecutionSignature = void(_2, _3);
+  using ExecutionSignature = void(_2, _3, _4);
 
-  template <typename NeighIn>
-  VTKM_EXEC void operator()(const NeighIn& neighborhood,
-                            bool& isMaximal) const
+  template <typename NeighIn, typename DarkRefNeighIn>
+  VTKM_EXEC void operator()(const DarkRefNeighIn& darkRefNeighborhood,
+                            const NeighIn& neighborhood, bool& isMaximal) const
   {
     isMaximal = false;
 
-    auto current = neighborhood.Get(0, 0, 0);
+    auto current = getThresholdedPixel(neighborhood.Get(0, 0, 0),
+                                       darkRefNeighborhood.Get(0, 0, 0));
     for (int j = -1; j < 2; ++j) {
       for (int i = -1; i < 2; ++i) {
         if (i == 0 && j == 0)
           continue;
-        if (current <= neighborhood.Get(i, j, 0))
+        if (current <= getThresholdedPixel(neighborhood.Get(i, j, 0),
+                                           darkRefNeighborhood.Get(i, j, 0))) {
           return;
+        }
       }
     }
 
     isMaximal = true;
   }
+
+  template <typename PixelType, typename DarkRefType>
+  inline VTKM_EXEC PixelType getThresholdedPixel(PixelType pixel,
+                                                 DarkRefType darkRef) const
+  {
+    auto tmp = static_cast<PixelType>(pixel - darkRef);
+    if (tmp <= m_backgroundThreshold || tmp >= m_xRayThreshold)
+      return 0;
+    return tmp;
+  }
+
+  VTKM_CONT
+  IsMaximalPixel(double backgroundThreshold, double xRayThreshold)
+    : m_backgroundThreshold(backgroundThreshold),
+      m_xRayThreshold(xRayThreshold){};
+
+private:
+  const double m_backgroundThreshold;
+  const double m_xRayThreshold;
 };
 
 std::vector<std::pair<int, int>> maximalPointsParallel(
-  const std::vector<uint16_t>& frame, int rows, int columns)
+  const std::vector<uint16_t>& frame, int rows, int columns,
+  double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet("frame");
@@ -58,8 +82,12 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
   auto frameHandle = vtkm::cont::make_ArrayHandle(frame);
   vtkm::cont::ArrayHandle<bool> maximalPixels;
 
+  auto darkRefHandle =
+    vtkm::cont::make_ArrayHandle(darkReferenceData, rows * columns);
+
   vtkm::worklet::Invoker invoke;
-  invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
+  invoke(IsMaximalPixel{ backgroundThreshold, xRayThreshold }, cellSet,
+         darkRefHandle, frameHandle, maximalPixels);
 
   // Convert to std::vector<std::pair<int, int>>
   auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
@@ -293,6 +321,12 @@ std::vector<std::vector<std::pair<int, int>>> electronCount(
       auto frameStart = data + i * block.header.rows * block.header.columns;
       std::vector<uint16_t> frame(
         frameStart, frameStart + block.header.rows * block.header.columns);
+
+#ifdef VTKm
+      events[block.header.imageNumbers[i]] = maximalPointsParallel(
+        frame, block.header.rows, block.header.columns,
+        darkReference.data.get(), backgroundThreshold, xRayThreshold);
+#else
       for (int j = 0; j < block.header.rows * block.header.columns; j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
@@ -301,11 +335,6 @@ std::vector<std::vector<std::pair<int, int>>> electronCount(
           frame[j] = 0;
         }
       }
-
-#ifdef VTKm
-      events[block.header.imageNumbers[i]] =
-        maximalPointsParallel(frame, block.header.rows, block.header.columns);
-#else
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
         maximalPoints(frame, block.header.rows, block.header.columns);
