@@ -12,6 +12,7 @@
 #include <vtkm/cont/ArrayHandle.h>
 #include <vtkm/cont/CellSetStructured.h>
 #include <vtkm/worklet/Invoker.h>
+#include <vtkm/worklet/WorkletMapTopology.h>
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
@@ -23,56 +24,61 @@ struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
   using ControlSignature = void(CellSetIn,
-                                FieldInNeighborhood darkRefNeighborhood,
                                 FieldInNeighborhood neighborhood,
                                 FieldOut isMaximal);
 
-  using ExecutionSignature = void(_2, _3, _4);
+  using ExecutionSignature = void(_2, _3);
 
-  template <typename NeighIn, typename DarkRefNeighIn>
-  VTKM_EXEC void operator()(const DarkRefNeighIn& darkRefNeighborhood,
-                            const NeighIn& neighborhood, bool& isMaximal) const
+  template <typename NeighIn>
+  VTKM_EXEC void operator()(const NeighIn& neighborhood, bool& isMaximal) const
   {
     isMaximal = false;
 
-    auto current = getThresholdedPixel(neighborhood.Get(0, 0, 0),
-                                       darkRefNeighborhood.Get(0, 0, 0));
+    auto current = neighborhood.Get(0, 0, 0);
     for (int j = -1; j < 2; ++j) {
       for (int i = -1; i < 2; ++i) {
         if (i == 0 && j == 0)
           continue;
-        if (current <= getThresholdedPixel(neighborhood.Get(i, j, 0),
-                                           darkRefNeighborhood.Get(i, j, 0))) {
+        if (current <= neighborhood.Get(i, j, 0))
           return;
-        }
       }
     }
 
     isMaximal = true;
   }
+};
 
-  template <typename PixelType, typename DarkRefType>
-  inline VTKM_EXEC PixelType getThresholdedPixel(PixelType pixel,
-                                                 DarkRefType darkRef) const
+// The types in here, "uint16_t" and "double", are specific for our use case
+// We may want to generalize it in the future
+struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
+{
+  using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
+
+  using ControlSignature = void(CellSetIn,
+                                FieldInOutPoint value,
+                                FieldInPoint background);
+
+  using ExecutionSignature = void(_2, _3);
+
+  VTKM_EXEC void operator()(uint16_t& val, double background) const
   {
-    auto tmp = static_cast<PixelType>(pixel - darkRef);
-    if (tmp <= m_backgroundThreshold || tmp >= m_xRayThreshold)
-      return 0;
-    return tmp;
+    val -= background;
+    if (val <= m_lower || val >= m_upper)
+      val = 0;
   }
 
   VTKM_CONT
-  IsMaximalPixel(double backgroundThreshold, double xRayThreshold)
-    : m_backgroundThreshold(backgroundThreshold),
-      m_xRayThreshold(xRayThreshold){};
+  SubtractAndThreshold(double lower, double upper)
+    : m_lower(lower),
+      m_upper(upper){};
 
 private:
-  const double m_backgroundThreshold;
-  const double m_xRayThreshold;
+  double m_lower;
+  double m_upper;
 };
 
 std::vector<std::pair<int, int>> maximalPointsParallel(
-  const std::vector<uint16_t>& frame, int rows, int columns,
+  std::vector<uint16_t>& frame, int rows, int columns,
   double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
 {
   // Build the data set
@@ -86,8 +92,10 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
     vtkm::cont::make_ArrayHandle(darkReferenceData, rows * columns);
 
   vtkm::worklet::Invoker invoke;
-  invoke(IsMaximalPixel{ backgroundThreshold, xRayThreshold }, cellSet,
-         darkRefHandle, frameHandle, maximalPixels);
+  // Background subtraction
+  invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet, frameHandle, darkRefHandle);
+  // Find maximal pixels
+  invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
 
   // Convert to std::vector<std::pair<int, int>>
   auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
