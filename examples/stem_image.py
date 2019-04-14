@@ -17,13 +17,13 @@ stem_image_data_day = np.zeros((160*160,), dtype=float)
 stem_image_data_night = np.zeros((160*160,), dtype=float)
 
 mask_size = 20
-blocks = []
+files = []
 for f in glob.glob('/data/4dstem/smallScanningDiffraction/data*.dat'):
-    reader = io.reader(f)
-    for b in reader:
-        blocks.append(b)
+    files.append(f)
 
-img = image.create_stem_image(blocks, 160, 160,  40, 288);
+blockiterator = io.blockiterator(files)
+
+img = image.create_stem_image(blockiterator, 160, 160,  40, 288);
 
 save_img(img.bright, 'bright.png')
 save_img(img.dark, 'dark.png')

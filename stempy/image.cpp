@@ -9,6 +9,7 @@
 #include <vtkm/cont/ArrayHandleView.h>
 #endif
 
+#include <iostream>
 #include <memory>
 
 using namespace std;
@@ -113,13 +114,20 @@ STEMValues calculateSTEMValuesParallel(
 }
 #endif
 
-STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  int innerRadius, int outerRadius)
+STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int innerRadius, int outerRadius)
 {
   STEMImage image(rows, columns);
 
+  if (blockIt.atEnd()) {
+    cerr << "Error in " << __FUNCTION__ << ": no blocks to read!\n";
+    return image;
+  }
+
+  const Block& block = *blockIt;
+
   // Get image size from first block
-  auto detectorImageRows = blocks[0].header.rows;
-  auto detectorImageColumns = blocks[0].header.columns;
+  auto detectorImageRows = block.header.rows;
+  auto detectorImageColumns = block.header.columns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
@@ -131,8 +139,8 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
-  for(const Block &block: blocks) {
-    auto data = block.data.get();
+  while(true) {
+    auto data = (*blockIt).data.get();
 #ifdef VTKm
     // Transfer the entire block of data at once.
     auto dataHandle = vtkm::cont::make_ArrayHandle(
@@ -151,6 +159,11 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
       image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
       image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
     }
+
+    // Move to the next block
+    ++blockIt;
+    if (blockIt.atEnd())
+      break;
   }
 
   delete[] brightFieldMask;
