@@ -42,7 +42,7 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
         coordinate_type = np.dtype([('x', np.uint32), ('y', np.uint32)])
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=coordinate_type)
         # For now just assume we have all the frames, so the event index can
-        # be used to derive teh scan_postions.
+        # be used to derive the scan_postions.
         # TODO: This should be passed to use
         scan_positions[...] = [(i // scan_nx, i % scan_nx) for i in range(0, events.shape[0])]
 
