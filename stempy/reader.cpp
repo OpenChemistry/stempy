@@ -29,6 +29,9 @@ StreamReader::StreamReader(const vector<string>& files, uint8_t version)
 {
   // Open up the first file
   openNextFile();
+
+  // Read the first block
+  read();
 }
 
 void StreamReader::openNextFile()

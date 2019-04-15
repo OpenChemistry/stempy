@@ -125,11 +125,9 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
     return image;
   }
 
-  const Block& block = *first;
-
   // Get image size from first block
-  auto detectorImageRows = block.header.rows;
-  auto detectorImageColumns = block.header.columns;
+  auto detectorImageRows = first->header.rows;
+  auto detectorImageColumns = first->header.columns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
@@ -142,7 +140,8 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
 #endif
 
   for (; first != last; ++first) {
-    auto data = first->data.get();
+    auto& block = *first;
+    auto data = block.data.get();
 #ifdef VTKm
     // Transfer the entire block of data at once.
     auto dataHandle = vtkm::cont::make_ArrayHandle(
