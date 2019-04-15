@@ -9,6 +9,7 @@
 #include <vtkm/cont/ArrayHandleView.h>
 #endif
 
+#include <future>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -115,6 +116,41 @@ STEMValues calculateSTEMValuesParallel(
 }
 #endif
 
+// These should be ran by separate threads
+namespace {
+#ifdef VTKm
+void _runCalculateSTEMValues(Block block, uint32_t numberOfPixels,
+                             const vtkm::cont::ArrayHandle<uint16_t>& bright,
+                             const vtkm::cont::ArrayHandle<uint16_t>& dark,
+                             STEMImage& image)
+#else
+void _runCalculateSTEMValues(Block block, uint32_t numberOfPixels,
+                             uint16_t* brightFieldMask, uint16_t* darkFieldMask,
+                             STEMImage& image)
+#endif
+{
+  auto data = block.data.get();
+#ifdef VTKm
+  // Transfer the entire block of data at once.
+  auto dataHandle = vtkm::cont::make_ArrayHandle(
+    data, numberOfPixels * block.header.imagesInBlock);
+#endif
+  for (int i = 0; i < block.header.imagesInBlock; i++) {
+#ifdef VTKm
+    // Use view to the array already transfered
+    auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
+                                                 numberOfPixels);
+    auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+#else
+    auto stemValues = calculateSTEMValues(
+      data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
+#endif
+    image.bright.data[block.header.imageNumbers[i] - 1] = stemValues.bright;
+    image.dark.data[block.header.imageNumbers[i] - 1] = stemValues.dark;
+  }
+}
+} // end namespace
+
 template <typename InputIt>
 STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
                           int innerRadius, int outerRadius)
@@ -141,28 +177,23 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
+  // Spawn a different thread for each image
+  vector<future<void>> futures;
   for (; first != last; ++first) {
-    auto& block = *first;
-    auto data = block.data.get();
 #ifdef VTKm
-    // Transfer the entire block of data at once.
-    auto dataHandle = vtkm::cont::make_ArrayHandle(
-      data, numberOfPixels * block.header.imagesInBlock);
-#endif
-    for(int i=0; i<block.header.imagesInBlock; i++) {
-#ifdef VTKm
-      // Use view to the array already transfered
-      auto view = vtkm::cont::make_ArrayHandleView(
-        dataHandle, i * numberOfPixels, numberOfPixels);
-      auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+    futures.emplace_back(std::async(std::launch::async, _runCalculateSTEMValues,
+                                    *first, numberOfPixels, std::cref(bright),
+                                    std::cref(dark), std::ref(image)));
 #else
-      auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
-                                            brightFieldMask, darkFieldMask);
+    futures.emplace_back(std::async(std::launch::async, _runCalculateSTEMValues,
+                                    *first, numberOfPixels, brightFieldMask,
+                                    darkFieldMask, std::ref(image)));
 #endif
-      image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
-      image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
-    }
   }
+
+  // Make sure all threads are finished before continuing
+  for (auto& future : futures)
+    future.get();
 
   delete[] brightFieldMask;
   delete[] darkFieldMask;
