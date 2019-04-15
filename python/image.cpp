@@ -41,7 +41,8 @@ PYBIND11_MODULE(_image, m)
     .def_readonly("bright", &STEMImage::bright)
     .def_readonly("dark", &STEMImage::dark);
 
-  m.def("create_stem_image", &createSTEMImage);
+  // Add more template instantiations as we add more types of iterators
+  m.def("create_stem_image", &createSTEMImage<StreamReader::iterator>);
   m.def("calculate_average", &calculateAverage);
   m.def("electron_count", &electronCount);
 }

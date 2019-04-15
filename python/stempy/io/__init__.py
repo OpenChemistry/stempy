@@ -3,7 +3,6 @@ from collections import namedtuple
 import numpy as np
 
 from stempy._io import _reader
-from stempy._io import _blockiterator
 
 class FileVersion(object):
     VERSION1 = 1
@@ -34,11 +33,5 @@ class Reader(_reader):
 
         return block
 
-class BlockIterator(_blockiterator):
-    pass
-
 def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
-
-def blockiterator(files):
-    return BlockIterator(files)

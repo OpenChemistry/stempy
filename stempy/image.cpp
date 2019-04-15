@@ -114,16 +114,18 @@ STEMValues calculateSTEMValuesParallel(
 }
 #endif
 
-STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int innerRadius, int outerRadius)
+template <typename InputIt>
+STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
+                          int innerRadius, int outerRadius)
 {
   STEMImage image(rows, columns);
 
-  if (blockIt.atEnd()) {
+  if (first == last) {
     cerr << "Error in " << __FUNCTION__ << ": no blocks to read!\n";
     return image;
   }
 
-  const Block& block = *blockIt;
+  const Block& block = *first;
 
   // Get image size from first block
   auto detectorImageRows = block.header.rows;
@@ -139,8 +141,8 @@ STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int in
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
-  while(!blockIt.atEnd()) {
-    auto data = (*blockIt).data.get();
+  for (; first != last; ++first) {
+    auto data = first->data.get();
 #ifdef VTKm
     // Transfer the entire block of data at once.
     auto dataHandle = vtkm::cont::make_ArrayHandle(
@@ -159,9 +161,6 @@ STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int in
       image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
       image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
     }
-
-    // Move to the next block
-    ++blockIt;
   }
 
   delete[] brightFieldMask;
@@ -197,5 +196,9 @@ Image<double> calculateAverage(std::vector<Block> &blocks)
   return image;
 }
 
-
+// Instantiate the ones that can be used
+template STEMImage createSTEMImage(StreamReader::iterator first,
+                                   StreamReader::iterator last, int rows,
+                                   int columns, int innerRadius,
+                                   int outerRadius);
 }

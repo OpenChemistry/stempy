@@ -2,7 +2,6 @@
 #include <pybind11/stl.h>
 #include <vector>
 
-#include <stempy/blockiterator.h>
 #include <stempy/reader.h>
 
 namespace py = pybind11;
@@ -34,12 +33,13 @@ PYBIND11_MODULE(_io, m)
     });
 
   py::class_<StreamReader>(m, "_reader")
-    .def(py::init<const std::string &, uint8_t>())
-    .def("read", (Block (StreamReader::*)())&StreamReader::read)
+    .def(py::init<const std::string&, uint8_t>())
+    .def(py::init<const std::vector<std::string>&, uint8_t>())
+    .def("read", (Block & (StreamReader::*)()) & StreamReader::read)
+    .def("begin",
+         (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
+    .def("end", (StreamReader::iterator(StreamReader::*)()) & StreamReader::end)
     .def("process", &StreamReader::process, "", py::arg("stream_id"),
-        py::arg("concurrency") = -1, py::arg("width") = 160,
-        py::arg("height") = 160, py::arg("url") = "http://127.0.0.1:5000");
-
-  py::class_<BlockIterator>(m , "_blockiterator", py::buffer_protocol())
-    .def(py::init<const std::vector<std::string>&>());
+         py::arg("concurrency") = -1, py::arg("width") = 160,
+         py::arg("height") = 160, py::arg("url") = "http://127.0.0.1:5000");
 }

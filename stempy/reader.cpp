@@ -129,10 +129,12 @@ Header StreamReader::readHeaderVersion2() {
   return header;
 }
 
-Block StreamReader::read() {
+Block& StreamReader::read()
+{
+  m_curBlock = Block();
 
   if (atEnd())
-    return Block();
+    return m_curBlock;
 
   // Check that we have a block to read
   auto c = m_stream.peek();
@@ -160,7 +162,8 @@ Block StreamReader::read() {
         throw invalid_argument(ss.str());
     }
 
-    Block b(header);
+    m_curBlock = Block(header);
+    Block& b = m_curBlock;
 
     auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
@@ -170,7 +173,7 @@ Block StreamReader::read() {
     throw invalid_argument("Unexpected EOF while processing stream.");
   }
 
-  return Block();
+  return m_curBlock;
 }
 
 void StreamReader::process(int streamId, int concurrency, int width, int height,
