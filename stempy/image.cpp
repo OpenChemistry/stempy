@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 using namespace std;
 
@@ -121,8 +122,9 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
   STEMImage image(rows, columns);
 
   if (first == last) {
-    cerr << "Error in " << __FUNCTION__ << ": no blocks to read!\n";
-    return image;
+    ostringstream msg;
+    msg << "No blocks to read!";
+    throw invalid_argument(msg.str());
   }
 
   // Get image size from first block

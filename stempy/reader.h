@@ -45,9 +45,6 @@ public:
   void process(int streamId, int concurrency=-1, int width=160, int height=160,
       const std::string& url="http://127.0.0.1:5000");
 
-  // Whether or not we are at the end of all of the files
-  bool atEnd() const { return m_curFileIndex >= m_files.size(); }
-
   Block& currentBlock() { return m_curBlock; }
 
   class iterator;
@@ -110,6 +107,9 @@ private:
   int m_version;
 
   void openNextFile();
+
+  // Whether or not we are at the end of all of the files
+  bool atEnd() const { return m_curFileIndex >= m_files.size(); }
 
   Header readHeaderVersion1();
   Header readHeaderVersion2();

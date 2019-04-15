@@ -27,6 +27,13 @@ Block::Block(const Header& header) :
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   : m_files(files), m_version(version)
 {
+  // If there are no files, throw an exception
+  if (m_files.empty()) {
+    ostringstream msg;
+    msg << "No files provided to StreamReader!";
+    throw invalid_argument(msg.str());
+  }
+
   // Open up the first file
   openNextFile();
 
