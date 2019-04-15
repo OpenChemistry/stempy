@@ -139,7 +139,7 @@ STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int in
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
-  while(true) {
+  while(!blockIt.atEnd()) {
     auto data = (*blockIt).data.get();
 #ifdef VTKm
     // Transfer the entire block of data at once.
@@ -162,8 +162,6 @@ STEMImage createSTEMImage(BlockIterator& blockIt, int rows, int columns,  int in
 
     // Move to the next block
     ++blockIt;
-    if (blockIt.atEnd())
-      break;
   }
 
   delete[] brightFieldMask;

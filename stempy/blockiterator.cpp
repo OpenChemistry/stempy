@@ -38,7 +38,7 @@ const Block* BlockIterator::operator->() const
 BlockIterator& BlockIterator::operator++ ()
 {
   m_block = Block();
-  if (m_streams.size() <= m_curStreamIndex) {
+  if (atEnd()) {
     cerr << "BlockIterator: current stream index is out of bounds!" << endl;
     return *this;
   }
@@ -48,7 +48,7 @@ BlockIterator& BlockIterator::operator++ ()
   if (!m_block.data) {
     // Increment the current stream index and try again
     ++m_curStreamIndex;
-    if (m_streams.size() == m_curStreamIndex)
+    if (atEnd())
       return *this;
     return ++(*this);
   }
