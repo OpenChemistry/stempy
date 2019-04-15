@@ -39,13 +39,18 @@ class StreamReader {
 
 public:
   StreamReader(const std::string &path, uint8_t version=1);
+  StreamReader(const std::vector<std::string>& files, uint8_t version = 1);
 
   Block read();
   void process(int streamId, int concurrency=-1, int width=160, int height=160,
       const std::string& url="http://127.0.0.1:5000");
 
+  // Whether or not we are at the end of all of the files
+  bool atEnd() const { return m_curStreamIndex >= m_streams.size(); }
+
 private:
-  std::ifstream m_stream;
+  std::vector<std::ifstream> m_streams;
+  size_t m_curStreamIndex = 0;
   int m_version;
 
   Header readHeaderVersion1();
@@ -57,6 +62,9 @@ private:
   std::istream & read(T* value, std::streamsize size);
 };
 
+inline StreamReader::StreamReader(const std::string& path, uint8_t version)
+  : StreamReader(std::vector<std::string>{ path }, version)
+{}
 }
 
 #endif

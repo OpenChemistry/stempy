@@ -24,14 +24,19 @@ Block::Block(const Header& header) :
       std::default_delete<uint16_t[]>())
 {}
 
-StreamReader::StreamReader(const std::string& path, uint8_t version)
+StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   : m_version(version)
 {
-  m_stream.open (path, ios::in | ios::binary);
-  if (!m_stream.is_open()) {
-    ostringstream msg;
-    msg << "Unable to open file: " << path;
-    throw invalid_argument(msg.str());
+  m_streams.reserve(files.size());
+  for (const auto& file : files) {
+    m_streams.push_back(ifstream());
+    m_streams.back().open(file, ios::in | ios::binary);
+
+    if (!m_streams.back().is_open()) {
+      ostringstream msg;
+      msg << "Unable to open file: " << file;
+      throw invalid_argument(msg.str());
+    }
   }
 }
 
@@ -42,13 +47,20 @@ istream & StreamReader::read(T& value){
 
 template<typename T>
 istream & StreamReader::read(T* value, streamsize size){
-    m_stream.read(reinterpret_cast<char*>(value), size);
 
-    if (m_stream.eof()) {
-      throw EofException();
+  if (atEnd())
+    throw EofException();
+
+  m_streams[m_curStreamIndex].read(reinterpret_cast<char*>(value), size);
+
+  // If we are at the end of the file, increment the current stream
+  // index and try again
+  if (m_streams[m_curStreamIndex].eof()) {
+    ++m_curStreamIndex;
+    return read(value, size);
     }
 
-    return m_stream;
+    return m_streams[m_curStreamIndex];
 }
 
 Header StreamReader::readHeaderVersion1() {
@@ -105,13 +117,22 @@ Header StreamReader::readHeaderVersion2() {
 
 Block StreamReader::read() {
 
+  if (atEnd())
+    return Block();
 
   // Check that we have a block to read
-  auto c = m_stream.peek();
-  if (c != EOF) {
-    try {
-      Header header;
-      switch (this->m_version) {
+  auto c = m_streams[m_curStreamIndex].peek();
+
+  // If we are at the end of the file, increment the current stream
+  // index and try again
+  if (c == EOF) {
+    ++m_curStreamIndex;
+    return read();
+  }
+
+  try {
+    Header header;
+    switch (this->m_version) {
       case 1:
         header = readHeaderVersion1();
         break;
@@ -123,19 +144,18 @@ Block StreamReader::read() {
         ss << "Unexpected version: ";
         ss << this->m_version;
         throw invalid_argument(ss.str());
-      }
-
-      Block b(header);
-
-      auto dataSize = b.header.rows*b.header.columns*b.header.imagesInBlock;
-      read(b.data.get(), dataSize*sizeof(uint16_t));
-
-      return b;
     }
-    catch (EofException& e) {
-      throw invalid_argument("Unexpected EOF while processing stream.");
-    }
+
+    Block b(header);
+
+    auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
+    read(b.data.get(), dataSize * sizeof(uint16_t));
+
+    return b;
+  } catch (EofException& e) {
+    throw invalid_argument("Unexpected EOF while processing stream.");
   }
+
   return Block();
 }
 
