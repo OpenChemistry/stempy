@@ -32,6 +32,9 @@ PYBIND11_MODULE(_io, m)
             sizeof(uint16_t) });
     });
 
+  py::class_<StreamReader::iterator>(m, "_reader_iterator")
+    .def(py::init<StreamReader*>());
+
   py::class_<StreamReader>(m, "_reader")
     .def(py::init<const std::string&, uint8_t>())
     .def(py::init<const std::vector<std::string>&, uint8_t>())
