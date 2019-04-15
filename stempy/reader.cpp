@@ -25,18 +25,32 @@ Block::Block(const Header& header) :
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
-  : m_version(version)
+  : m_files(files), m_version(version)
 {
-  m_streams.reserve(files.size());
-  for (const auto& file : files) {
-    m_streams.push_back(ifstream());
-    m_streams.back().open(file, ios::in | ios::binary);
+  // Open up the first file
+  openNextFile();
+}
 
-    if (!m_streams.back().is_open()) {
-      ostringstream msg;
-      msg << "Unable to open file: " << file;
-      throw invalid_argument(msg.str());
-    }
+void StreamReader::openNextFile()
+{
+  // If we already have a file open, move on to the next index
+  // Otherwise, assume we haven't opened any files yet
+  if (m_stream.is_open()) {
+    m_stream.close();
+    ++m_curFileIndex;
+  }
+
+  // Don't do anything if we are at the end of the files
+  if (atEnd())
+    return;
+
+  const auto& file = m_files[m_curFileIndex];
+  m_stream.open(file, ios::in | ios::binary);
+
+  if (!m_stream.is_open()) {
+    ostringstream msg;
+    msg << "Unable to open file: " << file;
+    throw invalid_argument(msg.str());
   }
 }
 
@@ -51,16 +65,16 @@ istream & StreamReader::read(T* value, streamsize size){
   if (atEnd())
     throw EofException();
 
-  m_streams[m_curStreamIndex].read(reinterpret_cast<char*>(value), size);
+  m_stream.read(reinterpret_cast<char*>(value), size);
 
-  // If we are at the end of the file, increment the current stream
-  // index and try again
-  if (m_streams[m_curStreamIndex].eof()) {
-    ++m_curStreamIndex;
+  // If we are at the end of the file, open up the next file
+  // and try again.
+  if (m_stream.eof()) {
+    openNextFile();
     return read(value, size);
-    }
+  }
 
-    return m_streams[m_curStreamIndex];
+  return m_stream;
 }
 
 Header StreamReader::readHeaderVersion1() {
@@ -121,12 +135,12 @@ Block StreamReader::read() {
     return Block();
 
   // Check that we have a block to read
-  auto c = m_streams[m_curStreamIndex].peek();
+  auto c = m_stream.peek();
 
-  // If we are at the end of the file, increment the current stream
-  // index and try again
+  // If we are at the end of the file, open up the next file and try
+  // again
   if (c == EOF) {
-    ++m_curStreamIndex;
+    openNextFile();
     return read();
   }
 

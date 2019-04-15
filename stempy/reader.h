@@ -46,12 +46,15 @@ public:
       const std::string& url="http://127.0.0.1:5000");
 
   // Whether or not we are at the end of all of the files
-  bool atEnd() const { return m_curStreamIndex >= m_streams.size(); }
+  bool atEnd() const { return m_curFileIndex >= m_files.size(); }
 
 private:
-  std::vector<std::ifstream> m_streams;
-  size_t m_curStreamIndex = 0;
+  std::ifstream m_stream;
+  std::vector<std::string> m_files;
+  size_t m_curFileIndex = 0;
   int m_version;
+
+  void openNextFile();
 
   Header readHeaderVersion1();
   Header readHeaderVersion2();
