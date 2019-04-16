@@ -69,7 +69,6 @@ Header StreamReader::readHeaderVersion1() {
 
   // Now get the image numbers
   header.imageNumbers.resize(header.imagesInBlock);
-  auto imageNumbersSize = sizeof(uint32_t)*header.imagesInBlock;
   copy(headerData + index,
        headerData + index + header.imagesInBlock,
        header.imageNumbers.data());
@@ -88,7 +87,6 @@ Header StreamReader::readHeaderVersion2() {
   // reset to zero here!
   firstImageNumber = 0;
 
-  int index = 0;
   header.imagesInBlock = 1600;
   header.rows = 576;
   header.columns = 576;
@@ -171,7 +169,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       break;
     }
 
-    if (brightFieldMask == nullptr) {40,
+    if (brightFieldMask == nullptr) {
       brightFieldMask = createAnnularMask(b.header.rows, b.header.columns, 0, 288);
     }
 
