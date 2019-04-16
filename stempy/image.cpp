@@ -3,6 +3,8 @@
 #include "config.h"
 #include "mask.h"
 
+#include <ThreadPool.h>
+
 #ifdef VTKm
 #include <vtkm/cont/Algorithm.h>
 #include <vtkm/cont/ArrayHandleCompositeVector.h>
@@ -119,12 +121,12 @@ STEMValues calculateSTEMValuesParallel(
 // These should be ran by separate threads
 namespace {
 #ifdef VTKm
-void _runCalculateSTEMValues(Block block, uint32_t numberOfPixels,
+void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
                              const vtkm::cont::ArrayHandle<uint16_t>& bright,
                              const vtkm::cont::ArrayHandle<uint16_t>& dark,
                              STEMImage& image)
 #else
-void _runCalculateSTEMValues(Block block, uint32_t numberOfPixels,
+void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
                              uint16_t* brightFieldMask, uint16_t* darkFieldMask,
                              STEMImage& image)
 #endif
@@ -177,17 +179,36 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
-  // Spawn a different thread for each image
+  // Run the calculations in a thread pool while the data is read from
+  // the disk in the main thread.
+  int numThreads = 4;
+  ThreadPool pool(numThreads);
+
+  // Populate the worker pool
   vector<future<void>> futures;
   for (; first != last; ++first) {
+    Block b = std::move(*first);
 #ifdef VTKm
-    futures.emplace_back(std::async(std::launch::async, _runCalculateSTEMValues,
-                                    *first, numberOfPixels, std::cref(bright),
-                                    std::cref(dark), std::ref(image)));
+    // Instead of calling _runCalculateSTEMValues directly, we use a
+    // lambda so that we can explicity delete the block. Otherwise,
+    // the block will not be deleted until the threads are destroyed.
+    futures.emplace_back(pool.enqueue(
+      [b{ std::move(b) }, numberOfPixels, &bright, &dark, &image]() mutable {
+        _runCalculateSTEMValues(b, numberOfPixels, bright, dark, image);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
 #else
-    futures.emplace_back(std::async(std::launch::async, _runCalculateSTEMValues,
-                                    *first, numberOfPixels, brightFieldMask,
-                                    darkFieldMask, std::ref(image)));
+    futures.emplace_back(
+      pool.enqueue([b{ std::move(b) }, numberOfPixels, brightFieldMask,
+                    darkFieldMask, &image]() mutable {
+        _runCalculateSTEMValues(b, numberOfPixels, brightFieldMask,
+                                darkFieldMask, image);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
 #endif
   }
 
