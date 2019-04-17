@@ -6,7 +6,6 @@
 #include <vector>
 #include <memory>
 
-
 namespace stempy {
 
   template <typename T>
@@ -37,7 +36,9 @@ namespace stempy {
     STEMImage& operator=(STEMImage&& i) noexcept = default;
   };
 
-  STEMImage createSTEMImage(std::vector<Block> &blocks, int rows, int colums,  int innerRadius, int outerRadius);
+  template <typename InputIt>
+  STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int colums,
+                            int innerRadius, int outerRadius);
   STEMValues calculateSTEMValues(uint16_t data[], int offset,
                                  int numberOfPixels,
                                  uint16_t brightFieldMask[],

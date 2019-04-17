@@ -3,13 +3,18 @@
 #include "config.h"
 #include "mask.h"
 
+#include <ThreadPool.h>
+
 #ifdef VTKm
 #include <vtkm/cont/Algorithm.h>
 #include <vtkm/cont/ArrayHandleCompositeVector.h>
 #include <vtkm/cont/ArrayHandleView.h>
 #endif
 
+#include <future>
+#include <iostream>
 #include <memory>
+#include <sstream>
 
 using namespace std;
 
@@ -113,13 +118,56 @@ STEMValues calculateSTEMValuesParallel(
 }
 #endif
 
-STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  int innerRadius, int outerRadius)
+// These should be ran by separate threads
+namespace {
+#ifdef VTKm
+void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
+                             const vtkm::cont::ArrayHandle<uint16_t>& bright,
+                             const vtkm::cont::ArrayHandle<uint16_t>& dark,
+                             STEMImage& image)
+#else
+void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
+                             uint16_t* brightFieldMask, uint16_t* darkFieldMask,
+                             STEMImage& image)
+#endif
+{
+  auto data = block.data.get();
+#ifdef VTKm
+  // Transfer the entire block of data at once.
+  auto dataHandle = vtkm::cont::make_ArrayHandle(
+    data, numberOfPixels * block.header.imagesInBlock);
+#endif
+  for (int i = 0; i < block.header.imagesInBlock; i++) {
+#ifdef VTKm
+    // Use view to the array already transfered
+    auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
+                                                 numberOfPixels);
+    auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+#else
+    auto stemValues = calculateSTEMValues(
+      data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
+#endif
+    image.bright.data[block.header.imageNumbers[i] - 1] = stemValues.bright;
+    image.dark.data[block.header.imageNumbers[i] - 1] = stemValues.dark;
+  }
+}
+} // end namespace
+
+template <typename InputIt>
+STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
+                          int innerRadius, int outerRadius)
 {
   STEMImage image(rows, columns);
 
+  if (first == last) {
+    ostringstream msg;
+    msg << "No blocks to read!";
+    throw invalid_argument(msg.str());
+  }
+
   // Get image size from first block
-  auto detectorImageRows = blocks[0].header.rows;
-  auto detectorImageColumns = blocks[0].header.columns;
+  auto detectorImageRows = first->header.rows;
+  auto detectorImageColumns = first->header.columns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
@@ -131,27 +179,45 @@ STEMImage createSTEMImage(std::vector<Block>& blocks, int rows, int columns,  in
   auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
 #endif
 
-  for(const Block &block: blocks) {
-    auto data = block.data.get();
+  // Run the calculations in a thread pool while the data is read from
+  // the disk in the main thread.
+  // We benchmarked this on a 10 core computer, and typically found
+  // 2 threads to be ideal.
+  int numThreads = 2;
+  ThreadPool pool(numThreads);
+
+  // Populate the worker pool
+  vector<future<void>> futures;
+  for (; first != last; ++first) {
+    // Move the block into the thread by copying... CUDA 10.1 won't allow
+    // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
+    Block b = std::move(*first);
 #ifdef VTKm
-    // Transfer the entire block of data at once.
-    auto dataHandle = vtkm::cont::make_ArrayHandle(
-      data, numberOfPixels * block.header.imagesInBlock);
-#endif
-    for(int i=0; i<block.header.imagesInBlock; i++) {
-#ifdef VTKm
-      // Use view to the array already transfered
-      auto view = vtkm::cont::make_ArrayHandleView(
-        dataHandle, i * numberOfPixels, numberOfPixels);
-      auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+    // Instead of calling _runCalculateSTEMValues directly, we use a
+    // lambda so that we can explicity delete the block. Otherwise,
+    // the block will not be deleted until the threads are destroyed.
+    futures.emplace_back(
+      pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
+        _runCalculateSTEMValues(b, numberOfPixels, bright, dark, image);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
 #else
-      auto stemValues = calculateSTEMValues(data, i*numberOfPixels, numberOfPixels,
-                                            brightFieldMask, darkFieldMask);
+    futures.emplace_back(pool.enqueue(
+      [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
+        _runCalculateSTEMValues(b, numberOfPixels, brightFieldMask,
+                                darkFieldMask, image);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
 #endif
-      image.bright.data[block.header.imageNumbers[i]-1] = stemValues.bright;
-      image.dark.data[block.header.imageNumbers[i]-1] = stemValues.dark;
-    }
   }
+
+  // Make sure all threads are finished before continuing
+  for (auto& future : futures)
+    future.get();
 
   delete[] brightFieldMask;
   delete[] darkFieldMask;
@@ -186,5 +252,13 @@ Image<double> calculateAverage(std::vector<Block> &blocks)
   return image;
 }
 
-
+// Instantiate the ones that can be used
+template STEMImage createSTEMImage(StreamReader::iterator first,
+                                   StreamReader::iterator last, int rows,
+                                   int columns, int innerRadius,
+                                   int outerRadius);
+template STEMImage createSTEMImage(vector<Block>::iterator first,
+                                   vector<Block>::iterator last, int rows,
+                                   int columns, int innerRadius,
+                                   int outerRadius);
 }

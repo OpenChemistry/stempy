@@ -24,13 +24,39 @@ Block::Block(const Header& header) :
       std::default_delete<uint16_t[]>())
 {}
 
-StreamReader::StreamReader(const std::string& path, uint8_t version)
-  : m_version(version)
+StreamReader::StreamReader(const vector<string>& files, uint8_t version)
+  : m_files(files), m_version(version)
 {
-  m_stream.open (path, ios::in | ios::binary);
+  // If there are no files, throw an exception
+  if (m_files.empty()) {
+    ostringstream msg;
+    msg << "No files provided to StreamReader!";
+    throw invalid_argument(msg.str());
+  }
+
+  // Open up the first file
+  openNextFile();
+}
+
+void StreamReader::openNextFile()
+{
+  // If we already have a file open, move on to the next index
+  // Otherwise, assume we haven't opened any files yet
+  if (m_stream.is_open()) {
+    m_stream.close();
+    ++m_curFileIndex;
+  }
+
+  // Don't do anything if we are at the end of the files
+  if (atEnd())
+    return;
+
+  const auto& file = m_files[m_curFileIndex];
+  m_stream.open(file, ios::in | ios::binary);
+
   if (!m_stream.is_open()) {
     ostringstream msg;
-    msg << "Unable to open file: " << path;
+    msg << "Unable to open file: " << file;
     throw invalid_argument(msg.str());
   }
 }
@@ -42,13 +68,20 @@ istream & StreamReader::read(T& value){
 
 template<typename T>
 istream & StreamReader::read(T* value, streamsize size){
-    m_stream.read(reinterpret_cast<char*>(value), size);
 
-    if (m_stream.eof()) {
-      throw EofException();
-    }
+  if (atEnd())
+    throw EofException();
 
-    return m_stream;
+  m_stream.read(reinterpret_cast<char*>(value), size);
+
+  // If we are at the end of the file, open up the next file
+  // and try again.
+  if (m_stream.eof()) {
+    openNextFile();
+    return read(value, size);
+  }
+
+  return m_stream;
 }
 
 Header StreamReader::readHeaderVersion1() {
@@ -101,15 +134,24 @@ Header StreamReader::readHeaderVersion2() {
   return header;
 }
 
-Block StreamReader::read() {
-
+Block StreamReader::read()
+{
+  if (atEnd())
+    return Block();
 
   // Check that we have a block to read
   auto c = m_stream.peek();
-  if (c != EOF) {
-    try {
-      Header header;
-      switch (this->m_version) {
+
+  // If we are at the end of the file, open up the next file and try
+  // again
+  if (c == EOF) {
+    openNextFile();
+    return read();
+  }
+
+  try {
+    Header header;
+    switch (this->m_version) {
       case 1:
         header = readHeaderVersion1();
         break;
@@ -121,19 +163,18 @@ Block StreamReader::read() {
         ss << "Unexpected version: ";
         ss << this->m_version;
         throw invalid_argument(ss.str());
-      }
-
-      Block b(header);
-
-      auto dataSize = b.header.rows*b.header.columns*b.header.imagesInBlock;
-      read(b.data.get(), dataSize*sizeof(uint16_t));
-
-      return b;
     }
-    catch (EofException& e) {
-      throw invalid_argument("Unexpected EOF while processing stream.");
-    }
+
+    Block b(header);
+
+    auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
+    read(b.data.get(), dataSize * sizeof(uint16_t));
+
+    return b;
+  } catch (EofException& e) {
+    throw invalid_argument("Unexpected EOF while processing stream.");
   }
+
   return Block();
 }
 
