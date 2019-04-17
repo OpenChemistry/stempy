@@ -181,7 +181,9 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
 
   // Run the calculations in a thread pool while the data is read from
   // the disk in the main thread.
-  int numThreads = 4;
+  // We benchmarked this on a 10 core computer, and typically found
+  // 2 threads to be ideal.
+  int numThreads = 2;
   ThreadPool pool(numThreads);
 
   // Populate the worker pool
