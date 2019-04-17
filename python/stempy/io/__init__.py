@@ -1,6 +1,6 @@
 from collections import namedtuple
-
 import numpy as np
+import h5py
 
 from stempy._io import _reader
 
@@ -35,3 +35,24 @@ class Reader(_reader):
 
 def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
+
+def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
+    with h5py.File(path, 'w') as f:
+        group = f.create_group('electron_events')
+        scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
+        # For now just assume we have all the frames, so the event index can
+        # be used to derive the scan_postions.
+        # TODO: This should be passed to use
+        scan_positions[...] = [i for i in range(0, events.shape[0])]
+        scan_positions.attrs['Nx'] = scan_nx
+        scan_positions.attrs['Ny'] = scan_ny
+
+        coordinates_type = h5py.special_dtype(vlen=np.uint32)
+        frames = group.create_dataset('frames', (events.shape[0],), dtype=coordinates_type)
+        # Add the frame dimensions as attributes
+        if detector_nx is not None:
+            frames.attrs['Nx'] = detector_nx
+        if detector_ny is not None:
+            frames.attrs['Ny'] = detector_ny
+
+        frames[...] = events
