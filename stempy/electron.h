@@ -5,7 +5,7 @@
 
 namespace stempy {
 
-std::vector<std::vector<std::pair<int, int>>> electronCount(
+std::vector<std::vector<uint32_t>> electronCount(
   std::vector<Block>& blocks, int scanRows, int scanColumns,
   Image<double>& darkreference, int numberOfSamples = 20,
   int backgroundThresholdNSigma = 4, int xRayThresholdNSigma = 30);

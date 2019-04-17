@@ -70,7 +70,7 @@ private:
   double m_upper;
 };
 
-std::vector<std::pair<int, int>> maximalPointsParallel(
+std::vector<uint32_t> maximalPointsParallel(
   std::vector<uint16_t>& frame, int rows, int columns,
   double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
 {
@@ -93,16 +93,13 @@ std::vector<std::pair<int, int>> maximalPointsParallel(
   // Find maximal pixels
   invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
 
-  // Convert to std::vector<std::pair<int, int>>
+  // Convert to std::vector<uint32_t>
   auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
-  std::vector<std::pair<int, int>> outputVec;
+  std::vector<uint32_t> outputVec;
   outputVec.reserve(maximalPixelsPortal.GetNumberOfValues());
   for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
-    if (maximalPixelsPortal.Get(i)) {
-      auto row = i / columns;
-      auto column = i % columns;
-      outputVec.push_back(std::make_pair(row, column));
-    }
+    if (maximalPixelsPortal.Get(i))
+      outputVec.push_back(i);
   }
 
   // Done
@@ -121,10 +118,10 @@ inline uint16_t mod(uint16_t x, uint16_t y)
 
 // Return the points in the frame with values larger than all 8 of their nearest
 // neighbors
-std::vector<std::pair<int, int>> maximalPoints(
+std::vector<uint32_t> maximalPoints(
   const std::vector<uint16_t>& frame, int rows, int columns)
 {
-  std::vector<std::pair<int, int>> events;
+  std::vector<uint32_t> events;
   auto numberOfPixels = rows * columns;
   for (int i = 0; i < numberOfPixels; i++) {
     auto row = i / columns;
@@ -160,14 +157,14 @@ std::vector<std::pair<int, int>> maximalPoints(
       event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
 
     if (event) {
-      events.push_back(std::make_pair(row, column));
+      events.push_back(i);
     }
   }
 
   return events;
 }
 
-std::vector<std::vector<std::pair<int, int>>> electronCount(
+std::vector<std::vector<uint32_t>> electronCount(
   std::vector<Block>& blocks, int scanRows, int scanColumns,
   Image<double>& darkReference, int numberOfSamples,
   int backgroundThresholdNSigma, int xRayThresholdNSigma)
@@ -179,7 +176,7 @@ std::vector<std::vector<std::pair<int, int>>> electronCount(
   auto xRayThreshold = std::get<1>(thres);
 
   // Matrix to hold electron events.
-  std::vector<std::vector<std::pair<int, int>>> events(scanRows * scanColumns);
+  std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
   int frameIndex = 0;
   for (const Block& block : blocks) {
     auto data = block.data.get();

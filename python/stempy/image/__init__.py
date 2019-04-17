@@ -2,8 +2,9 @@ from stempy import _image
 import numpy as np
 from collections import namedtuple
 
-def create_stem_image(blocks, width, height,  inner_radius, outer_radius):
-    img =  _image.create_stem_image([b._block for b in blocks],
+def create_stem_image(reader, width, height,  inner_radius,
+                      outer_radius):
+    img =  _image.create_stem_image(reader.begin(), reader.end(),
                                     width, height,  inner_radius, outer_radius)
 
     image = namedtuple('STEMImage', ['bright', 'dark'])
