@@ -187,22 +187,23 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
   // Populate the worker pool
   vector<future<void>> futures;
   for (; first != last; ++first) {
-    Block b;
+    // Move the block into the thread by copying... CUDA 10.1 won't allow
+    // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
+    Block b = std::move(*first);
 #ifdef VTKm
     // Instead of calling _runCalculateSTEMValues directly, we use a
     // lambda so that we can explicity delete the block. Otherwise,
     // the block will not be deleted until the threads are destroyed.
-    futures.emplace_back(pool.enqueue([b{ std::move(*first) }, numberOfPixels,
-                                       &bright, &dark, &image]() mutable {
-      _runCalculateSTEMValues(b, numberOfPixels, bright, dark, image);
-      // If we don't reset this, it won't get reset until the thread is
-      // destroyed.
-      b.data.reset();
-    }));
-#else
     futures.emplace_back(
-      pool.enqueue([b{ std::move(*first) }, numberOfPixels, brightFieldMask,
-                    darkFieldMask, &image]() mutable {
+      pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
+        _runCalculateSTEMValues(b, numberOfPixels, bright, dark, image);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
+#else
+    futures.emplace_back(pool.enqueue(
+      [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
         _runCalculateSTEMValues(b, numberOfPixels, brightFieldMask,
                                 darkFieldMask, image);
         // If we don't reset this, it won't get reset until the thread is
