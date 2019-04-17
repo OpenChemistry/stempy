@@ -254,4 +254,8 @@ template STEMImage createSTEMImage(StreamReader::iterator first,
                                    StreamReader::iterator last, int rows,
                                    int columns, int innerRadius,
                                    int outerRadius);
+template STEMImage createSTEMImage(vector<Block>::iterator first,
+                                   vector<Block>::iterator last, int rows,
+                                   int columns, int innerRadius,
+                                   int outerRadius);
 }
