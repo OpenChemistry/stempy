@@ -41,11 +41,9 @@ public:
   StreamReader(const std::string &path, uint8_t version=1);
   StreamReader(const std::vector<std::string>& files, uint8_t version = 1);
 
-  Block& read();
+  Block read();
   void process(int streamId, int concurrency=-1, int width=160, int height=160,
       const std::string& url="http://127.0.0.1:5000");
-
-  Block& currentBlock() { return m_curBlock; }
 
   class iterator;
   iterator begin() { return iterator(this); }
@@ -73,35 +71,45 @@ public:
       value_type value;
     };
 
-    iterator(StreamReader* reader) : m_streamReader(reader) {}
+    iterator(StreamReader* reader) : m_streamReader(reader)
+    {
+      if (reader)
+        ++(*this);
+    }
+
     self_type operator++()
     {
-      m_streamReader->read();
-      if (!m_streamReader->currentBlock().data)
+      m_block = m_streamReader->read();
+      if (!m_block.data)
         m_streamReader = nullptr;
       return *this;
     }
+
     postinc_return operator++(int)
     {
-      postinc_return temp(m_streamReader->currentBlock());
+      postinc_return temp(m_block);
       ++(*this);
       return temp;
     }
-    reference operator*() { return m_streamReader->currentBlock(); }
-    pointer operator->() { return &m_streamReader->currentBlock(); }
+
+    reference operator*() { return m_block; }
+
+    pointer operator->() { return &m_block; }
+
     bool operator==(const self_type& rhs)
     {
       return m_streamReader == rhs.m_streamReader;
     }
+
     bool operator!=(const self_type& rhs) { return !(*this == rhs); }
 
   private:
     StreamReader* m_streamReader;
+    value_type m_block;
   };
 
 private:
   std::ifstream m_stream;
-  Block m_curBlock;
   std::vector<std::string> m_files;
   size_t m_curFileIndex = 0;
   int m_version;

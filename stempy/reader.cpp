@@ -36,9 +36,6 @@ StreamReader::StreamReader(const vector<string>& files, uint8_t version)
 
   // Open up the first file
   openNextFile();
-
-  // Read the first block
-  read();
 }
 
 void StreamReader::openNextFile()
@@ -139,12 +136,10 @@ Header StreamReader::readHeaderVersion2() {
   return header;
 }
 
-Block& StreamReader::read()
+Block StreamReader::read()
 {
-  m_curBlock = Block();
-
   if (atEnd())
-    return m_curBlock;
+    return Block();
 
   // Check that we have a block to read
   auto c = m_stream.peek();
@@ -172,8 +167,7 @@ Block& StreamReader::read()
         throw invalid_argument(ss.str());
     }
 
-    m_curBlock = Block(header);
-    Block& b = m_curBlock;
+    Block b(header);
 
     auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
@@ -183,7 +177,7 @@ Block& StreamReader::read()
     throw invalid_argument("Unexpected EOF while processing stream.");
   }
 
-  return m_curBlock;
+  return Block();
 }
 
 void StreamReader::process(int streamId, int concurrency, int width, int height,
