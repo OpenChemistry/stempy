@@ -1,5 +1,4 @@
 import click
-import h5py
 import sys
 
 from stempy import io, image
@@ -20,10 +19,7 @@ def make_stem_hdf5(files, output):
     reader = io.reader(files)
     img = image.create_stem_image(reader, 160, 160,  40, 288);
 
-    with h5py.File(output, 'w') as f:
-        stem_group = f.create_group('stem')
-        stem_group.create_dataset('bright', data=img.bright)
-        stem_group.create_dataset('dark', data=img.dark)
+    io.save_stem_image(output, img)
 
 if __name__ == '__main__':
     make_stem_hdf5()
