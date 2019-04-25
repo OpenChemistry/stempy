@@ -185,7 +185,7 @@ Block StreamReader::read()
   return Block();
 }
 
-void StreamReader::rewind()
+void StreamReader::reset()
 {
   if (m_stream.is_open())
     m_stream.close();
