@@ -45,6 +45,9 @@ public:
   void process(int streamId, int concurrency=-1, int width=160, int height=160,
       const std::string& url="http://127.0.0.1:5000");
 
+  // Rewind to the start of the first file
+  void rewind();
+
   class iterator;
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
