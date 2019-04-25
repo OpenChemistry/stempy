@@ -30,6 +30,9 @@ STEMImage::STEMImage(uint32_t width, uint32_t height)
 {
   this->bright = Image<uint64_t>(width, height);
   this->dark = Image<uint64_t>(width, height);
+  // Init values to zero
+  std::fill(this->bright.data.get(), this->bright.data.get() + width*height, 0);
+  std::fill(this->dark.data.get(), this->dark.data.get() + width*height, 0);
 }
 
 STEMValues calculateSTEMValues(uint16_t data[], int offset,
@@ -147,8 +150,8 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
     auto stemValues = calculateSTEMValues(
       data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
 #endif
-    image.bright.data[block.header.imageNumbers[i] - 1] = stemValues.bright;
-    image.dark.data[block.header.imageNumbers[i] - 1] = stemValues.dark;
+    image.bright.data[block.header.imageNumbers[i]] = stemValues.bright;
+    image.dark.data[block.header.imageNumbers[i]] = stemValues.dark;
   }
 }
 } // end namespace
