@@ -37,7 +37,7 @@ def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
 
 def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
-    with h5py.File(path, 'w') as f:
+    with h5py.File(path, 'a') as f:
         group = f.create_group('electron_events')
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
         # For now just assume we have all the frames, so the event index can
@@ -56,3 +56,9 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
             frames.attrs['Ny'] = detector_ny
 
         frames[...] = events
+
+def save_stem_image(outputFile, image):
+    with h5py.File(outputFile, 'a') as f:
+        stem_group = f.create_group('stem')
+        stem_group.create_dataset('bright', data=image.bright)
+        stem_group.create_dataset('dark', data=image.dark)
