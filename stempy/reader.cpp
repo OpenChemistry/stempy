@@ -106,6 +106,13 @@ Header StreamReader::readHeaderVersion1() {
        headerData + index + header.imagesInBlock,
        header.imageNumbers.data());
 
+  // Currently the imageNumbers seem to be 1 indexed, we hope this will change.
+  // for now, convert them to 0 indexed to make the rest of the code easier.
+  auto imageNumbers = header.imageNumbers;
+  for(int i=0; i< header.imagesInBlock; i++) {
+    imageNumbers[i]-= 1;
+  }
+
   return header;
 }
 
