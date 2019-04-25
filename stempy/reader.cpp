@@ -118,7 +118,7 @@ Header StreamReader::readHeaderVersion2() {
   // HACK!
   // Our current datasets doesn't seem to have a valid firstImageNumber, so we
   // reset to zero here!
-  firstImageNumber = 1;
+  firstImageNumber = 0;
 
   header.imagesInBlock = 1600;
   header.rows = 576;
