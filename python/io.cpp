@@ -39,6 +39,7 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<const std::string&, uint8_t>())
     .def(py::init<const std::vector<std::string>&, uint8_t>())
     .def("read", (Block(StreamReader::*)()) & StreamReader::read)
+    .def("rewind", &StreamReader::rewind)
     .def("begin",
          (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
     .def("end", (StreamReader::iterator(StreamReader::*)()) & StreamReader::end)

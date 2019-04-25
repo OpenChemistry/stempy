@@ -164,21 +164,17 @@ std::vector<uint32_t> maximalPoints(
   return events;
 }
 
-std::vector<std::vector<uint32_t>> electronCount(
-  std::vector<Block>& blocks, int scanRows, int scanColumns,
-  Image<double>& darkReference, int numberOfSamples,
-  int backgroundThresholdNSigma, int xRayThresholdNSigma)
+template <typename InputIt>
+std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
+                                                 int scanRows, int scanColumns,
+                                                 Image<double>& darkReference,
+                                                 double backgroundThreshold,
+                                                 double xRayThreshold)
 {
-  std::pair<double, double> thres =
-    calculateThresholds(blocks, darkReference, numberOfSamples,
-                        backgroundThresholdNSigma, xRayThresholdNSigma);
-  auto backgroundThreshold = std::get<0>(thres);
-  auto xRayThreshold = std::get<1>(thres);
-
   // Matrix to hold electron events.
   std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
-  int frameIndex = 0;
-  for (const Block& block : blocks) {
+  for (; first != last; ++first) {
+    auto block = std::move(*first);
     auto data = block.data.get();
     for (int i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart = data + i * block.header.rows * block.header.columns;
@@ -207,4 +203,10 @@ std::vector<std::vector<uint32_t>> electronCount(
 
   return events;
 }
+
+// Instantiate the ones that can be used
+template std::vector<std::vector<uint32_t>> electronCount(
+  StreamReader::iterator first, StreamReader::iterator last, int scanRows,
+  int scanColumns, Image<double>& darkReference, double backgroundThreshold,
+  double xRayThreshold);
 }

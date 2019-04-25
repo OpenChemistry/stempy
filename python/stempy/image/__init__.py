@@ -30,11 +30,24 @@ def calculate_average(blocks):
 
     return img
 
-def electron_count(blocks, rows, columns, darkreference,  number_of_samples=40,
-                   background_threshold_n_sigma=4, xray_threshold_n_sigma=10):
-    events = _image.electron_count([b._block for b in blocks], rows, columns,
-                                   darkreference._image, number_of_samples,
-                                   background_threshold_n_sigma, xray_threshold_n_sigma)
+def electron_count(reader, rows, columns, darkreference,  number_of_samples=40,
+                   background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
+                   threshold_num_blocks=1):
+
+    blocks = []
+    for i in range(threshold_num_blocks):
+        blocks.append(next(reader))
+
+    background_threshold, xray_threshold = _image.calculate_thresholds(
+        [b._block for b in blocks], darkreference._image, number_of_samples,
+        background_threshold_n_sigma, xray_threshold_n_sigma)
+
+    # Rewind the reader
+    reader.rewind()
+
+    events = _image.electron_count(reader.begin(), reader.end(), rows, columns,
+                                   darkreference._image, background_threshold,
+                                   xray_threshold)
 
     # Convert to numpy and return
     return np.array([np.array(x) for x in events])
