@@ -150,8 +150,8 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
     auto stemValues = calculateSTEMValues(
       data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
 #endif
-    image.bright.data[block.header.imageNumbers[i] - 1] = stemValues.bright;
-    image.dark.data[block.header.imageNumbers[i] - 1] = stemValues.dark;
+    image.bright.data[block.header.imageNumbers[i]] = stemValues.bright;
+    image.dark.data[block.header.imageNumbers[i]] = stemValues.dark;
   }
 }
 } // end namespace
