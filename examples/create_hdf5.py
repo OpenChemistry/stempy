@@ -46,16 +46,13 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
     reader = io.reader(files, version=reader_version)
     blocks = [b for b in reader]
 
-    # TODO: Make these CLI options
-    scan_nx = 40
-    scan_ny = 40
-    frame_events = image.electron_count(blocks, scan_nx, scan_ny, dark)
+    frame_events = image.electron_count(blocks, rows, columns, dark)
 
     reader = io.reader(files, version=io.FileVersion.VERSION2)
     img = image.create_stem_image(reader, rows, columns, inner_radius,
                                   outer_radius);
 
-    io.save_electron_counts(output, frame_events, scan_nx, scan_ny)
+    io.save_electron_counts(output, frame_events, rows, columns)
     io.save_stem_image(output, img)
 
 if __name__ == '__main__':
