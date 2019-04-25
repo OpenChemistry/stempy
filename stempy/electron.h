@@ -5,16 +5,12 @@
 
 namespace stempy {
 
-std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
-                                              Image<double>& darkreference,
-                                              int numberOfSamples = 20,
-                                              int backgroundThresholdNSigma = 4,
-                                              int xRayThresholdNSigma = 10);
-
-std::vector<std::vector<uint32_t>> electronCount(
-  std::vector<Block>& blocks, int scanRows, int scanColumns,
-  Image<double>& darkreference, int numberOfSamples = 20,
-  int backgroundThresholdNSigma = 4, int xRayThresholdNSigma = 30);
+template <typename InputIt>
+std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
+                                                 int scanRows, int scanColumns,
+                                                 Image<double>& darkreference,
+                                                 double backgroundThreshold,
+                                                 double xRayThreshold);
 }
 
 #endif /* STEMPY_ELECTRON_H_ */

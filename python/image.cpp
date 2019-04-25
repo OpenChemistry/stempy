@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <stempy/electron.h>
+#include <stempy/electronthresholds.h>
 #include <stempy/image.h>
 #include <stempy/reader.h>
 
@@ -44,5 +45,6 @@ PYBIND11_MODULE(_image, m)
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_image", &createSTEMImage<StreamReader::iterator>);
   m.def("calculate_average", &calculateAverage);
-  m.def("electron_count", &electronCount);
+  m.def("electron_count", &electronCount<StreamReader::iterator>);
+  m.def("calculate_thresholds", &calculateThresholds);
 }
