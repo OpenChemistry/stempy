@@ -45,7 +45,8 @@ namespace stempy {
                                  uint16_t darkFieldMask[],
                                  uint32_t imageNumber=-1);
 
-  Image<double> calculateAverage(std::vector<Block> &blocks);
+  template <typename InputIt>
+  Image<double> calculateAverage(InputIt first, InputIt last);
 }
 
 #endif

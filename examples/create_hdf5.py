@@ -40,8 +40,7 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
         sys.exit('Unknown dark reader version:', dark_reader_version)
 
     reader = io.reader(dark_sample, version=dark_reader_version)
-    blocks = [b for b in reader]
-    dark = image.calculate_average(blocks)
+    dark = image.calculate_average(reader)
 
     reader = io.reader(files, version=reader_version)
     frame_events = image.electron_count(reader, rows, columns, dark)

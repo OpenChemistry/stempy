@@ -23,8 +23,8 @@ class ImageArray(np.ndarray):
         if obj is None: return
         self._image = getattr(obj, '_image', None)
 
-def calculate_average(blocks):
-    image =  _image.calculate_average([b._block for b in blocks])
+def calculate_average(reader):
+    image =  _image.calculate_average(reader.begin(), reader.end())
     img = ImageArray(np.array(image, copy = False))
     img._image = image
 
