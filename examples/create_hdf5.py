@@ -45,7 +45,7 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
     reader = io.reader(files, version=reader_version)
     frame_events = image.electron_count(reader, rows, columns, dark)
 
-    reader = io.reader(files, version=io.FileVersion.VERSION2)
+    reader = io.reader(files, version=reader_version)
     img = image.create_stem_image(reader, rows, columns, inner_radius,
                                   outer_radius);
 
