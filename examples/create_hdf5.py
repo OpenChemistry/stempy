@@ -45,11 +45,18 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
     reader = io.reader(files, version=reader_version)
     frame_events = image.electron_count(reader, rows, columns, dark)
 
-    reader = io.reader(files, version=reader_version)
+    # Read one block in to get the detector frames
+    reader.reset()
+    block = reader.read()
+    detector_nx = block.header.columns
+    detector_ny = block.header.rows
+
+    reader.reset()
     img = image.create_stem_image(reader, rows, columns, inner_radius,
                                   outer_radius);
 
-    io.save_electron_counts(output, frame_events, rows, columns)
+    io.save_electron_counts(output, frame_events, rows, columns, detector_nx,
+                            detector_ny)
     io.save_stem_image(output, img)
 
 if __name__ == '__main__':
