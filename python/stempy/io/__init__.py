@@ -36,16 +36,17 @@ class Reader(_reader):
 def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
 
-def save_raw_data(path, data, detector_nx=None, detector_ny=None):
+def save_raw_data(path, data, zip_data=False):
     with h5py.File(path, 'a') as f:
-        group = f.require_group('electron_events')
+        group = f.require_group('stem')
 
-        frames = group.create_dataset('frames', data=data)
-        # Add the frame dimensions as attributes
-        if detector_nx is not None:
-            frames.attrs['Nx'] = detector_nx
-        if detector_ny is not None:
-            frames.attrs['Ny'] = detector_ny
+        if zip_data:
+            # Make each chunk the size of a frame
+            chunk_shape = (1, data.shape[1], data.shape[2])
+            group.create_dataset('frames', data=data, compression='gzip',
+                                 chunks=chunk_shape)
+        else:
+            group.create_dataset('frames', data=data)
 
 def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
     with h5py.File(path, 'a') as f:
