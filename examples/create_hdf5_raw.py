@@ -33,9 +33,6 @@ def make_stem_hdf5(files, rows, columns, inner_radius, outer_radius,
     reader = io.reader(files, version=reader_version)
     blocks = [block for block in reader]
 
-    detector_nx = blocks[0].header.columns
-    detector_ny = blocks[0].header.rows
-
     raw_data = np.concatenate([block.data for block in blocks])
 
     reader.reset()
@@ -43,7 +40,7 @@ def make_stem_hdf5(files, rows, columns, inner_radius, outer_radius,
                                   outer_radius);
 
     io.save_stem_image(output, img)
-    io.save_raw_data(output, raw_data, detector_nx, detector_ny)
+    io.save_raw_data(output, raw_data)
 
 if __name__ == '__main__':
     make_stem_hdf5()
