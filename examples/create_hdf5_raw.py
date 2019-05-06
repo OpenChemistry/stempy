@@ -36,7 +36,7 @@ def make_stem_hdf5(files, rows, columns, inner_radius, outer_radius,
     detector_nx = blocks[0].header.columns
     detector_ny = blocks[0].header.rows
 
-    raw_data = np.array([block.data for block in blocks])
+    raw_data = np.concatenate([block.data for block in blocks])
 
     reader.reset()
     img = image.create_stem_image(reader, rows, columns, inner_radius,
