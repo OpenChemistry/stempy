@@ -47,15 +47,13 @@ def save_raw_data(path, data, zip_data=False):
             rdcc_nbytes = chunk_size
 
     with h5py.File(path, 'a', rdcc_nbytes=rdcc_nbytes) as f:
-        group = f.require_group('stem')
-
         if zip_data:
             # Make each chunk the size of a frame
             chunk_shape = (1, data.shape[1], data.shape[2])
-            group.create_dataset('frames', data=data, compression='gzip',
-                                 chunks=chunk_shape)
+            f.create_dataset('frames', data=data, compression='gzip',
+                             chunks=chunk_shape)
         else:
-            group.create_dataset('frames', data=data)
+            f.create_dataset('frames', data=data)
 
 def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
     with h5py.File(path, 'a') as f:
