@@ -36,9 +36,28 @@ class Reader(_reader):
 def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
 
+def save_raw_data(path, data, zip_data=False):
+    # Chunk cache size. Default is 1 MB
+    rdcc_nbytes = 1000000
+
+    if zip_data:
+        # Make sure the chunk cache is at least the size of one chunk
+        chunk_size = data.shape[1] * data.shape[2] * data.dtype.itemsize
+        if rdcc_nbytes < chunk_size:
+            rdcc_nbytes = chunk_size
+
+    with h5py.File(path, 'a', rdcc_nbytes=rdcc_nbytes) as f:
+        if zip_data:
+            # Make each chunk the size of a frame
+            chunk_shape = (1, data.shape[1], data.shape[2])
+            f.create_dataset('frames', data=data, compression='gzip',
+                             chunks=chunk_shape)
+        else:
+            f.create_dataset('frames', data=data)
+
 def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
     with h5py.File(path, 'a') as f:
-        group = f.create_group('electron_events')
+        group = f.require_group('electron_events')
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
         # For now just assume we have all the frames, so the event index can
         # be used to derive the scan_postions.
@@ -59,6 +78,6 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
 
 def save_stem_image(outputFile, image):
     with h5py.File(outputFile, 'a') as f:
-        stem_group = f.create_group('stem')
+        stem_group = f.require_group('stem')
         stem_group.create_dataset('bright', data=image.bright)
         stem_group.create_dataset('dark', data=image.dark)

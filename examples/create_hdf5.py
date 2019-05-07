@@ -1,4 +1,5 @@
 import click
+import numpy as np
 import sys
 
 from stempy import io, image
@@ -13,9 +14,14 @@ from stempy import io, image
 @click.option('-v', '--reader-version', default=1, help='Reader version')
 @click.option('-x', '--dark-reader-version', default=1,
               help='Dark sample reader version')
+@click.option('--save-raw', is_flag=True, default=False,
+              help='Save raw data also')
+@click.option('--zip-raw', is_flag=True, default=False,
+              help='Zip the raw data that is saved')
 @click.option('-o', '--output', default='stem_image.h5', help='Output file')
 def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
-                   outer_radius, reader_version, dark_reader_version, output):
+                   outer_radius, reader_version, dark_reader_version, save_raw,
+                   zip_raw, output):
     """Make an HDF5 file containing a STEM image
 
     Example: "python create_hdf5.py -d darksample.dat /path/to/data/data*.dat"
@@ -58,6 +64,13 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
     io.save_electron_counts(output, frame_events, rows, columns, detector_nx,
                             detector_ny)
     io.save_stem_image(output, img)
+
+    if save_raw:
+        reader.reset()
+        blocks = [block for block in reader]
+
+        raw_data = np.concatenate([block.data for block in blocks])
+        io.save_raw_data(output, raw_data, zip_raw)
 
 if __name__ == '__main__':
     make_stem_hdf5()
