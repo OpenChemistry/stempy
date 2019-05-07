@@ -12,8 +12,8 @@ PYBIND11_MODULE(_io, m)
 {
   py::class_<Header>(m, "_header")
     .def_readonly("images_in_block", &Header::imagesInBlock)
-    .def_readonly("rows", &Header::rows)
-    .def_readonly("columns", &Header::columns)
+    .def_readonly("frame_rows", &Header::frameRows)
+    .def_readonly("frame_columns", &Header::frameColumns)
     .def_readonly("version", &Header::version)
     .def_readonly("timestamp", &Header::timestamp)
     .def_readonly("image_numbers", &Header::imageNumbers);
@@ -26,9 +26,9 @@ PYBIND11_MODULE(_io, m)
           sizeof(uint16_t),                                             /* Size of one scalar */
           py::format_descriptor<uint16_t>::format(),                    /* Python struct-style format descriptor */
           3,                                                            /* Number of dimensions */
-          { b.header.imagesInBlock, b.header.rows, b.header.columns },  /* Buffer dimensions */
-          { sizeof(uint16_t) * b.header.rows * b.header.columns,
-            sizeof(uint16_t) * b.header.rows,                           /* Strides (in bytes) for each index */
+          { b.header.imagesInBlock, b.header.frameRows, b.header.frameColumns },  /* Buffer dimensions */
+          { sizeof(uint16_t) * b.header.frameRows * b.header.frameColumns,
+            sizeof(uint16_t) * b.header.frameRows,                           /* Strides (in bytes) for each index */
             sizeof(uint16_t) });
     });
 

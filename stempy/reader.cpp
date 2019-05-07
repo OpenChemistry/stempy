@@ -20,7 +20,7 @@ namespace stempy {
 
 Block::Block(const Header& header) :
   header(header),
-  data(new uint16_t[header.rows*header.columns*header.imagesInBlock],
+  data(new uint16_t[header.frameRows*header.frameColumns*header.imagesInBlock],
       std::default_delete<uint16_t[]>())
 {}
 
@@ -93,8 +93,8 @@ Header StreamReader::readHeaderVersion1() {
 
   int index = 0;
   header.imagesInBlock = headerData[index++];
-  header.rows = headerData[index++];
-  header.columns = headerData[index++];
+  header.frameRows = headerData[index++];
+  header.frameColumns = headerData[index++];
   header.version = headerData[index++];
   header.timestamp =  headerData[index++];
   // Skip over 6 - 10 - reserved
@@ -128,8 +128,8 @@ Header StreamReader::readHeaderVersion2() {
   firstImageNumber = 0;
 
   header.imagesInBlock = 1600;
-  header.rows = 576;
-  header.columns = 576;
+  header.frameRows = 576;
+  header.frameColumns = 576;
   header.version = 2;
 
   // Now generate the image numbers
@@ -174,7 +174,7 @@ Block StreamReader::read()
 
     Block b(header);
 
-    auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
+    auto dataSize = b.header.frameRows * b.header.frameColumns * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
 
     return b;
@@ -226,11 +226,11 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
     }
 
     if (brightFieldMask == nullptr) {
-      brightFieldMask = createAnnularMask(b.header.rows, b.header.columns, 0, 288);
+      brightFieldMask = createAnnularMask(b.header.frameRows, b.header.frameColumns, 0, 288);
     }
 
     if (darkFieldMask == nullptr) {
-      darkFieldMask = createAnnularMask(b.header.rows, b.header.columns, 40, 288);
+      darkFieldMask = createAnnularMask(b.header.frameRows, b.header.frameColumns, 40, 288);
     }
 
     results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
@@ -238,7 +238,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       for (int i=0; i<b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
-        auto numberOfPixels = b.header.rows*b.header.columns;
+        auto numberOfPixels = b.header.frameRows*b.header.frameColumns;
         values.push_back(calculateSTEMValues(data, i*numberOfPixels,
             numberOfPixels, brightFieldMask, darkFieldMask, imageNumber));
       }

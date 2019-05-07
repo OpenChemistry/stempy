@@ -14,7 +14,7 @@ struct EofException : public std::exception
 };
 
 struct Header {
-  uint32_t imagesInBlock = 0, rows = 0, columns = 0, version = 0, timestamp = 0;
+  uint32_t imagesInBlock = 0, frameRows = 0, frameColumns = 0, version = 0, timestamp = 0;
   std::vector<uint32_t> imageNumbers;
 
   Header() = default;

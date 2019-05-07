@@ -169,8 +169,8 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
   }
 
   // Get image size from first block
-  auto detectorImageRows = first->header.rows;
-  auto detectorImageColumns = first->header.columns;
+  auto detectorImageRows = first->header.frameRows;
+  auto detectorImageColumns = first->header.frameColumns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
   auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
@@ -231,8 +231,8 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
 template <typename InputIt>
 Image<double> calculateAverage(InputIt first, InputIt last)
 {
-  auto detectorImageRows = first->header.rows;
-  auto detectorImageColumns = first->header.columns;
+  auto detectorImageRows = first->header.frameRows;
+  auto detectorImageColumns = first->header.frameColumns;
   auto numberOfPixels = detectorImageRows*detectorImageColumns;
   Image<double> image(detectorImageRows, detectorImageColumns);
 
@@ -243,7 +243,7 @@ Image<double> calculateAverage(InputIt first, InputIt last)
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
     for(int i=0; i<block.header.imagesInBlock; i++) {
-      auto numberOfPixels = block.header.rows * block.header.columns;
+      auto numberOfPixels = block.header.frameRows * block.header.frameColumns;
       for(int j=0; j<numberOfPixels; j++) {
         image.data[j] += blockData[i*numberOfPixels+j];
       }

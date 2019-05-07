@@ -55,8 +55,8 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
                                               int backgroundThresholdNSigma,
                                               int xRayThresholdNSigma)
 {
-  auto detectorImageRows = blocks[0].header.rows;
-  auto detectorImageColumns = blocks[0].header.columns;
+  auto detectorImageRows = blocks[0].header.frameRows;
+  auto detectorImageColumns = blocks[0].header.frameColumns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
   // Setup random number engine

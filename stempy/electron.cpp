@@ -177,16 +177,16 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
     auto block = std::move(*first);
     auto data = block.data.get();
     for (int i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart = data + i * block.header.rows * block.header.columns;
+      auto frameStart = data + i * block.header.frameRows * block.header.frameColumns;
       std::vector<uint16_t> frame(
-        frameStart, frameStart + block.header.rows * block.header.columns);
+        frameStart, frameStart + block.header.frameRows * block.header.frameColumns);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, block.header.rows, block.header.columns,
+        frame, block.header.frameRows, block.header.frameColumns,
         darkReference.data.get(), backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.rows * block.header.columns; j++) {
+      for (int j = 0; j < block.header.frameRows * block.header.frameColumns; j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
         // Threshold the electron events
@@ -196,7 +196,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, block.header.rows, block.header.columns);
+        maximalPoints(frame, block.header.frameRows, block.header.frameColumns);
 #endif
     }
   }
