@@ -37,7 +37,16 @@ def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
 
 def save_raw_data(path, data, zip_data=False):
-    with h5py.File(path, 'a') as f:
+    # Chunk cache size. Default is 1 MB
+    rdcc_nbytes = 1000000
+
+    if zip_data:
+        # Make sure the chunk cache is at least the size of one chunk
+        chunk_size = data.shape[1] * data.shape[2] * data.dtype.itemsize
+        if rdcc_nbytes < chunk_size:
+            rdcc_nbytes = chunk_size
+
+    with h5py.File(path, 'a', rdcc_nbytes=rdcc_nbytes) as f:
         group = f.require_group('stem')
 
         if zip_data:
