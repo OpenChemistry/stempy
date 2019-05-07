@@ -16,6 +16,10 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='',
-    packages=find_packages(),
-    install_requires=[]
+    packages=find_packages('python'),
+    package_dir={'':'python'},
+    install_requires=[
+        'numpy',
+        'h5py'
+    ]
 )
