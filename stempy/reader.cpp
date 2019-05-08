@@ -109,7 +109,7 @@ Header StreamReader::readHeaderVersion1() {
   // Currently the imageNumbers seem to be 1 indexed, we hope this will change.
   // for now, convert them to 0 indexed to make the rest of the code easier.
   auto& imageNumbers = header.imageNumbers;
-  for(int i=0; i< header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < header.imagesInBlock; i++) {
     imageNumbers[i]-= 1;
   }
 
@@ -134,7 +134,7 @@ Header StreamReader::readHeaderVersion2() {
 
   // Now generate the image numbers
   header.imageNumbers.reserve(header.imagesInBlock);
-  for(int i=0; i<header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < header.imagesInBlock; i++) {
     header.imageNumbers.push_back(firstImageNumber + i);
   }
 
@@ -282,7 +282,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
 
     results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
       vector<STEMValues> values;
-      for (int i=0; i<b.header.imagesInBlock; i++) {
+      for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
         auto numberOfPixels = b.header.frameRows * b.header.frameColumns;

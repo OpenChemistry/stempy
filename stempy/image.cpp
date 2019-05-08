@@ -140,7 +140,7 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
   auto dataHandle = vtkm::cont::make_ArrayHandle(
     data, numberOfPixels * block.header.imagesInBlock);
 #endif
-  for (int i = 0; i < block.header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
 #ifdef VTKm
     // Use view to the array already transfered
     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
@@ -255,15 +255,15 @@ Image<double> calculateAverage(InputIt first, InputIt last)
     auto block = std::move(*first);
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
-    for(int i=0; i<block.header.imagesInBlock; i++) {
+    for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto numberOfPixels = block.header.frameRows * block.header.frameColumns;
-      for(int j=0; j<numberOfPixels; j++) {
+      for (unsigned j = 0; j < numberOfPixels; j++) {
         image.data[j] += blockData[i*numberOfPixels+j];
       }
     }
   }
 
-  for(int i=0; i<detectorImageRows*detectorImageColumns; i++) {
+  for (unsigned i = 0; i < detectorImageRows * detectorImageColumns; i++) {
     image.data[i] /= numberOfImages;
   }
 

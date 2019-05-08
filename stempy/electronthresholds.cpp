@@ -17,7 +17,7 @@ double calculateVariance(std::vector<int16_t>& values, double mean)
 {
   double variance = 0;
 
-  for (int i = 0; i < values.size(); i++) {
+  for (size_t i = 0; i < values.size(); i++) {
     variance += pow(values[i], 2.0);
   }
 
@@ -37,7 +37,7 @@ public:
                  lsq::Matrixd&) override
   {
     outVal.resize(bins.size());
-    for (Eigen::Index i = 0; i < bins.size(); ++i) {
+    for (size_t i = 0; i < bins.size(); ++i) {
       outVal[i] =
         (state[0] * exp(-0.5 * pow((this->bins[i] - state[1]) / state[2], 2)) -
          histogram[i]);
@@ -75,7 +75,7 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
     auto randomFrameIndex = randomFrameDist(randomEngine);
     auto blockData = randomBlock.data.get();
 
-    for (int j = 0; j < numberOfPixels; j++) {
+    for (unsigned j = 0; j < numberOfPixels; j++) {
       // For now just use the index, the image number don't seem to work, in the
       // current data set. In the future we should be using the image number.
       samples[i * numberOfPixels + j] =
