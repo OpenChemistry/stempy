@@ -10,9 +10,9 @@ namespace stempy {
 
   template <typename T>
   struct Image {
-    std::shared_ptr<T[]> data;
     uint32_t width = 0;
     uint32_t height = 0;
+    std::shared_ptr<T[]> data;
 
     Image() = default;
     Image(uint32_t width, uint32_t height);

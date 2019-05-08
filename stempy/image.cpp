@@ -20,10 +20,9 @@ using namespace std;
 
 namespace stempy {
 
-template<typename T>
-Image<T>::Image(uint32_t width, uint32_t height) :
-    width(width), height(height),
-    data(new T[width * height], std::default_delete<T[]>())
+template <typename T>
+Image<T>::Image(uint32_t w, uint32_t h)
+  : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
 { }
 
 STEMImage::STEMImage(uint32_t width, uint32_t height)
@@ -140,7 +139,7 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
   auto dataHandle = vtkm::cont::make_ArrayHandle(
     data, numberOfPixels * block.header.imagesInBlock);
 #endif
-  for (int i = 0; i < block.header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
 #ifdef VTKm
     // Use view to the array already transfered
     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
@@ -246,24 +245,24 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 {
   auto detectorImageRows = first->header.frameRows;
   auto detectorImageColumns = first->header.frameColumns;
-  auto numberOfPixels = detectorImageRows*detectorImageColumns;
+  auto numDetectorPixels = detectorImageRows * detectorImageColumns;
   Image<double> image(detectorImageRows, detectorImageColumns);
 
-  std::fill(image.data.get(), image.data.get() + numberOfPixels, 0.0);
+  std::fill(image.data.get(), image.data.get() + numDetectorPixels, 0.0);
   uint64_t numberOfImages = 0;
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
-    for(int i=0; i<block.header.imagesInBlock; i++) {
+    for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto numberOfPixels = block.header.frameRows * block.header.frameColumns;
-      for(int j=0; j<numberOfPixels; j++) {
+      for (unsigned j = 0; j < numberOfPixels; j++) {
         image.data[j] += blockData[i*numberOfPixels+j];
       }
     }
   }
 
-  for(int i=0; i<detectorImageRows*detectorImageColumns; i++) {
+  for (unsigned i = 0; i < detectorImageRows * detectorImageColumns; i++) {
     image.data[i] /= numberOfImages;
   }
 

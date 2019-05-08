@@ -59,7 +59,7 @@ struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
 
   VTKM_EXEC void operator()(uint16_t& val, double background) const
   {
-    val -= background;
+    val -= static_cast<uint16_t>(background);
     if (val <= m_lower || val >= m_upper)
       val = 0;
   }
@@ -198,7 +198,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
-    for (int i = 0; i < block.header.imagesInBlock; i++) {
+    for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart =
         data + i * block.header.frameRows * block.header.frameColumns;
       std::vector<uint16_t> frame(

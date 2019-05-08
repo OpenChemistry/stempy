@@ -18,10 +18,10 @@ using namespace std;
 
 namespace stempy {
 
-Block::Block(const Header& header)
-  : header(header), data(new uint16_t[header.frameRows * header.frameColumns *
-                                      header.imagesInBlock],
-                         std::default_delete<uint16_t[]>())
+Block::Block(const Header& h)
+  : header(h),
+    data(new uint16_t[h.frameRows * h.frameColumns * h.imagesInBlock],
+         std::default_delete<uint16_t[]>())
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
@@ -109,7 +109,7 @@ Header StreamReader::readHeaderVersion1() {
   // Currently the imageNumbers seem to be 1 indexed, we hope this will change.
   // for now, convert them to 0 indexed to make the rest of the code easier.
   auto& imageNumbers = header.imageNumbers;
-  for(int i=0; i< header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < header.imagesInBlock; i++) {
     imageNumbers[i]-= 1;
   }
 
@@ -134,7 +134,7 @@ Header StreamReader::readHeaderVersion2() {
 
   // Now generate the image numbers
   header.imageNumbers.reserve(header.imagesInBlock);
-  for(int i=0; i<header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < header.imagesInBlock; i++) {
     header.imageNumbers.push_back(firstImageNumber + i);
   }
 
@@ -248,6 +248,9 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   msg->insert("width", to_string(width));
   msg->insert("height", to_string(height));
   ioClient.emit("stem.size", msg);
+#else
+  // Silence unused url parameter warning
+  (void)url;
 #endif
 
   // Setup threadpool
@@ -282,7 +285,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
 
     results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
       vector<STEMValues> values;
-      for (int i=0; i<b.header.imagesInBlock; i++) {
+      for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
         auto numberOfPixels = b.header.frameRows * b.header.frameColumns;
