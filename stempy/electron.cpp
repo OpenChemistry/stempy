@@ -193,8 +193,6 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
     throw std::invalid_argument(msg.str());
   }
 
-  std::cout << scanRows << std::endl;
-
   // Matrix to hold electron events.
   std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
   for (; first != last; ++first) {
