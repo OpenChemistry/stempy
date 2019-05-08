@@ -12,8 +12,8 @@ uint16_t* createAnnularMask(int rows, int columns, int innerRadius, int outerRad
   auto mask = new uint16_t[numberOfElements]();
   auto xCenter = round(rows/2.0);
   auto yCenter = round(rows/2.0);
-  innerRadius = pow(innerRadius, 2.0);
-  outerRadius = pow(outerRadius, 2.0);
+  innerRadius = static_cast<int>(pow(innerRadius, 2.0));
+  outerRadius = static_cast<int>(pow(outerRadius, 2.0));
 
   for (int i=0; i<numberOfElements; i++) {
     auto x = i % rows;
