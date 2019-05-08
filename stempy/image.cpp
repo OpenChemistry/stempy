@@ -245,10 +245,10 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 {
   auto detectorImageRows = first->header.frameRows;
   auto detectorImageColumns = first->header.frameColumns;
-  auto numberOfPixels = detectorImageRows*detectorImageColumns;
+  auto numDetectorPixels = detectorImageRows * detectorImageColumns;
   Image<double> image(detectorImageRows, detectorImageColumns);
 
-  std::fill(image.data.get(), image.data.get() + numberOfPixels, 0.0);
+  std::fill(image.data.get(), image.data.get() + numDetectorPixels, 0.0);
   uint64_t numberOfImages = 0;
   for (; first != last; ++first) {
     auto block = std::move(*first);
