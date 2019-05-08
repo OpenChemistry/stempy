@@ -248,6 +248,9 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   msg->insert("width", to_string(width));
   msg->insert("height", to_string(height));
   ioClient.emit("stem.size", msg);
+#else
+  // Silence unused url parameter warning
+  (void)url;
 #endif
 
   // Setup threadpool
