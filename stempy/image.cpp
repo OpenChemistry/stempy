@@ -157,16 +157,29 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
 } // end namespace
 
 template <typename InputIt>
-STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int columns,
-                          int innerRadius, int outerRadius)
+STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
+    int outerRadius, int rows, int columns)
 {
-  STEMImage image(rows, columns);
-
   if (first == last) {
     ostringstream msg;
     msg << "No blocks to read!";
     throw invalid_argument(msg.str());
   }
+
+  // If we haven't been provided with rows and columns, try the header.
+  if (rows == 0 || columns == 0) {
+    rows = first->header.scanRows;
+    columns = first->header.scanColumns;
+  }
+
+  // Raise an exception if we still don't have valid rows and columns
+  if (rows <= 0 || columns <= 0) {
+    ostringstream msg;
+    msg << "No scan image size provided.";
+    throw invalid_argument(msg.str());
+  }
+
+  STEMImage image(rows, columns);
 
   // Get image size from first block
   auto detectorImageRows = first->header.frameRows;

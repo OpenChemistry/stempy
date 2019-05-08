@@ -37,8 +37,8 @@ namespace stempy {
   };
 
   template <typename InputIt>
-  STEMImage createSTEMImage(InputIt first, InputIt last, int rows, int colums,
-                            int innerRadius, int outerRadius);
+  STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
+      int outerRadius, int rows=0, int columns=0);
   STEMValues calculateSTEMValues(uint16_t data[], int offset,
                                  int numberOfPixels,
                                  uint16_t brightFieldMask[],

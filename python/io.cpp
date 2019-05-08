@@ -16,7 +16,9 @@ PYBIND11_MODULE(_io, m)
     .def_readonly("frame_columns", &Header::frameColumns)
     .def_readonly("version", &Header::version)
     .def_readonly("timestamp", &Header::timestamp)
-    .def_readonly("image_numbers", &Header::imageNumbers);
+    .def_readonly("image_numbers", &Header::imageNumbers)
+    .def_readonly("scan_rows", &Header::scanRows)
+    .def_readonly("scan_columns", &Header::scanColumns);
 
   py::class_<Block>(m , "_block", py::buffer_protocol())
     .def_readonly("header", &Block::header)

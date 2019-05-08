@@ -11,6 +11,9 @@
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
+#include <sstream>
+#include <stdexcept>
+
 #ifdef VTKm
 namespace {
 
@@ -166,11 +169,32 @@ std::vector<uint32_t> maximalPoints(
 
 template <typename InputIt>
 std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
-                                                 int scanRows, int scanColumns,
                                                  Image<double>& darkReference,
                                                  double backgroundThreshold,
-                                                 double xRayThreshold)
+                                                 double xRayThreshold,
+                                                 int scanRows, int scanColumns)
 {
+  if (first == last) {
+    std::ostringstream msg;
+    msg << "No blocks to read!";
+    throw std::invalid_argument(msg.str());
+  }
+
+  // If we haven't been provided with rows and columns, try the header.
+  if (scanRows == 0 || scanColumns == 0) {
+    scanRows = first->header.scanRows;
+    scanColumns = first->header.scanColumns;
+  }
+
+  // Raise an exception if we still don't have valid rows and columns
+  if (scanRows <= 0 || scanColumns <= 0) {
+    std::ostringstream msg;
+    msg << "No scan image size provided.";
+    throw std::invalid_argument(msg.str());
+  }
+
+  std::cout << scanRows << std::endl;
+
   // Matrix to hold electron events.
   std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
   for (; first != last; ++first) {
@@ -206,7 +230,6 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
 
 // Instantiate the ones that can be used
 template std::vector<std::vector<uint32_t>> electronCount(
-  StreamReader::iterator first, StreamReader::iterator last, int scanRows,
-  int scanColumns, Image<double>& darkReference, double backgroundThreshold,
-  double xRayThreshold);
+  StreamReader::iterator first, StreamReader::iterator last, Image<double>& darkReference,
+  double backgroundThreshold, double xRayThreshold, int scanRows, int scanColumns);
 }

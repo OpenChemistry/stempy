@@ -2,10 +2,10 @@ from stempy import _image
 import numpy as np
 from collections import namedtuple
 
-def create_stem_image(reader, width, height,  inner_radius,
-                      outer_radius):
+def create_stem_image(reader, inner_radius,
+                      outer_radius, width=0, height=0):
     img =  _image.create_stem_image(reader.begin(), reader.end(),
-                                    width, height,  inner_radius, outer_radius)
+                                    inner_radius, outer_radius, width, height)
 
     image = namedtuple('STEMImage', ['bright', 'dark'])
     image.bright = np.array(img.bright, copy = False)
@@ -30,9 +30,9 @@ def calculate_average(reader):
 
     return img
 
-def electron_count(reader, rows, columns, darkreference,  number_of_samples=40,
+def electron_count(reader, darkreference,  number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
-                   threshold_num_blocks=1):
+                   threshold_num_blocks=1, rows=0, columns=0):
 
     blocks = []
     for i in range(threshold_num_blocks):
@@ -45,9 +45,8 @@ def electron_count(reader, rows, columns, darkreference,  number_of_samples=40,
     # Reset the reader
     reader.reset()
 
-    events = _image.electron_count(reader.begin(), reader.end(), rows, columns,
-                                   darkreference._image, background_threshold,
-                                   xray_threshold)
+    events = _image.electron_count(reader.begin(), reader.end(), darkreference._image,
+                                   background_threshold, xray_threshold, rows, columns)
 
     # Convert to numpy and return
     return np.array([np.array(x) for x in events])
