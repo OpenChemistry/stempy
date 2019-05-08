@@ -59,7 +59,7 @@ struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
 
   VTKM_EXEC void operator()(uint16_t& val, double background) const
   {
-    val -= background;
+    val -= static_cast<uint16_t>(background);
     if (val <= m_lower || val >= m_upper)
       val = 0;
   }
