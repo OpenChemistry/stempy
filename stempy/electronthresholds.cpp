@@ -28,9 +28,9 @@ class GaussianErrorFunction : public lsq::ErrorFunction<double>
 {
 
 public:
-  GaussianErrorFunction(const std::vector<int32_t>& bins,
-                        const std::vector<uint64_t>& histogram)
-    : bins(bins), histogram(histogram)
+  GaussianErrorFunction(const std::vector<int32_t>& b,
+                        const std::vector<uint64_t>& h)
+    : bins(b), histogram(h)
   {
   }
   void _evaluate(const lsq::Vectord& state, lsq::Vectord& outVal,

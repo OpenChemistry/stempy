@@ -20,10 +20,9 @@ using namespace std;
 
 namespace stempy {
 
-template<typename T>
-Image<T>::Image(uint32_t width, uint32_t height) :
-    width(width), height(height),
-    data(new T[width * height], std::default_delete<T[]>())
+template <typename T>
+Image<T>::Image(uint32_t w, uint32_t h)
+  : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
 { }
 
 STEMImage::STEMImage(uint32_t width, uint32_t height)

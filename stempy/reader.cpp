@@ -18,10 +18,10 @@ using namespace std;
 
 namespace stempy {
 
-Block::Block(const Header& header)
-  : header(header), data(new uint16_t[header.frameRows * header.frameColumns *
-                                      header.imagesInBlock],
-                         std::default_delete<uint16_t[]>())
+Block::Block(const Header& h)
+  : header(h),
+    data(new uint16_t[h.frameRows * h.frameColumns * h.imagesInBlock],
+         std::default_delete<uint16_t[]>())
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
