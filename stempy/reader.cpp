@@ -18,10 +18,10 @@ using namespace std;
 
 namespace stempy {
 
-Block::Block(const Header& header) :
-  header(header),
-  data(new uint16_t[header.frameRows*header.frameColumns*header.imagesInBlock],
-      std::default_delete<uint16_t[]>())
+Block::Block(const Header& header)
+  : header(header), data(new uint16_t[header.frameRows * header.frameColumns *
+                                      header.imagesInBlock],
+                         std::default_delete<uint16_t[]>())
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
@@ -147,7 +147,8 @@ Header StreamReader::readHeaderVersion2() {
 // unsigned int16 total_number_of_stem_y_positions_in_scan;
 // unsigned int16 stem_x_position_of_frame;
 // unsigned int16 stem_y_position_of_frame;
-Header StreamReader::readHeaderVersion3() {
+Header StreamReader::readHeaderVersion3()
+{
 
   Header header;
 
@@ -158,7 +159,7 @@ Header StreamReader::readHeaderVersion3() {
 
   // Read scan and frame number
   uint32_t headerNumbers[2];
-  read(headerNumbers, 2*sizeof(uint32_t));
+  read(headerNumbers, 2 * sizeof(uint32_t));
 
   int index = 0;
   header.scanNumber = headerNumbers[index++];
@@ -167,16 +168,16 @@ Header StreamReader::readHeaderVersion3() {
   // Now read the size and positions
   uint16_t headerPositions[4];
   index = 0;
-  read(headerPositions, 4*sizeof(uint16_t));
+  read(headerPositions, 4 * sizeof(uint16_t));
 
   header.scanColumns = headerPositions[index++];
   header.scanRows = headerPositions[index++];
 
   // Now get the image numbers
   header.imageNumbers.resize(1);
-  auto scanColumnPosition =  headerPositions[index];
-  auto scanRowPosition =  headerPositions[index++];
-  header.imageNumbers.push_back(scanRowPosition*scanColumnPosition);
+  auto scanColumnPosition = headerPositions[index];
+  auto scanRowPosition = headerPositions[index++];
+  header.imageNumbers.push_back(scanRowPosition * scanColumnPosition);
 
   return header;
 }
@@ -217,7 +218,8 @@ Block StreamReader::read()
 
     Block b(header);
 
-    auto dataSize = b.header.frameRows * b.header.frameColumns * b.header.imagesInBlock;
+    auto dataSize =
+      b.header.frameRows * b.header.frameColumns * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
 
     return b;
@@ -269,11 +271,13 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
     }
 
     if (brightFieldMask == nullptr) {
-      brightFieldMask = createAnnularMask(b.header.frameRows, b.header.frameColumns, 0, 288);
+      brightFieldMask =
+        createAnnularMask(b.header.frameRows, b.header.frameColumns, 0, 288);
     }
 
     if (darkFieldMask == nullptr) {
-      darkFieldMask = createAnnularMask(b.header.frameRows, b.header.frameColumns, 40, 288);
+      darkFieldMask =
+        createAnnularMask(b.header.frameRows, b.header.frameColumns, 40, 288);
     }
 
     results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
@@ -281,7 +285,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       for (int i=0; i<b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
-        auto numberOfPixels = b.header.frameRows*b.header.frameColumns;
+        auto numberOfPixels = b.header.frameRows * b.header.frameColumns;
         values.push_back(calculateSTEMValues(data, i*numberOfPixels,
             numberOfPixels, brightFieldMask, darkFieldMask, imageNumber));
       }

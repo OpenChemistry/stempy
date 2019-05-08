@@ -201,16 +201,19 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
     auto block = std::move(*first);
     auto data = block.data.get();
     for (int i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart = data + i * block.header.frameRows * block.header.frameColumns;
+      auto frameStart =
+        data + i * block.header.frameRows * block.header.frameColumns;
       std::vector<uint16_t> frame(
-        frameStart, frameStart + block.header.frameRows * block.header.frameColumns);
+        frameStart,
+        frameStart + block.header.frameRows * block.header.frameColumns);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
         frame, block.header.frameRows, block.header.frameColumns,
         darkReference.data.get(), backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.frameRows * block.header.frameColumns; j++) {
+      for (int j = 0; j < block.header.frameRows * block.header.frameColumns;
+           j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
         // Threshold the electron events
@@ -230,6 +233,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
 
 // Instantiate the ones that can be used
 template std::vector<std::vector<uint32_t>> electronCount(
-  StreamReader::iterator first, StreamReader::iterator last, Image<double>& darkReference,
-  double backgroundThreshold, double xRayThreshold, int scanRows, int scanColumns);
+  StreamReader::iterator first, StreamReader::iterator last,
+  Image<double>& darkReference, double backgroundThreshold,
+  double xRayThreshold, int scanRows, int scanColumns);
 }

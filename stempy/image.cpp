@@ -158,7 +158,7 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
 
 template <typename InputIt>
 STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-    int outerRadius, int rows, int columns)
+                          int outerRadius, int rows, int columns)
 {
   if (first == last) {
     ostringstream msg;

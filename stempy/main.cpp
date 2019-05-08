@@ -24,8 +24,8 @@ int main (int argc, char *argv[])
     cout << "Block count: " << ++count << endl;
     cout << "Version: " << stream.header.version << endl;
     cout << "Images in block: " <<  stream.header.imagesInBlock << endl;
-    cout << "Rows: " <<  stream.header.frameRows << endl;
-    cout << "Columns: " <<  stream.header.frameColumns << endl;
+    cout << "Rows: " << stream.header.frameRows << endl;
+    cout << "Columns: " << stream.header.frameColumns << endl;
     cout << "Image numbers: ";
 
     for (auto n : stream.header.imageNumbers) {
