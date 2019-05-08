@@ -7,6 +7,7 @@ from stempy._io import _reader
 class FileVersion(object):
     VERSION1 = 1
     VERSION2 = 2
+    VERSION3 = 3
 
 class Reader(_reader):
     def __iter__(self):

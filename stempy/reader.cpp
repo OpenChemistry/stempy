@@ -141,6 +141,46 @@ Header StreamReader::readHeaderVersion2() {
   return header;
 }
 
+// unsigned int32 scan_number;
+// unsigned int32 frame_number;
+// unsigned int16 total_number_of_stem_x_positions_in_scan;
+// unsigned int16 total_number_of_stem_y_positions_in_scan;
+// unsigned int16 stem_x_position_of_frame;
+// unsigned int16 stem_y_position_of_frame;
+Header StreamReader::readHeaderVersion3() {
+
+  Header header;
+
+  header.imagesInBlock = 1;
+  header.frameRows = 576;
+  header.frameColumns = 576;
+  header.version = 3;
+
+  // Read scan and frame number
+  uint32_t headerNumbers[2];
+  read(headerNumbers, 2*sizeof(uint32_t));
+
+  int index = 0;
+  header.scanNumber = headerNumbers[index++];
+  header.frameNumber = headerNumbers[index];
+
+  // Now read the size and positions
+  uint16_t headerPositions[4];
+  index = 0;
+  read(headerPositions, 4*sizeof(uint16_t));
+
+  header.scanColumns = headerPositions[index++];
+  header.scanRows = headerPositions[index++];
+
+  // Now get the image numbers
+  header.imageNumbers.resize(1);
+  auto scanColumnPosition =  headerPositions[index];
+  auto scanRowPosition =  headerPositions[index++];
+  header.imageNumbers.push_back(scanRowPosition*scanColumnPosition);
+
+  return header;
+}
+
 Block StreamReader::read()
 {
   if (atEnd())
@@ -164,6 +204,9 @@ Block StreamReader::read()
         break;
       case 2:
         header = readHeaderVersion2();
+        break;
+      case 3:
+        header = readHeaderVersion3();
         break;
       default:
         std::ostringstream ss;
