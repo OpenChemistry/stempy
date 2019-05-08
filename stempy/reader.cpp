@@ -18,10 +18,10 @@ using namespace std;
 
 namespace stempy {
 
-Block::Block(const Header& header) :
-  header(header),
-  data(new uint16_t[header.rows*header.columns*header.imagesInBlock],
-      std::default_delete<uint16_t[]>())
+Block::Block(const Header& header)
+  : header(header), data(new uint16_t[header.frameRows * header.frameColumns *
+                                      header.imagesInBlock],
+                         std::default_delete<uint16_t[]>())
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
@@ -93,8 +93,8 @@ Header StreamReader::readHeaderVersion1() {
 
   int index = 0;
   header.imagesInBlock = headerData[index++];
-  header.rows = headerData[index++];
-  header.columns = headerData[index++];
+  header.frameRows = headerData[index++];
+  header.frameColumns = headerData[index++];
   header.version = headerData[index++];
   header.timestamp =  headerData[index++];
   // Skip over 6 - 10 - reserved
@@ -128,8 +128,8 @@ Header StreamReader::readHeaderVersion2() {
   firstImageNumber = 0;
 
   header.imagesInBlock = 1600;
-  header.rows = 576;
-  header.columns = 576;
+  header.frameRows = 576;
+  header.frameColumns = 576;
   header.version = 2;
 
   // Now generate the image numbers
@@ -137,6 +137,47 @@ Header StreamReader::readHeaderVersion2() {
   for(int i=0; i<header.imagesInBlock; i++) {
     header.imageNumbers.push_back(firstImageNumber + i);
   }
+
+  return header;
+}
+
+// unsigned int32 scan_number;
+// unsigned int32 frame_number;
+// unsigned int16 total_number_of_stem_x_positions_in_scan;
+// unsigned int16 total_number_of_stem_y_positions_in_scan;
+// unsigned int16 stem_x_position_of_frame;
+// unsigned int16 stem_y_position_of_frame;
+Header StreamReader::readHeaderVersion3()
+{
+
+  Header header;
+
+  header.imagesInBlock = 1;
+  header.frameRows = 576;
+  header.frameColumns = 576;
+  header.version = 3;
+
+  // Read scan and frame number
+  uint32_t headerNumbers[2];
+  read(headerNumbers, 2 * sizeof(uint32_t));
+
+  int index = 0;
+  header.scanNumber = headerNumbers[index++];
+  header.frameNumber = headerNumbers[index];
+
+  // Now read the size and positions
+  uint16_t headerPositions[4];
+  index = 0;
+  read(headerPositions, 4 * sizeof(uint16_t));
+
+  header.scanColumns = headerPositions[index++];
+  header.scanRows = headerPositions[index++];
+
+  // Now get the image numbers
+  header.imageNumbers.resize(1);
+  auto scanColumnPosition = headerPositions[index];
+  auto scanRowPosition = headerPositions[index++];
+  header.imageNumbers.push_back(scanRowPosition * scanColumnPosition);
 
   return header;
 }
@@ -165,6 +206,9 @@ Block StreamReader::read()
       case 2:
         header = readHeaderVersion2();
         break;
+      case 3:
+        header = readHeaderVersion3();
+        break;
       default:
         std::ostringstream ss;
         ss << "Unexpected version: ";
@@ -174,7 +218,8 @@ Block StreamReader::read()
 
     Block b(header);
 
-    auto dataSize = b.header.rows * b.header.columns * b.header.imagesInBlock;
+    auto dataSize =
+      b.header.frameRows * b.header.frameColumns * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
 
     return b;
@@ -226,11 +271,13 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
     }
 
     if (brightFieldMask == nullptr) {
-      brightFieldMask = createAnnularMask(b.header.rows, b.header.columns, 0, 288);
+      brightFieldMask =
+        createAnnularMask(b.header.frameRows, b.header.frameColumns, 0, 288);
     }
 
     if (darkFieldMask == nullptr) {
-      darkFieldMask = createAnnularMask(b.header.rows, b.header.columns, 40, 288);
+      darkFieldMask =
+        createAnnularMask(b.header.frameRows, b.header.frameColumns, 40, 288);
     }
 
     results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
@@ -238,7 +285,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       for (int i=0; i<b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
-        auto numberOfPixels = b.header.rows*b.header.columns;
+        auto numberOfPixels = b.header.frameRows * b.header.frameColumns;
         values.push_back(calculateSTEMValues(data, i*numberOfPixels,
             numberOfPixels, brightFieldMask, darkFieldMask, imageNumber));
       }

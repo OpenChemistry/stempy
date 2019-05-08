@@ -11,6 +11,9 @@
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
+#include <sstream>
+#include <stdexcept>
+
 #ifdef VTKm
 namespace {
 
@@ -166,27 +169,49 @@ std::vector<uint32_t> maximalPoints(
 
 template <typename InputIt>
 std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
-                                                 int scanRows, int scanColumns,
                                                  Image<double>& darkReference,
                                                  double backgroundThreshold,
-                                                 double xRayThreshold)
+                                                 double xRayThreshold,
+                                                 int scanRows, int scanColumns)
 {
+  if (first == last) {
+    std::ostringstream msg;
+    msg << "No blocks to read!";
+    throw std::invalid_argument(msg.str());
+  }
+
+  // If we haven't been provided with rows and columns, try the header.
+  if (scanRows == 0 || scanColumns == 0) {
+    scanRows = first->header.scanRows;
+    scanColumns = first->header.scanColumns;
+  }
+
+  // Raise an exception if we still don't have valid rows and columns
+  if (scanRows <= 0 || scanColumns <= 0) {
+    std::ostringstream msg;
+    msg << "No scan image size provided.";
+    throw std::invalid_argument(msg.str());
+  }
+
   // Matrix to hold electron events.
   std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
     for (int i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart = data + i * block.header.rows * block.header.columns;
+      auto frameStart =
+        data + i * block.header.frameRows * block.header.frameColumns;
       std::vector<uint16_t> frame(
-        frameStart, frameStart + block.header.rows * block.header.columns);
+        frameStart,
+        frameStart + block.header.frameRows * block.header.frameColumns);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, block.header.rows, block.header.columns,
+        frame, block.header.frameRows, block.header.frameColumns,
         darkReference.data.get(), backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.rows * block.header.columns; j++) {
+      for (int j = 0; j < block.header.frameRows * block.header.frameColumns;
+           j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
         // Threshold the electron events
@@ -196,7 +221,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, block.header.rows, block.header.columns);
+        maximalPoints(frame, block.header.frameRows, block.header.frameColumns);
 #endif
     }
   }
@@ -206,7 +231,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
 
 // Instantiate the ones that can be used
 template std::vector<std::vector<uint32_t>> electronCount(
-  StreamReader::iterator first, StreamReader::iterator last, int scanRows,
-  int scanColumns, Image<double>& darkReference, double backgroundThreshold,
-  double xRayThreshold);
+  StreamReader::iterator first, StreamReader::iterator last,
+  Image<double>& darkReference, double backgroundThreshold,
+  double xRayThreshold, int scanRows, int scanColumns);
 }

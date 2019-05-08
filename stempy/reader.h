@@ -14,7 +14,10 @@ struct EofException : public std::exception
 };
 
 struct Header {
-  uint32_t imagesInBlock = 0, rows = 0, columns = 0, version = 0, timestamp = 0;
+  uint32_t imagesInBlock = 0, frameRows = 0, frameColumns = 0, version = 0,
+           timestamp = 0;
+  uint32_t frameNumber = 0, scanNumber = 0;
+  uint16_t scanRows = 0, scanColumns = 0;
   std::vector<uint32_t> imageNumbers;
 
   Header() = default;
@@ -124,6 +127,7 @@ private:
 
   Header readHeaderVersion1();
   Header readHeaderVersion2();
+  Header readHeaderVersion3();
 
   template<typename T>
   std::istream & read(T& value);
