@@ -31,11 +31,13 @@ set_target_properties(_io
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
+    BUILD_RPATH "$ORIGIN"
 )
 set_target_properties(_image
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
+    BUILD_RPATH "$ORIGIN"
 )
 
 install(FILES stempy/io/__init__.py  COMPONENT python DESTINATION "${INSTALL_LIBRARY_DIR}/stempy/io/")
