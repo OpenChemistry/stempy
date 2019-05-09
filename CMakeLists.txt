@@ -21,7 +21,7 @@ include_directories(SYSTEM
 
 find_package(Threads)
 find_package(SocketIOClientCpp QUIET)
-include_directories(
+include_directories(SYSTEM
   ${SocketIOClientCpp_INCLUDE_DIRS}
 )
 
