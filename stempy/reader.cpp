@@ -306,23 +306,26 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   int numberOfPixels = firstResult.size()*results.size();
 
   auto emitMessage = [&ioClient, &streamId, &imageId, &numberOfPixels](
-    const string& eventName, const std::vector<uint64_t>& pixelValues,
-    const std::vector<uint32_t>& pixelIndexes, int numberOfPixes) {
-    auto msg = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
-    msg->insert("streamId", to_string(streamId));
-    msg->insert("imageId", to_string(imageId));
+                       const string& eventName,
+                       const std::vector<uint64_t>& pixelValues,
+                       const std::vector<uint32_t>& pixelIndexes,
+                       int numPixels) {
+    auto message = std::dynamic_pointer_cast<sio::object_message>(
+      sio::object_message::create());
+    message->insert("streamId", to_string(streamId));
+    message->insert("imageId", to_string(imageId));
     auto data = std::dynamic_pointer_cast<sio::object_message>(sio::object_message::create());
     // TODO: Can probably get rid these copies
     data->insert("values", std::make_shared<std::string>(
                              reinterpret_cast<const char*>(pixelValues.data()),
-                             numberOfPixels * sizeof(uint64_t)));
+                             numPixels * sizeof(uint64_t)));
     data->insert("indexes",
                  std::make_shared<std::string>(
                    reinterpret_cast<const char*>(pixelIndexes.data()),
-                   numberOfPixels * sizeof(uint32_t)));
-    msg->insert("data", data);
+                   numPixels * sizeof(uint32_t)));
+    message->insert("data", data);
 
-    ioClient.emit(eventName, msg);
+    ioClient.emit(eventName, message);
   };
 
   // Values

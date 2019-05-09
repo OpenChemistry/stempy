@@ -7,8 +7,7 @@ using namespace std;
 
 namespace stempy {
 
-SocketIOClient::SocketIOClient(const string &url, const string &ns)
-  : url(url), ns(ns)
+SocketIOClient::SocketIOClient(const string& u, const string& n) : url(u), ns(n)
 {
   this->client.set_open_listener(bind(&SocketIOClient::onConnect, this));
   this->client.set_close_listener(bind(&SocketIOClient::onClose, this, placeholders::_1));
