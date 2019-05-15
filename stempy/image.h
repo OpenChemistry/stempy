@@ -43,7 +43,8 @@ namespace stempy {
 
   STEMImage createSTEMImageSparse(
     const std::vector<std::vector<uint32_t>>& sparseData, int innerRadius,
-    int outerRadius, int rows, int columns, int frameRows, int frameColumns);
+    int outerRadius, int rows, int columns, int frameRows, int frameColumns,
+    int centerX = -1, int centerY = -1);
 
   STEMValues calculateSTEMValues(const uint16_t data[], int offset,
                                  int numberOfPixels,

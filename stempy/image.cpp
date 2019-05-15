@@ -261,14 +261,15 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 
 STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
                                 int innerRadius, int outerRadius, int rows,
-                                int columns, int frameRows, int frameColumns)
+                                int columns, int frameRows, int frameColumns,
+                                int centerX, int centerY)
 {
   STEMImage image(rows, columns);
 
-  auto brightFieldMask =
-    createAnnularMask(frameRows, frameColumns, 0, outerRadius);
-  auto darkFieldMask =
-    createAnnularMask(frameRows, frameColumns, innerRadius, outerRadius);
+  auto brightFieldMask = createAnnularMask(frameRows, frameColumns, 0,
+                                           outerRadius, centerX, centerY);
+  auto darkFieldMask = createAnnularMask(frameRows, frameColumns, innerRadius,
+                                         outerRadius, centerX, centerY);
 
   auto numberOfPixels = frameRows * frameColumns;
   vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
