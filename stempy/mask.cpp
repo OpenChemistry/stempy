@@ -14,7 +14,7 @@ uint16_t* createAnnularMask(int rows, int columns, int innerRadius,
   auto mask = new uint16_t[numberOfElements]();
 
   if (centerX < 0)
-    centerX = round(rows / 2.0);
+    centerX = round(columns / 2.0);
 
   if (centerY < 0)
     centerY = round(rows / 2.0);
