@@ -1,5 +1,5 @@
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='stempy',
@@ -16,7 +16,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='',
-    packages=find_packages('python'),
+    packages=['stempy', 'stempy.io', 'stempy.image'],
     package_dir={'':'python'},
     install_requires=[
         'numpy',
