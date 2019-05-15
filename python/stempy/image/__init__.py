@@ -3,9 +3,11 @@ import numpy as np
 from collections import namedtuple
 
 def create_stem_image(reader, inner_radius,
-                      outer_radius, width=0, height=0):
+                      outer_radius, width=0, height=0,
+                      center_x=-1, center_y=-1):
     img =  _image.create_stem_image(reader.begin(), reader.end(),
-                                    inner_radius, outer_radius, width, height)
+                                    inner_radius, outer_radius, width, height,
+                                    center_x, center_y)
 
     image = namedtuple('STEMImage', ['bright', 'dark'])
     image.bright = np.array(img.bright, copy = False)

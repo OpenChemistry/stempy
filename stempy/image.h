@@ -38,14 +38,16 @@ namespace stempy {
 
   template <typename InputIt>
   STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                            int outerRadius, int rows = 0, int columns = 0);
+                            int outerRadius, int rows = 0, int columns = 0,
+                            int centerX = -1, int centerY = -1);
 
   STEMImage createSTEMImageSparse(
     const std::vector<std::vector<uint32_t>>& sparseData, int innerRadius,
     int outerRadius, int rows, int columns, int frameRows, int frameColumns);
 
   STEMValues calculateSTEMValues(const uint16_t data[], int offset,
-                                 int numberOfPixels, uint16_t brightFieldMask[],
+                                 int numberOfPixels,
+                                 uint16_t brightFieldMask[],
                                  uint16_t darkFieldMask[],
                                  uint32_t imageNumber = -1);
 
