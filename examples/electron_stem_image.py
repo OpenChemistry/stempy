@@ -26,12 +26,10 @@ with h5py.File('stem_image.h5', 'r') as rf:
 
 num_pixels = frame_rows * frame_columns
 
-expanded_data = io.expand_electron_data(frames, num_pixels)
-
 inner_radius = 40
 outer_radius = 288
 
-img = image.create_stem_image_sparse(expanded_data, inner_radius, outer_radius,
+img = image.create_stem_image_sparse(frames, inner_radius, outer_radius,
                                      rows, columns, frame_rows, frame_columns)
 
 save_img(img.bright, 'bright.png', rows, columns)

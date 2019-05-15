@@ -243,18 +243,31 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
   return image;
 }
 
-STEMImage createSTEMImageSparse(const vector<uint16_t>& data, int innerRadius,
-                                int outerRadius, int rows, int columns,
-                                int frameRows, int frameColumns)
+vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
+                                      size_t numPixels)
+{
+  vector<uint16_t> ret(data.size() * numPixels, 0);
+  for (size_t i = 0; i < data.size(); ++i) {
+    for (auto pos : data[i])
+      ret[i * numPixels + pos] = 1;
+  }
+
+  return ret;
+}
+
+STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
+                                int innerRadius, int outerRadius, int rows,
+                                int columns, int frameRows, int frameColumns)
 {
   STEMImage image(rows, columns);
-
-  auto numberOfPixels = frameRows * frameColumns;
 
   auto brightFieldMask =
     createAnnularMask(frameRows, frameColumns, 0, outerRadius);
   auto darkFieldMask =
     createAnnularMask(frameRows, frameColumns, innerRadius, outerRadius);
+
+  auto numberOfPixels = frameRows * frameColumns;
+  vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
 
   size_t numImages = data.size() / numberOfPixels;
   vector<uint32_t> imageNumbers(numImages);

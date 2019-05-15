@@ -37,14 +37,6 @@ class Reader(_reader):
 def reader(path, version=FileVersion.VERSION1):
     return Reader(path, version)
 
-def expand_electron_data(frames, numPixels):
-    ret = np.zeros((len(frames) * numPixels,), dtype=np.uint16)
-    for i, frame in enumerate(frames):
-        for pos in frame:
-            ret[i * numPixels + pos] = 1
-
-    return ret
-
 def save_raw_data(path, data, zip_data=False):
     # Chunk cache size. Default is 1 MB
     rdcc_nbytes = 1000000
