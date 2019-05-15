@@ -123,23 +123,25 @@ STEMValues calculateSTEMValuesParallel(
 // These should be ran by separate threads
 namespace {
 #ifdef VTKm
-void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
+void _runCalculateSTEMValues(uint16_t data[],
+                             const vector<uint32_t>& imageNumbers,
+                             uint32_t numberOfPixels,
                              const vtkm::cont::ArrayHandle<uint16_t>& bright,
                              const vtkm::cont::ArrayHandle<uint16_t>& dark,
                              STEMImage& image)
 #else
-void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
-                             uint16_t* brightFieldMask, uint16_t* darkFieldMask,
-                             STEMImage& image)
+void _runCalculateSTEMValues(uint16_t data[],
+                             const vector<uint32_t>& imageNumbers,
+                             uint32_t numberOfPixels, uint16_t* brightFieldMask,
+                             uint16_t* darkFieldMask, STEMImage& image)
 #endif
 {
-  auto data = block.data.get();
 #ifdef VTKm
   // Transfer the entire block of data at once.
-  auto dataHandle = vtkm::cont::make_ArrayHandle(
-    data, numberOfPixels * block.header.imagesInBlock);
+  auto dataHandle =
+    vtkm::cont::make_ArrayHandle(data, numberOfPixels * imageNumbers.size());
 #endif
-  for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
+  for (unsigned i = 0; i < imageNumbers.size(); ++i) {
 #ifdef VTKm
     // Use view to the array already transfered
     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
@@ -149,8 +151,8 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
     auto stemValues = calculateSTEMValues(
       data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
 #endif
-    image.bright.data[block.header.imageNumbers[i]] = stemValues.bright;
-    image.dark.data[block.header.imageNumbers[i]] = stemValues.dark;
+    image.bright.data[imageNumbers[i]] = stemValues.bright;
+    image.dark.data[imageNumbers[i]] = stemValues.dark;
   }
 }
 } // end namespace
@@ -213,7 +215,8 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
     // the block will not be deleted until the threads are destroyed.
     futures.emplace_back(
       pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
-        _runCalculateSTEMValues(b, numberOfPixels, bright, dark, image);
+        _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+                                numberOfPixels, bright, dark, image);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
         b.data.reset();
@@ -221,8 +224,9 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
 #else
     futures.emplace_back(pool.enqueue(
       [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
-        _runCalculateSTEMValues(b, numberOfPixels, brightFieldMask,
-                                darkFieldMask, image);
+        _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+                                numberOfPixels, brightFieldMask, darkFieldMask,
+                                image);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
         b.data.reset();
