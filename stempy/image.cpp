@@ -157,7 +157,8 @@ void _runCalculateSTEMValues(const Block& block, uint32_t numberOfPixels,
 
 template <typename InputIt>
 STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                          int outerRadius, int rows, int columns)
+                          int outerRadius, int rows, int columns, int centerX,
+                          int centerY)
 {
   if (first == last) {
     ostringstream msg;
@@ -185,8 +186,11 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
   auto detectorImageColumns = first->header.frameColumns;
   auto numberOfPixels = detectorImageRows * detectorImageRows;
 
-  auto brightFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, 0, outerRadius);
-  auto darkFieldMask = createAnnularMask(detectorImageRows, detectorImageColumns, innerRadius, outerRadius);
+  auto brightFieldMask = createAnnularMask(
+    detectorImageRows, detectorImageColumns, 0, outerRadius, centerX, centerY);
+  auto darkFieldMask =
+    createAnnularMask(detectorImageRows, detectorImageColumns, innerRadius,
+                      outerRadius, centerX, centerY);
 
 #ifdef VTKm
   // Only transfer the mask once.
@@ -273,11 +277,11 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 template STEMImage createSTEMImage(StreamReader::iterator first,
                                    StreamReader::iterator last, int rows,
                                    int columns, int innerRadius,
-                                   int outerRadius);
+                                   int outerRadius, int centerX, int centerY);
 template STEMImage createSTEMImage(vector<Block>::iterator first,
                                    vector<Block>::iterator last, int rows,
                                    int columns, int innerRadius,
-                                   int outerRadius);
+                                   int outerRadius, int centerX, int centerY);
 
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
