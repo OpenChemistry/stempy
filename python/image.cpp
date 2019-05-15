@@ -44,6 +44,7 @@ PYBIND11_MODULE(_image, m)
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_image", &createSTEMImage<StreamReader::iterator>);
+  m.def("create_stem_image_sparse", &createSTEMImageSparse);
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>);
   m.def("electron_count", &electronCount<StreamReader::iterator>);
   m.def("calculate_thresholds", &calculateThresholds);

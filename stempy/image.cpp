@@ -14,6 +14,7 @@
 #include <future>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <sstream>
 
 using namespace std;
@@ -34,11 +35,9 @@ STEMImage::STEMImage(uint32_t width, uint32_t height)
   std::fill(this->dark.data.get(), this->dark.data.get() + width*height, 0);
 }
 
-STEMValues calculateSTEMValues(uint16_t data[], int offset,
-                               int numberOfPixels,
-                               uint16_t brightFieldMask[],
-                               uint16_t darkFieldMask[],
-                               uint32_t imageNumber)
+STEMValues calculateSTEMValues(const uint16_t data[], int offset,
+                               int numberOfPixels, uint16_t brightFieldMask[],
+                               uint16_t darkFieldMask[], uint32_t imageNumber)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
@@ -123,14 +122,14 @@ STEMValues calculateSTEMValuesParallel(
 // These should be ran by separate threads
 namespace {
 #ifdef VTKm
-void _runCalculateSTEMValues(uint16_t data[],
+void _runCalculateSTEMValues(const uint16_t data[],
                              const vector<uint32_t>& imageNumbers,
                              uint32_t numberOfPixels,
                              const vtkm::cont::ArrayHandle<uint16_t>& bright,
                              const vtkm::cont::ArrayHandle<uint16_t>& dark,
                              STEMImage& image)
 #else
-void _runCalculateSTEMValues(uint16_t data[],
+void _runCalculateSTEMValues(const uint16_t data[],
                              const vector<uint32_t>& imageNumbers,
                              uint32_t numberOfPixels, uint16_t* brightFieldMask,
                              uint16_t* darkFieldMask, STEMImage& image)
@@ -237,6 +236,39 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
   // Make sure all threads are finished before continuing
   for (auto& future : futures)
     future.get();
+
+  delete[] brightFieldMask;
+  delete[] darkFieldMask;
+
+  return image;
+}
+
+STEMImage createSTEMImageSparse(const vector<uint16_t>& data, int innerRadius,
+                                int outerRadius, int rows, int columns,
+                                int frameRows, int frameColumns)
+{
+  STEMImage image(rows, columns);
+
+  auto numberOfPixels = frameRows * frameColumns;
+
+  auto brightFieldMask =
+    createAnnularMask(frameRows, frameColumns, 0, outerRadius);
+  auto darkFieldMask =
+    createAnnularMask(frameRows, frameColumns, innerRadius, outerRadius);
+
+  size_t numImages = data.size() / numberOfPixels;
+  vector<uint32_t> imageNumbers(numImages);
+  std::iota(imageNumbers.begin(), imageNumbers.end(), 0);
+
+#ifdef VTKm
+  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
+  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
+  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, bright,
+                          dark, image);
+#else
+  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels,
+                          brightFieldMask, darkFieldMask, image);
+#endif
 
   delete[] brightFieldMask;
   delete[] darkFieldMask;
