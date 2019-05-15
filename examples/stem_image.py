@@ -22,7 +22,7 @@ for f in glob.glob('/data/4dstem/smallScanningDiffraction/data*.dat'):
     files.append(f)
 
 reader = io.reader(files)
-img = image.create_stem_image(reader, 160, 160,  40, 288);
+img = image.create_stem_image(reader, 40, 288, 160, 160);
 
 save_img(img.bright, 'bright.png')
 save_img(img.dark, 'dark.png')
