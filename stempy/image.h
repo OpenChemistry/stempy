@@ -40,11 +40,17 @@ namespace stempy {
   STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
                             int outerRadius, int rows = 0, int columns = 0,
                             int centerX = -1, int centerY = -1);
-  STEMValues calculateSTEMValues(uint16_t data[], int offset,
+
+  STEMImage createSTEMImageSparse(
+    const std::vector<std::vector<uint32_t>>& sparseData, int innerRadius,
+    int outerRadius, int rows, int columns, int frameRows, int frameColumns,
+    int centerX = -1, int centerY = -1);
+
+  STEMValues calculateSTEMValues(const uint16_t data[], int offset,
                                  int numberOfPixels,
                                  uint16_t brightFieldMask[],
                                  uint16_t darkFieldMask[],
-                                 uint32_t imageNumber=-1);
+                                 uint32_t imageNumber = -1);
 
   template <typename InputIt>
   Image<double> calculateAverage(InputIt first, InputIt last);

@@ -15,6 +15,19 @@ def create_stem_image(reader, inner_radius,
 
     return image
 
+def create_stem_image_sparse(data, inner_radius, outer_radius,
+                             rows, columns, frame_rows, frame_columns,
+                             center_x=-1, center_y=-1):
+    img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
+                                           rows, columns, frame_rows,
+                                           frame_columns, center_x, center_y)
+
+    image = namedtuple('STEMImage', ['bright', 'dark'])
+    image.bright = np.array(img.bright, copy = False)
+    image.dark = np.array(img.dark, copy = False)
+
+    return image
+
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):
         obj = np.asarray(array, dtype=dtype, order=order).view(cls)
