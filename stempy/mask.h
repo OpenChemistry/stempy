@@ -8,7 +8,7 @@
 
 namespace stempy {
 
-uint16_t* createAnnularMask(int rows, int columns, int innerRadius,
+uint16_t* createAnnularMask(int width, int height, int innerRadius,
                             int outerRadius, int centerX = -1,
                             int centerY = -1);
 }

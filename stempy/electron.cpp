@@ -122,21 +122,21 @@ inline uint16_t mod(uint16_t x, uint16_t y)
 // Return the points in the frame with values larger than all 8 of their nearest
 // neighbors
 std::vector<uint32_t> maximalPoints(
-  const std::vector<uint16_t>& frame, int rows, int columns)
+  const std::vector<uint16_t>& frame, int width, int height)
 {
   std::vector<uint32_t> events;
-  auto numberOfPixels = rows * columns;
+  auto numberOfPixels = height * width;
   for (int i = 0; i < numberOfPixels; i++) {
-    auto row = i / columns;
-    auto column = i % columns;
-    auto rightNeighbourColumn = mod((i + 1), columns);
-    auto leftNeighbourColumn = mod((i - 1), columns);
-    auto topNeighbourRow = mod((row - 1), rows);
-    auto bottomNeighbourRow = mod((row + 1), rows);
+    auto row = i / width;
+    auto column = i % width;
+    auto rightNeighbourColumn = mod((i + 1), width);
+    auto leftNeighbourColumn = mod((i - 1), width);
+    auto topNeighbourRow = mod((row - 1), height);
+    auto bottomNeighbourRow = mod((row + 1), height);
     auto pixelValue = frame[i];
-    auto bottomNeighbourRowIndex = bottomNeighbourRow * columns;
-    auto topNeighbourRowIndex = topNeighbourRow * columns;
-    auto rowIndex = row * columns;
+    auto bottomNeighbourRowIndex = bottomNeighbourRow * width;
+    auto topNeighbourRowIndex = topNeighbourRow * width;
+    auto rowIndex = row * width;
 
     // top
     auto event = pixelValue > frame[topNeighbourRowIndex + column];
@@ -172,7 +172,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
                                                  Image<double>& darkReference,
                                                  double backgroundThreshold,
                                                  double xRayThreshold,
-                                                 int scanRows, int scanColumns)
+                                                 int scanWidth, int scanHeight)
 {
   if (first == last) {
     std::ostringstream msg;
@@ -180,37 +180,37 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
     throw std::invalid_argument(msg.str());
   }
 
-  // If we haven't been provided with rows and columns, try the header.
-  if (scanRows == 0 || scanColumns == 0) {
-    scanRows = first->header.scanRows;
-    scanColumns = first->header.scanColumns;
+  // If we haven't been provided with width and height, try the header.
+  if (scanWidth == 0 || scanHeight == 0) {
+    scanWidth = first->header.scanWidth;
+    scanHeight = first->header.scanHeight;
   }
 
   // Raise an exception if we still don't have valid rows and columns
-  if (scanRows <= 0 || scanColumns <= 0) {
+  if (scanWidth <= 0 || scanHeight <= 0) {
     std::ostringstream msg;
     msg << "No scan image size provided.";
     throw std::invalid_argument(msg.str());
   }
 
   // Matrix to hold electron events.
-  std::vector<std::vector<uint32_t>> events(scanRows * scanColumns);
+  std::vector<std::vector<uint32_t>> events(scanWidth * scanHeight);
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart =
-        data + i * block.header.frameRows * block.header.frameColumns;
+        data + i * block.header.frameHeight * block.header.frameWidth;
       std::vector<uint16_t> frame(
         frameStart,
-        frameStart + block.header.frameRows * block.header.frameColumns);
+        frameStart + block.header.frameHeight * block.header.frameWidth);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, block.header.frameRows, block.header.frameColumns,
+        frame, block.header.frameWidth, block.header.frameHeight,
         darkReference.data.get(), backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.frameRows * block.header.frameColumns;
+      for (int j = 0; j < block.header.frameHeight * block.header.frameWidth;
            j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
@@ -221,7 +221,7 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, block.header.frameRows, block.header.frameColumns);
+        maximalPoints(frame, block.header.frameWidth, block.header.frameHeight);
 #endif
     }
   }

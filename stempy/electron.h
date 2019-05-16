@@ -10,8 +10,8 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
                                                  Image<double>& darkreference,
                                                  double backgroundThreshold,
                                                  double xRayThreshold,
-                                                 int scanRows = 0,
-                                                 int scanColumns = 0);
+                                                 int scanWidth = 0,
+                                                 int scanHeight = 0);
 }
 
 #endif /* STEMPY_ELECTRON_H_ */

@@ -16,11 +16,11 @@ def create_stem_image(reader, inner_radius,
     return image
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             rows, columns, frame_rows, frame_columns,
+                             scan_width, scan_height, frame_width, frame_height,
                              center_x=-1, center_y=-1):
     img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
-                                           rows, columns, frame_rows,
-                                           frame_columns, center_x, center_y)
+                                           frame_width, frame_height,
+                                           center_x, center_y)
 
     image = namedtuple('STEMImage', ['bright', 'dark'])
     image.bright = np.array(img.bright, copy = False)
@@ -47,7 +47,7 @@ def calculate_average(reader):
 
 def electron_count(reader, darkreference,  number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
-                   threshold_num_blocks=1, rows=0, columns=0):
+                   threshold_num_blocks=1, scan_width=0, scan_height=0):
 
     blocks = []
     for i in range(threshold_num_blocks):
@@ -61,7 +61,7 @@ def electron_count(reader, darkreference,  number_of_samples=40,
     reader.reset()
 
     events = _image.electron_count(reader.begin(), reader.end(), darkreference._image,
-                                   background_threshold, xray_threshold, rows, columns)
+                                   background_threshold, xray_threshold, scan_width, scan_height)
 
     # Convert to numpy and return
     return np.array([np.array(x) for x in events])

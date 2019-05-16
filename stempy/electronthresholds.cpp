@@ -55,16 +55,16 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
                                               int backgroundThresholdNSigma,
                                               int xRayThresholdNSigma)
 {
-  auto detectorImageRows = blocks[0].header.frameRows;
-  auto detectorImageColumns = blocks[0].header.frameColumns;
-  auto numberOfPixels = detectorImageRows * detectorImageRows;
+  auto frameWidth = blocks[0].header.frameWidth;
+  auto frameHeight = blocks[0].header.frameHeight;
+  auto numberOfPixels = frameWidth * frameHeight;
 
   // Setup random number engine
   std::random_device randomDevice;
   std::default_random_engine randomEngine(randomDevice());
 
   int numberSamplePixels =
-    detectorImageRows * detectorImageColumns * numberOfSamples;
+    frameWidth * frameHeight * numberOfSamples;
   std::vector<int16_t> samples(numberSamplePixels, 0);
   for (int i = 0; i < numberOfSamples; i++) {
     std::uniform_int_distribution<int> randomBlockDist(0, blocks.size() - 1);
