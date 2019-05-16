@@ -177,7 +177,7 @@ Header StreamReader::readHeaderVersion3()
   header.imageNumbers.resize(1);
   auto scanColumnPosition = headerPositions[index];
   auto scanRowPosition = headerPositions[index++];
-  header.imageNumbers.push_back(scanRowPosition * scanColumnPosition);
+  header.imageNumbers.push_back(scanRowPosition * header.scanColumns + scanColumnPosition);
 
   return header;
 }
