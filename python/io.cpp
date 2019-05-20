@@ -12,13 +12,13 @@ PYBIND11_MODULE(_io, m)
 {
   py::class_<Header>(m, "_header")
     .def_readonly("images_in_block", &Header::imagesInBlock)
-    .def_readonly("frame_rows", &Header::frameRows)
-    .def_readonly("frame_columns", &Header::frameColumns)
+    .def_readonly("frame_height", &Header::frameHeight)
+    .def_readonly("frame_width", &Header::frameWidth)
     .def_readonly("version", &Header::version)
     .def_readonly("timestamp", &Header::timestamp)
     .def_readonly("image_numbers", &Header::imageNumbers)
-    .def_readonly("scan_rows", &Header::scanRows)
-    .def_readonly("scan_columns", &Header::scanColumns);
+    .def_readonly("scan_height", &Header::scanHeight)
+    .def_readonly("scan_width", &Header::scanWidth);
 
   py::class_<Block>(m, "_block", py::buffer_protocol())
     .def_readonly("header", &Block::header)
@@ -29,11 +29,11 @@ PYBIND11_MODULE(_io, m)
         py::format_descriptor<
           uint16_t>::format(), /* Python struct-style format descriptor */
         3,                     /* Number of dimensions */
-        { b.header.imagesInBlock, b.header.frameRows,
-          b.header.frameColumns }, /* Buffer dimensions */
-        { sizeof(uint16_t) * b.header.frameRows * b.header.frameColumns,
+        { b.header.imagesInBlock, b.header.frameHeight,
+          b.header.frameWidth }, /* Buffer dimensions */
+        { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
           sizeof(uint16_t) *
-            b.header.frameRows, /* Strides (in bytes) for each index */
+            b.header.frameHeight, /* Strides (in bytes) for each index */
           sizeof(uint16_t) });
     });
 

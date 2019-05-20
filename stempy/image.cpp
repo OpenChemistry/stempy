@@ -158,7 +158,7 @@ void _runCalculateSTEMValues(const uint16_t data[],
 
 template <typename InputIt>
 STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                          int outerRadius, int rows, int columns, int centerX,
+                          int outerRadius, int width, int height, int centerX,
                           int centerY)
 {
   if (first == last) {
@@ -167,30 +167,30 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
     throw invalid_argument(msg.str());
   }
 
-  // If we haven't been provided with rows and columns, try the header.
-  if (rows == 0 || columns == 0) {
-    rows = first->header.scanRows;
-    columns = first->header.scanColumns;
+  // If we haven't been provided with width and height, try the header.
+  if (width == 0 || height == 0) {
+    width = first->header.scanWidth;
+    height = first->header.scanHeight;
   }
 
-  // Raise an exception if we still don't have valid rows and columns
-  if (rows <= 0 || columns <= 0) {
+  // Raise an exception if we still don't have valid width and height
+  if (width <= 0 || height <= 0) {
     ostringstream msg;
     msg << "No scan image size provided.";
     throw invalid_argument(msg.str());
   }
 
-  STEMImage image(rows, columns);
+  STEMImage image(width, height);
 
   // Get image size from first block
-  auto detectorImageRows = first->header.frameRows;
-  auto detectorImageColumns = first->header.frameColumns;
-  auto numberOfPixels = detectorImageRows * detectorImageRows;
+  auto frameWidth = first->header.frameWidth;
+  auto frameHeight = first->header.frameHeight;
+  auto numberOfPixels = frameWidth * frameHeight;
 
   auto brightFieldMask = createAnnularMask(
-    detectorImageRows, detectorImageColumns, 0, outerRadius, centerX, centerY);
+    frameWidth, frameHeight, 0, outerRadius, centerX, centerY);
   auto darkFieldMask =
-    createAnnularMask(detectorImageRows, detectorImageColumns, innerRadius,
+    createAnnularMask(frameWidth, frameHeight, innerRadius,
                       outerRadius, centerX, centerY);
 
 #ifdef VTKm
@@ -260,18 +260,18 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 }
 
 STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
-                                int innerRadius, int outerRadius, int rows,
-                                int columns, int frameRows, int frameColumns,
+                                int innerRadius, int outerRadius, int width,
+                                int height, int frameWidth, int frameHeight,
                                 int centerX, int centerY)
 {
-  STEMImage image(rows, columns);
+  STEMImage image(width, height);
 
-  auto brightFieldMask = createAnnularMask(frameRows, frameColumns, 0,
+  auto brightFieldMask = createAnnularMask(frameWidth, frameHeight, 0,
                                            outerRadius, centerX, centerY);
-  auto darkFieldMask = createAnnularMask(frameRows, frameColumns, innerRadius,
+  auto darkFieldMask = createAnnularMask(frameWidth, frameHeight, innerRadius,
                                          outerRadius, centerX, centerY);
 
-  auto numberOfPixels = frameRows * frameColumns;
+  auto numberOfPixels = frameWidth * frameHeight;
   vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
 
   size_t numImages = data.size() / numberOfPixels;
@@ -297,10 +297,10 @@ STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
 template <typename InputIt>
 Image<double> calculateAverage(InputIt first, InputIt last)
 {
-  auto detectorImageRows = first->header.frameRows;
-  auto detectorImageColumns = first->header.frameColumns;
-  auto numDetectorPixels = detectorImageRows * detectorImageColumns;
-  Image<double> image(detectorImageRows, detectorImageColumns);
+  auto frameWidth = first->header.frameWidth;
+  auto frameHeight = first->header.frameHeight;
+  auto numDetectorPixels = frameWidth*frameHeight;
+  Image<double> image(frameWidth, frameHeight);
 
   std::fill(image.data.get(), image.data.get() + numDetectorPixels, 0.0);
   uint64_t numberOfImages = 0;
@@ -309,14 +309,14 @@ Image<double> calculateAverage(InputIt first, InputIt last)
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
-      auto numberOfPixels = block.header.frameRows * block.header.frameColumns;
+      auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
       for (unsigned j = 0; j < numberOfPixels; j++) {
         image.data[j] += blockData[i*numberOfPixels+j];
       }
     }
   }
 
-  for (unsigned i = 0; i < detectorImageRows * detectorImageColumns; i++) {
+  for (unsigned i = 0; i < frameHeight * frameWidth; i++) {
     image.data[i] /= numberOfImages;
   }
 
@@ -325,12 +325,12 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 
 // Instantiate the ones that can be used
 template STEMImage createSTEMImage(StreamReader::iterator first,
-                                   StreamReader::iterator last, int rows,
-                                   int columns, int innerRadius,
+                                   StreamReader::iterator last, int width,
+                                   int height, int innerRadius,
                                    int outerRadius, int centerX, int centerY);
 template STEMImage createSTEMImage(vector<Block>::iterator first,
-                                   vector<Block>::iterator last, int rows,
-                                   int columns, int innerRadius,
+                                   vector<Block>::iterator last, int width,
+                                   int height, int innerRadius,
                                    int outerRadius, int centerX, int centerY);
 
 template Image<double> calculateAverage(StreamReader::iterator first,

@@ -7,8 +7,8 @@ from stempy import io, image
 @click.command()
 @click.argument('files', nargs=-1, type=click.Path(exists=True, dir_okay=False))
 @click.option('-d', '--dark-sample', help='Dark sample file')
-@click.option('-r', '--rows', default=160, help='Number of rows')
-@click.option('-c', '--columns', default=160, help='Number of columns')
+@click.option('-w', '--width', default=160, help='Width of the stem image')
+@click.option('-h', '--height', default=160, help='Height of the stem image')
 @click.option('-i', '--inner-radius', default=40, help='Mask inner radius')
 @click.option('-u', '--outer-radius', default=288, help='Mask outer radius')
 @click.option('-v', '--reader-version', default=1, help='Reader version')
@@ -19,7 +19,7 @@ from stempy import io, image
 @click.option('--zip-raw', is_flag=True, default=False,
               help='Zip the raw data that is saved')
 @click.option('-o', '--output', default='stem_image.h5', help='Output file')
-def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
+def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
                    outer_radius, reader_version, dark_reader_version, save_raw,
                    zip_raw, output):
     """Make an HDF5 file containing a STEM image
@@ -49,19 +49,20 @@ def make_stem_hdf5(files, dark_sample, rows, columns, inner_radius,
     dark = image.calculate_average(reader)
 
     reader = io.reader(files, version=reader_version)
-    frame_events = image.electron_count(reader, rows, columns, dark)
+    frame_events = image.electron_count(reader, dark, scan_width=width,
+                                        scan_height=height)
 
     # Read one block in to get the detector frames
     reader.reset()
     block = reader.read()
-    detector_nx = block.header.columns
-    detector_ny = block.header.rows
+    detector_nx = block.header.frame_width
+    detector_ny = block.header.frame_height
 
     reader.reset()
-    img = image.create_stem_image(reader, rows, columns, inner_radius,
-                                  outer_radius);
+    img = image.create_stem_image(reader, inner_radius, outer_radius,
+                                  width=width, height=height)
 
-    io.save_electron_counts(output, frame_events, rows, columns, detector_nx,
+    io.save_electron_counts(output, frame_events, width, height, detector_nx,
                             detector_ny)
     io.save_stem_image(output, img)
 
