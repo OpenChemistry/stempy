@@ -31,7 +31,8 @@ def run_benchmarks(files, dark_sample, num_runs):
         dark = image.calculate_average(reader)
 
         reader = io.reader(files, version=io.FileVersion.VERSION2)
-        frame_events = image.electron_count(reader, 40, 40, dark)
+        frame_events = image.electron_count(reader, dark, scan_width=40,
+                                            scan_height=40)
 
         end = time.time()
         times.append(end - start)

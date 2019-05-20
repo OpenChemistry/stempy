@@ -45,7 +45,7 @@ def calculate_average(reader):
 
     return img
 
-def electron_count(reader, darkreference,  number_of_samples=40,
+def electron_count(reader, darkreference, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
                    threshold_num_blocks=1, scan_width=0, scan_height=0):
 

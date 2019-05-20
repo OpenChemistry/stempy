@@ -22,7 +22,7 @@ def run_benchmarks(files, num_runs):
         start = time.time()
 
         reader = io.reader(files)
-        img = image.create_stem_image(reader, 160, 160,  40, 288);
+        img = image.create_stem_image(reader, 40, 288, width=160, height=160)
 
         end = time.time()
         times.append(end - start)
