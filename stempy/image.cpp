@@ -158,7 +158,7 @@ void _runCalculateSTEMValues(const uint16_t data[],
 
 template <typename InputIt>
 STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                          int outerRadius, int scanWidth, int scanHeight, int centerX,
+                          int outerRadius, int width, int height, int centerX,
                           int centerY)
 {
   if (first == last) {
@@ -168,19 +168,19 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
   }
 
   // If we haven't been provided with width and height, try the header.
-  if (scanWidth == 0 || scanHeight == 0) {
-    scanWidth = first->header.scanWidth;
-    scanHeight = first->header.scanHeight;
+  if (width == 0 || height == 0) {
+    width = first->header.scanWidth;
+    height = first->header.scanHeight;
   }
 
-  // Raise an exception if we still don't have valid rows and columns
-  if (scanWidth <= 0 || scanHeight <= 0) {
+  // Raise an exception if we still don't have valid width and height
+  if (width <= 0 || height <= 0) {
     ostringstream msg;
     msg << "No scan image size provided.";
     throw invalid_argument(msg.str());
   }
 
-  STEMImage image(scanWidth, scanHeight);
+  STEMImage image(width, height);
 
   // Get image size from first block
   auto frameWidth = first->header.frameWidth;
@@ -260,11 +260,11 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 }
 
 STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
-                                int innerRadius, int outerRadius, int rows,
-                                int columns, int frameWidth, int frameHeight,
+                                int innerRadius, int outerRadius, int width,
+                                int height, int frameWidth, int frameHeight,
                                 int centerX, int centerY)
 {
-  STEMImage image(rows, columns);
+  STEMImage image(width, height);
 
   auto brightFieldMask = createAnnularMask(frameWidth, frameHeight, 0,
                                            outerRadius, centerX, centerY);

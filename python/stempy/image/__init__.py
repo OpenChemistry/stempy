@@ -16,11 +16,11 @@ def create_stem_image(reader, inner_radius,
     return image
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             scan_width, scan_height, frame_width, frame_height,
+                             width, height, frame_width, frame_height,
                              center_x=-1, center_y=-1):
     img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
-                                           frame_width, frame_height,
-                                           center_x, center_y)
+                                           width, height, frame_width,
+                                           frame_height, center_x, center_y)
 
     image = namedtuple('STEMImage', ['bright', 'dark'])
     image.bright = np.array(img.bright, copy = False)
