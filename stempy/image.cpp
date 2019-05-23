@@ -93,10 +93,8 @@ STEMValues calculateSTEMValuesParallel(
 
   using ResultType = uint64_t;
   const ResultType initialVal(0);
-  ResultType result =
+  stemValues.data =
     vtkm::cont::Algorithm::Reduce(vector, initialVal, MaskAndAdd{});
-
-  stemValues.data = result;
 
   return stemValues;
 }
