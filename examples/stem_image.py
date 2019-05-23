@@ -21,8 +21,8 @@ files = []
 for f in glob.glob('/data/4dstem/smallScanningDiffraction/data*.dat'):
     files.append(f)
 
-inner_radii = [0, 40, 80]
-outer_radii = [248, 288, 328]
+inner_radii = [0, 40]
+outer_radii = [288, 288]
 
 reader = io.reader(files)
 imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
@@ -30,4 +30,4 @@ imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
 
 for i, img in enumerate(imgs):
     suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-    save_img(img.data, 'img_' + suffix)
+    save_img(img, 'img_' + suffix)

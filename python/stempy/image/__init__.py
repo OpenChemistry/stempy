@@ -1,6 +1,5 @@
 from stempy import _image
 import numpy as np
-from collections import namedtuple
 
 def create_stem_images(reader, inner_radii,
                        outer_radii, width=0, height=0,
@@ -11,11 +10,9 @@ def create_stem_images(reader, inner_radii,
 
     images = []
     for img in imgs:
-        image = namedtuple('STEMImage', ['data'])
-        image.data = np.array(img, copy = False)
-        images.append(image)
+        images.append(np.array(img, copy=False))
 
-    return images
+    return np.array(images, copy=False)
 
 # This one exists for backward compatibility
 def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
@@ -23,17 +20,14 @@ def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
     return create_stem_images(reader, (inner_radius,), (outer_radius,),
                               width, height, center_x, center_y)[0]
 
-def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             width, height, frame_width, frame_height,
-                             center_x=-1, center_y=-1):
+def create_stems_image_sparse(data, inner_radius, outer_radius,
+                              width, height, frame_width, frame_height,
+                              center_x=-1, center_y=-1):
     img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
                                            width, height, frame_width,
                                            frame_height, center_x, center_y)
 
-    image = namedtuple('STEMImage', ['data'])
-    image.data = np.array(img, copy = False)
-
-    return image
+    return np.array(img, copy=False)
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):
