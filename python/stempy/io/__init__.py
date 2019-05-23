@@ -77,7 +77,8 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
 
         frames[...] = events
 
-def save_stem_image(outputFile, image):
+def save_stem_images(outputFile, images, names):
     with h5py.File(outputFile, 'a') as f:
         stem_group = f.require_group('stem')
-        stem_group.create_dataset('data', data=image.data)
+        for image, name in zip(images, names):
+            stem_group.create_dataset(name, data=image)
