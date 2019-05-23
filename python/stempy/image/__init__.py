@@ -11,9 +11,8 @@ def create_stem_images(reader, inner_radii,
 
     images = []
     for img in imgs:
-        image = namedtuple('STEMImage', ['bright', 'dark'])
-        image.bright = np.array(img.bright, copy = False)
-        image.dark = np.array(img.dark, copy = False)
+        image = namedtuple('STEMImage', ['data'])
+        image.data = np.array(img, copy = False)
         images.append(image)
 
     return images
@@ -31,9 +30,8 @@ def create_stem_image_sparse(data, inner_radius, outer_radius,
                                            width, height, frame_width,
                                            frame_height, center_x, center_y)
 
-    image = namedtuple('STEMImage', ['bright', 'dark'])
-    image.bright = np.array(img.bright, copy = False)
-    image.dark = np.array(img.dark, copy = False)
+    image = namedtuple('STEMImage', ['data'])
+    image.data = np.array(img, copy = False)
 
     return image
 

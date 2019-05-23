@@ -37,11 +37,6 @@ PYBIND11_MODULE(_image, m)
             sizeof(double) });
     });
 
-
-  py::class_<STEMImage>(m, "_stem_image")
-    .def_readonly("bright", &STEMImage::bright)
-    .def_readonly("dark", &STEMImage::dark);
-
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>);
   m.def("create_stem_image_sparse", &createSTEMImageSparse);

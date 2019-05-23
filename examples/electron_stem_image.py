@@ -33,5 +33,4 @@ img = image.create_stem_image_sparse(frames, inner_radius, outer_radius,
                                      scan_width, scan_height, frame_width,
                                      frame_height)
 
-save_img(img.bright, 'bright.png', scan_width, scan_height)
-save_img(img.dark, 'dark.png', scan_width, scan_height)
+save_img(img.data, 'img.png', scan_width, scan_height)

@@ -21,20 +21,11 @@ namespace stempy {
   };
 
   struct STEMValues {
-    uint64_t bright = 0;
-    uint64_t dark = 0;
+    uint64_t data = 0;
     uint32_t imageNumber = -1;
   };
 
-  struct STEMImage {
-    Image<uint64_t> bright;
-    Image<uint64_t> dark;
-
-    STEMImage() = default;
-    STEMImage(uint32_t width, uint32_t height);
-    STEMImage(STEMImage&& i) noexcept = default;
-    STEMImage& operator=(STEMImage&& i) noexcept = default;
-  };
+  using STEMImage = Image<uint64_t>;
 
   template <typename InputIt>
   std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
@@ -49,9 +40,7 @@ namespace stempy {
     int centerX = -1, int centerY = -1);
 
   STEMValues calculateSTEMValues(const uint16_t data[], int offset,
-                                 int numberOfPixels,
-                                 uint16_t brightFieldMask[],
-                                 uint16_t darkFieldMask[],
+                                 int numberOfPixels, uint16_t mask[],
                                  uint32_t imageNumber = -1);
 
   template <typename InputIt>

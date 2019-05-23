@@ -24,28 +24,19 @@ namespace stempy {
 template <typename T>
 Image<T>::Image(uint32_t w, uint32_t h)
   : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
-{ }
-
-STEMImage::STEMImage(uint32_t width, uint32_t height)
 {
-  this->bright = Image<uint64_t>(width, height);
-  this->dark = Image<uint64_t>(width, height);
-  // Init values to zero
-  std::fill(this->bright.data.get(), this->bright.data.get() + width*height, 0);
-  std::fill(this->dark.data.get(), this->dark.data.get() + width*height, 0);
+  std::fill(this->data.get(), this->data.get() + width * height, 0);
 }
 
 STEMValues calculateSTEMValues(const uint16_t data[], int offset,
-                               int numberOfPixels, uint16_t brightFieldMask[],
-                               uint16_t darkFieldMask[], uint32_t imageNumber)
+                               int numberOfPixels, uint16_t mask[],
+                               uint32_t imageNumber)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
   for (int i=0; i<numberOfPixels; i++) {
     auto value = data[offset + i];
-
-    stemValues.bright += value & brightFieldMask[i];
-    stemValues.dark  += value & darkFieldMask[i];
+    stemValues.data += value & mask[i];
   }
 
   return stemValues;
@@ -55,29 +46,24 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
 namespace {
 struct MaskAndAdd
 {
-  // Order is "input", "bright", and "dark"
-  using InputType = vtkm::Vec<uint16_t, 3>;
-  // Order is "bright" and "dark"
-  using OutputType = vtkm::Pair<uint64_t, uint64_t>;
+  // Order is "input", "mask"
+  using InputType = vtkm::Vec<uint16_t, 2>;
+  using OutputType = uint64_t;
 
   VTKM_EXEC_CONT
-  OutputType operator()(const InputType& a) const
-  {
-    return OutputType(a[0] & a[1], a[0] & a[2]);
-  }
+  OutputType operator()(const InputType& a) const { return a[0] & a[1]; }
 
   VTKM_EXEC_CONT
   OutputType operator()(const InputType& a, const InputType& b) const
   {
-    // Cast one of these to uint64_t to ensure no overflow on addition
-    return OutputType(static_cast<uint64_t>(a[0] & a[1]) + (b[0] & b[1]),
-                      static_cast<uint64_t>(a[0] & a[2]) + (b[0] & b[2]));
+    // Cast one of these to OutputType to ensure no overflow on addition
+    return static_cast<OutputType>(a[0] & a[1]) + (b[0] & b[1]);
   }
 
   VTKM_EXEC_CONT
   OutputType operator()(const InputType& a, const OutputType& b) const
   {
-    return OutputType((a[0] & a[1]) + b.first, (a[0] & a[2]) + b.second);
+    return (a[0] & a[1]) + b;
   }
 
   VTKM_EXEC_CONT
@@ -89,7 +75,7 @@ struct MaskAndAdd
   VTKM_EXEC_CONT
   OutputType operator()(const OutputType& a, const OutputType& b) const
   {
-    return OutputType(a.first + b.first, a.second + b.second);
+    return a + b;
   }
 };
 }
@@ -97,23 +83,20 @@ struct MaskAndAdd
 template <typename Storage>
 STEMValues calculateSTEMValuesParallel(
   vtkm::cont::ArrayHandle<uint16_t, Storage> const& input,
-  vtkm::cont::ArrayHandle<uint16_t> const& bright,
-  vtkm::cont::ArrayHandle<uint16_t> const& dark, uint32_t imageNumber = -1)
+  vtkm::cont::ArrayHandle<uint16_t> const& mask, uint32_t imageNumber = -1)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
 
-  // It is important to remember that the order is "input", "bright", "dark"
-  auto vector =
-    vtkm::cont::make_ArrayHandleCompositeVector(input, bright, dark);
+  // It is important to remember that the order is "input", "mask"
+  auto vector = vtkm::cont::make_ArrayHandleCompositeVector(input, mask);
 
-  using ResultType = vtkm::Pair<uint64_t, uint64_t>;
-  const ResultType initialVal(0, 0);
+  using ResultType = uint64_t;
+  const ResultType initialVal(0);
   ResultType result =
     vtkm::cont::Algorithm::Reduce(vector, initialVal, MaskAndAdd{});
 
-  stemValues.bright = result.first;
-  stemValues.dark = result.second;
+  stemValues.data = result;
 
   return stemValues;
 }
@@ -125,14 +108,13 @@ namespace {
 void _runCalculateSTEMValues(const uint16_t data[],
                              const vector<uint32_t>& imageNumbers,
                              uint32_t numberOfPixels,
-                             const vtkm::cont::ArrayHandle<uint16_t>& bright,
-                             const vtkm::cont::ArrayHandle<uint16_t>& dark,
+                             const vtkm::cont::ArrayHandle<uint16_t>& mask,
                              STEMImage& image)
 #else
 void _runCalculateSTEMValues(const uint16_t data[],
                              const vector<uint32_t>& imageNumbers,
-                             uint32_t numberOfPixels, uint16_t* brightFieldMask,
-                             uint16_t* darkFieldMask, STEMImage& image)
+                             uint32_t numberOfPixels, uint16_t* mask,
+                             STEMImage& image)
 #endif
 {
 #ifdef VTKm
@@ -145,13 +127,12 @@ void _runCalculateSTEMValues(const uint16_t data[],
     // Use view to the array already transfered
     auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
                                                  numberOfPixels);
-    auto stemValues = calculateSTEMValuesParallel(view, bright, dark);
+    auto stemValues = calculateSTEMValuesParallel(view, mask);
 #else
-    auto stemValues = calculateSTEMValues(
-      data, i * numberOfPixels, numberOfPixels, brightFieldMask, darkFieldMask);
+    auto stemValues =
+      calculateSTEMValues(data, i * numberOfPixels, numberOfPixels, mask);
 #endif
-    image.bright.data[imageNumbers[i]] = stemValues.bright;
-    image.dark.data[imageNumbers[i]] = stemValues.dark;
+    image.data[imageNumbers[i]] = stemValues.data;
   }
 }
 } // end namespace
@@ -202,26 +183,20 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   auto frameHeight = first->header.frameHeight;
   auto numberOfPixels = frameWidth * frameHeight;
 
-  vector<uint16_t*> brightFieldMasks;
-  vector<uint16_t*> darkFieldMasks;
+  vector<uint16_t*> masks;
 
 #ifdef VTKm
   // Only transfer the masks once
-  vector<vtkm::cont::ArrayHandle<uint16_t>> brights;
-  vector<vtkm::cont::ArrayHandle<uint16_t>> darks;
+  vector<vtkm::cont::ArrayHandle<uint16_t>> maskHandles;
 #endif
 
   for (size_t i = 0; i < innerRadii.size(); ++i) {
-    brightFieldMasks.push_back(createAnnularMask(
-      frameWidth, frameHeight, 0, outerRadii[i], centerX, centerY));
-    darkFieldMasks.push_back(createAnnularMask(
-      frameWidth, frameHeight, innerRadii[i], outerRadii[i], centerX, centerY));
+    masks.push_back(createAnnularMask(frameWidth, frameHeight, innerRadii[i],
+                                      outerRadii[i], centerX, centerY));
 
 #ifdef VTKm
-    brights.push_back(
-      vtkm::cont::make_ArrayHandle(brightFieldMasks.back(), numberOfPixels));
-    darks.push_back(
-      vtkm::cont::make_ArrayHandle(darkFieldMasks.back(), numberOfPixels));
+    maskHandles.push_back(
+      vtkm::cont::make_ArrayHandle(masks.back(), numberOfPixels));
 #endif
   }
 
@@ -239,32 +214,29 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
     Block b = std::move(*first);
 
-    for (size_t i = 0; i < brightFieldMasks.size(); ++i) {
+    for (size_t i = 0; i < masks.size(); ++i) {
       auto& image = images[i];
 #ifdef VTKm
-      const auto& bright = brights[i];
-      const auto& dark = darks[i];
+      const auto& maskHandle = maskHandles[i];
 
       // Instead of calling _runCalculateSTEMValues directly, we use a
       // lambda so that we can explicity delete the block. Otherwise,
       // the block will not be deleted until the threads are destroyed.
       futures.emplace_back(
-        pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
+        pool.enqueue([b, numberOfPixels, &maskHandle, &image]() mutable {
           _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
-                                  numberOfPixels, bright, dark, image);
+                                  numberOfPixels, maskHandle, image);
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
           b.data.reset();
         }));
 #else
-      const auto& brightFieldMask = brightFieldMasks[i];
-      const auto& darkFieldMask = darkFieldMasks[i];
+      const auto& mask = masks[i];
 
-      futures.emplace_back(pool.enqueue(
-        [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
+      futures.emplace_back(
+        pool.enqueue([b, numberOfPixels, mask, &image]() mutable {
           _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
-                                  numberOfPixels, brightFieldMask,
-                                  darkFieldMask, image);
+                                  numberOfPixels, mask, image);
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
           b.data.reset();
@@ -277,9 +249,7 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   for (auto& future : futures)
     future.get();
 
-  for (const auto* p : brightFieldMasks)
-    delete[] p;
-  for (const auto* p : darkFieldMasks)
+  for (const auto* p : masks)
     delete[] p;
 
   return images;
@@ -304,10 +274,8 @@ STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
 {
   STEMImage image(width, height);
 
-  auto brightFieldMask = createAnnularMask(frameWidth, frameHeight, 0,
-                                           outerRadius, centerX, centerY);
-  auto darkFieldMask = createAnnularMask(frameWidth, frameHeight, innerRadius,
-                                         outerRadius, centerX, centerY);
+  auto mask = createAnnularMask(frameWidth, frameHeight, innerRadius,
+                                outerRadius, centerX, centerY);
 
   auto numberOfPixels = frameWidth * frameHeight;
   vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
@@ -317,17 +285,15 @@ STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
   std::iota(imageNumbers.begin(), imageNumbers.end(), 0);
 
 #ifdef VTKm
-  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
-  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
-  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, bright,
-                          dark, image);
+  auto maskHandle = vtkm::cont::make_ArrayHandle(mask, numberOfPixels);
+  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, maskHandle,
+                          image);
 #else
-  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels,
-                          brightFieldMask, darkFieldMask, image);
+  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, mask,
+                          image);
 #endif
 
-  delete[] brightFieldMask;
-  delete[] darkFieldMask;
+  delete[] mask;
 
   return image;
 }
