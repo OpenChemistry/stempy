@@ -20,14 +20,25 @@ def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
     return create_stem_images(reader, (inner_radius,), (outer_radius,),
                               width, height, center_x, center_y)[0]
 
-def create_stems_image_sparse(data, inner_radius, outer_radius,
+def create_stem_images_sparse(data, inner_radius, outer_radius,
                               width, height, frame_width, frame_height,
                               center_x=-1, center_y=-1):
-    img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
-                                           width, height, frame_width,
-                                           frame_height, center_x, center_y)
+    imgs = _image.create_stem_images_sparse(data, inner_radius, outer_radius,
+                                            width, height, frame_width,
+                                            frame_height, center_x, center_y)
 
-    return np.array(img, copy=False)
+    images = []
+    for img in imgs:
+        images.append(np.array(img, copy=False))
+
+    return np.array(images, copy=False)
+
+def create_stem_image_sparse(data, inner_radius, outer_radius,
+                             width, height, frame_width, frame_height,
+                             center_x=-1, center_y=-1):
+    return create_stem_images_sparse(data, [inner_radius], [outer_radius],
+                                     width, height, frame_width, frame_height,
+                                     center_x, center_y)[0]
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):

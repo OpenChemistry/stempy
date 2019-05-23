@@ -267,35 +267,65 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
   return ret;
 }
 
-STEMImage createSTEMImageSparse(const vector<vector<uint32_t>>& sparseData,
-                                int innerRadius, int outerRadius, int width,
-                                int height, int frameWidth, int frameHeight,
-                                int centerX, int centerY)
+vector<STEMImage> createSTEMImagesSparse(
+  const vector<vector<uint32_t>>& sparseData, vector<int> innerRadii,
+  vector<int> outerRadii, int width, int height, int frameWidth,
+  int frameHeight, int centerX, int centerY)
 {
-  STEMImage image(width, height);
+  if (innerRadii.empty() || outerRadii.empty()) {
+    ostringstream msg;
+    msg << "innerRadii or outerRadii are empty!";
+    throw invalid_argument(msg.str());
+  }
 
-  auto mask = createAnnularMask(frameWidth, frameHeight, innerRadius,
-                                outerRadius, centerX, centerY);
+  if (innerRadii.size() != outerRadii.size()) {
+    ostringstream msg;
+    msg << "innerRadii and outerRadii are not the same size!";
+    throw invalid_argument(msg.str());
+  }
 
   auto numberOfPixels = frameWidth * frameHeight;
+
+  vector<STEMImage> images;
+  for (const auto& r : innerRadii)
+    images.push_back(STEMImage(width, height));
+
+  vector<uint16_t*> masks;
+
+#ifdef VTKm
+  // Only transfer the masks once
+  vector<vtkm::cont::ArrayHandle<uint16_t>> maskHandles;
+#endif
+
+  for (size_t i = 0; i < innerRadii.size(); ++i) {
+    masks.push_back(createAnnularMask(frameWidth, frameHeight, innerRadii[i],
+                                      outerRadii[i], centerX, centerY));
+#ifdef VTKm
+    maskHandles.push_back(
+      vtkm::cont::make_ArrayHandle(masks.back(), numberOfPixels));
+#endif
+  }
+
   vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
 
   size_t numImages = data.size() / numberOfPixels;
   vector<uint32_t> imageNumbers(numImages);
   std::iota(imageNumbers.begin(), imageNumbers.end(), 0);
 
+  for (size_t i = 0; i < masks.size(); ++i) {
 #ifdef VTKm
-  auto maskHandle = vtkm::cont::make_ArrayHandle(mask, numberOfPixels);
-  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, maskHandle,
-                          image);
+    _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels,
+                            maskHandles[i], images[i]);
 #else
-  _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, mask,
-                          image);
+    _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, masks[i],
+                            images[i]);
 #endif
+  }
 
-  delete[] mask;
+  for (auto* p : masks)
+    delete[] p;
 
-  return image;
+  return images;
 }
 
 template <typename InputIt>
