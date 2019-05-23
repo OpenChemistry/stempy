@@ -174,7 +174,7 @@ Header StreamReader::readHeaderVersion3()
   header.scanHeight = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanXPosition = headerPositions[index];
+  auto scanXPosition = headerPositions[index++];
   auto scanYPosition = headerPositions[index++];
   header.imageNumbers.push_back(scanYPosition * header.scanWidth  + scanXPosition);
 
