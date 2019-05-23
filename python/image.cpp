@@ -37,14 +37,9 @@ PYBIND11_MODULE(_image, m)
             sizeof(double) });
     });
 
-
-  py::class_<STEMImage>(m, "_stem_image")
-    .def_readonly("bright", &STEMImage::bright)
-    .def_readonly("dark", &STEMImage::dark);
-
   // Add more template instantiations as we add more types of iterators
-  m.def("create_stem_image", &createSTEMImage<StreamReader::iterator>);
-  m.def("create_stem_image_sparse", &createSTEMImageSparse);
+  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>);
+  m.def("create_stem_images_sparse", &createSTEMImagesSparse);
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>);
   m.def("electron_count", &electronCount<StreamReader::iterator>);
   m.def("calculate_thresholds", &calculateThresholds);

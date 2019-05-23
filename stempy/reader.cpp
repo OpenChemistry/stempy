@@ -260,8 +260,7 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   }
 
   ThreadPool pool(concurrency);
-  uint16_t* brightFieldMask = nullptr;
-  uint16_t* darkFieldMask = nullptr;
+  uint16_t* mask = nullptr;
 
   std::vector< std::future<vector<STEMValues>> > results;
 
@@ -272,24 +271,19 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
       break;
     }
 
-    if (brightFieldMask == nullptr) {
-      brightFieldMask =
-        createAnnularMask(b.header.frameWidth, b.header.frameHeight, 0, 288);
-    }
-
-    if (darkFieldMask == nullptr) {
-      darkFieldMask =
+    if (mask == nullptr) {
+      mask =
         createAnnularMask(b.header.frameWidth, b.header.frameHeight, 40, 288);
     }
 
-    results.push_back(pool.enqueue([b{move(b)}, brightFieldMask, darkFieldMask]() {
+    results.push_back(pool.enqueue([b{ move(b) }, mask]() {
       vector<STEMValues> values;
       for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
         auto data = b.data.get();
         auto imageNumber = b.header.imageNumbers[i];
         auto numberOfPixels = b.header.frameWidth * b.header.frameHeight;
-        values.push_back(calculateSTEMValues(data, i*numberOfPixels,
-            numberOfPixels, brightFieldMask, darkFieldMask, imageNumber));
+        values.push_back(calculateSTEMValues(
+          data, i * numberOfPixels, numberOfPixels, mask, imageNumber));
       }
 
       return values;
@@ -328,15 +322,14 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
   };
 
   // Values
-  std::vector<uint64_t> brightPixels(numberOfPixels);
-  std::vector<uint64_t> darkPixels(numberOfPixels);
+  std::vector<uint64_t> pixels(numberOfPixels);
   std::vector<uint32_t> pixelIndexes(numberOfPixels);
 
   auto i = 0;
-  auto processResult = [&brightPixels, &darkPixels, &pixelIndexes, &i](vector<STEMValues> &values) {
+  auto processResult = [&pixels, &pixelIndexes,
+                        &i](vector<STEMValues>& values) {
     for(auto &value: values) {
-      brightPixels[i] = value.bright;
-      darkPixels[i] = value.dark;
+      pixels[i] = value.data;
       pixelIndexes[i] = value.imageNumber - 1;
       i++;
     }
@@ -352,34 +345,27 @@ void StreamReader::process(int streamId, int concurrency, int width, int height,
     processResult(values);
   }
 
-  emitMessage("stem.bright", brightPixels, pixelIndexes, numberOfPixels);
-  emitMessage("stem.dark", darkPixels, pixelIndexes, numberOfPixels);
+  emitMessage("stem.data", pixels, pixelIndexes, numberOfPixels);
 // TODO We can probably remove this block soon.
 #else
   int numberOfPixels = width*height;
-  uint64_t brightPixels[numberOfPixels]  = {0};
-  uint64_t darkPixels[numberOfPixels]  = {0};
+  uint64_t pixels[numberOfPixels] = { 0 };
   for(auto &&valuesInBlock: results) {
     auto values = valuesInBlock.get();
     for(auto &value: values ) {
-      brightPixels[value.imageNumber-1] = value.bright;
-      darkPixels[value.imageNumber-1] = value.dark;
+      pixels[value.imageNumber - 1] = value.data;
     }
   }
   // Write the partial images to files
-  std::ostringstream brightFilename, darkFilename;
-  brightFilename << "bright-" << std::setw( 3 ) <<  std::setfill('0')  <<
-      streamId << "."  << std::setw( 3 ) <<  std::setfill('0')  << imageId << ".bin";
-  darkFilename << "dark-" << std::setw( 3 ) <<  std::setfill('0')  << streamId
-      << "." << std::setw( 3 ) <<  std::setfill('0')  << imageId << ".bin";
-  ofstream brightFile(brightFilename.str(), ios::binary);
-  ofstream darkFile(darkFilename.str(), ios::binary);
-  brightFile.write(reinterpret_cast<char*>(brightPixels), numberOfPixels*sizeof(uint64_t));
-  darkFile.write(reinterpret_cast<char*>(darkPixels), numberOfPixels*sizeof(uint64_t));
+  std::ostringstream filename;
+  filename << std::setw(3) << std::setfill('0') << streamId << "."
+           << std::setw(3) << std::setfill('0') << imageId << ".bin";
+  ofstream file(filename.str(), ios::binary);
+  file.write(reinterpret_cast<char*>(pixels),
+             numberOfPixels * sizeof(uint64_t));
 #endif
 
-  delete[] brightFieldMask;
-  delete[] darkFieldMask;
+  delete[] mask;
 }
 
 }

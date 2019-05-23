@@ -21,35 +21,27 @@ namespace stempy {
   };
 
   struct STEMValues {
-    uint64_t bright = 0;
-    uint64_t dark = 0;
+    uint64_t data = 0;
     uint32_t imageNumber = -1;
   };
 
-  struct STEMImage {
-    Image<uint64_t> bright;
-    Image<uint64_t> dark;
-
-    STEMImage() = default;
-    STEMImage(uint32_t width, uint32_t height);
-    STEMImage(STEMImage&& i) noexcept = default;
-    STEMImage& operator=(STEMImage&& i) noexcept = default;
-  };
+  using STEMImage = Image<uint64_t>;
 
   template <typename InputIt>
-  STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                            int outerRadius, int scanWidth = 0, int scanHeight = 0,
-                            int centerX = -1, int centerY = -1);
+  std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
+                                          std::vector<int> innerRadii,
+                                          std::vector<int> outerRadii,
+                                          int scanWidth = 0, int scanHeight = 0,
+                                          int centerX = -1, int centerY = -1);
 
-  STEMImage createSTEMImageSparse(
-    const std::vector<std::vector<uint32_t>>& sparseData, int innerRadius,
-    int outerRadius, int rows, int columns, int frameWidth, int frameHeight,
-    int centerX = -1, int centerY = -1);
+  std::vector<STEMImage> createSTEMImagesSparse(
+    const std::vector<std::vector<uint32_t>>& sparseData,
+    std::vector<int> innerRadii, std::vector<int> outerRadii, int rows,
+    int columns, int frameWidth, int frameHeight, int centerX = -1,
+    int centerY = -1);
 
   STEMValues calculateSTEMValues(const uint16_t data[], int offset,
-                                 int numberOfPixels,
-                                 uint16_t brightFieldMask[],
-                                 uint16_t darkFieldMask[],
+                                 int numberOfPixels, uint16_t mask[],
                                  uint32_t imageNumber = -1);
 
   template <typename InputIt>

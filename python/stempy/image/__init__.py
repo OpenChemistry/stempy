@@ -1,32 +1,38 @@
 from stempy import _image
 import numpy as np
-from collections import namedtuple
 
-def create_stem_image(reader, inner_radius,
-                      outer_radius, width=0, height=0,
+def create_stem_images(reader, inner_radii,
+                       outer_radii, width=0, height=0,
+                       center_x=-1, center_y=-1):
+    imgs = _image.create_stem_images(reader.begin(), reader.end(),
+                                     inner_radii, outer_radii, width, height,
+                                     center_x, center_y)
+
+    images = [np.array(img, copy=False) for img in imgs]
+    return np.array(images, copy=False)
+
+# This one exists for backward compatibility
+def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
                       center_x=-1, center_y=-1):
-    img =  _image.create_stem_image(reader.begin(), reader.end(),
-                                    inner_radius, outer_radius, width, height,
-                                    center_x, center_y)
+    return create_stem_images(reader, (inner_radius,), (outer_radius,),
+                              width, height, center_x, center_y)[0]
 
-    image = namedtuple('STEMImage', ['bright', 'dark'])
-    image.bright = np.array(img.bright, copy = False)
-    image.dark = np.array(img.dark, copy = False)
+def create_stem_images_sparse(data, inner_radius, outer_radius,
+                              width, height, frame_width, frame_height,
+                              center_x=-1, center_y=-1):
+    imgs = _image.create_stem_images_sparse(data, inner_radius, outer_radius,
+                                            width, height, frame_width,
+                                            frame_height, center_x, center_y)
 
-    return image
+    images = [np.array(img, copy=False) for img in imgs]
+    return np.array(images, copy=False)
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
                              width, height, frame_width, frame_height,
                              center_x=-1, center_y=-1):
-    img =  _image.create_stem_image_sparse(data, inner_radius, outer_radius,
-                                           width, height, frame_width,
-                                           frame_height, center_x, center_y)
-
-    image = namedtuple('STEMImage', ['bright', 'dark'])
-    image.bright = np.array(img.bright, copy = False)
-    image.dark = np.array(img.dark, copy = False)
-
-    return image
+    return create_stem_images_sparse(data, [inner_radius], [outer_radius],
+                                     width, height, frame_width, frame_height,
+                                     center_x, center_y)[0]
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):
