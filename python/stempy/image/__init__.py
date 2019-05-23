@@ -2,18 +2,27 @@ from stempy import _image
 import numpy as np
 from collections import namedtuple
 
-def create_stem_image(reader, inner_radius,
-                      outer_radius, width=0, height=0,
+def create_stem_images(reader, inner_radii,
+                       outer_radii, width=0, height=0,
+                       center_x=-1, center_y=-1):
+    imgs = _image.create_stem_images(reader.begin(), reader.end(),
+                                     inner_radii, outer_radii, width, height,
+                                     center_x, center_y)
+
+    images = []
+    for img in imgs:
+        image = namedtuple('STEMImage', ['bright', 'dark'])
+        image.bright = np.array(img.bright, copy = False)
+        image.dark = np.array(img.dark, copy = False)
+        images.append(image)
+
+    return images
+
+# This one exists for backward compatibility
+def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
                       center_x=-1, center_y=-1):
-    img =  _image.create_stem_image(reader.begin(), reader.end(),
-                                    inner_radius, outer_radius, width, height,
-                                    center_x, center_y)
-
-    image = namedtuple('STEMImage', ['bright', 'dark'])
-    image.bright = np.array(img.bright, copy = False)
-    image.dark = np.array(img.dark, copy = False)
-
-    return image
+    return create_stem_images(reader, (inner_radius,), (outer_radius,),
+                              width, height, center_x, center_y)[0]
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
                              width, height, frame_width, frame_height,

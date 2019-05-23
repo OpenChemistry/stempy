@@ -37,9 +37,11 @@ namespace stempy {
   };
 
   template <typename InputIt>
-  STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                            int outerRadius, int scanWidth = 0, int scanHeight = 0,
-                            int centerX = -1, int centerY = -1);
+  std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
+                                          std::vector<int> innerRadii,
+                                          std::vector<int> outerRadii,
+                                          int scanWidth = 0, int scanHeight = 0,
+                                          int centerX = -1, int centerY = -1);
 
   STEMImage createSTEMImageSparse(
     const std::vector<std::vector<uint32_t>>& sparseData, int innerRadius,

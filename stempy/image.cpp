@@ -157,13 +157,26 @@ void _runCalculateSTEMValues(const uint16_t data[],
 } // end namespace
 
 template <typename InputIt>
-STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
-                          int outerRadius, int width, int height, int centerX,
-                          int centerY)
+vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
+                                   vector<int> innerRadii,
+                                   vector<int> outerRadii, int width,
+                                   int height, int centerX, int centerY)
 {
   if (first == last) {
     ostringstream msg;
     msg << "No blocks to read!";
+    throw invalid_argument(msg.str());
+  }
+
+  if (innerRadii.empty() || outerRadii.empty()) {
+    ostringstream msg;
+    msg << "innerRadii or outerRadii are empty!";
+    throw invalid_argument(msg.str());
+  }
+
+  if (innerRadii.size() != outerRadii.size()) {
+    ostringstream msg;
+    msg << "innerRadii and outerRadii are not the same size!";
     throw invalid_argument(msg.str());
   }
 
@@ -180,24 +193,37 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
     throw invalid_argument(msg.str());
   }
 
-  STEMImage image(width, height);
+  vector<STEMImage> images;
+  for (const auto& r: innerRadii)
+    images.push_back(STEMImage(width, height));
 
   // Get image size from first block
   auto frameWidth = first->header.frameWidth;
   auto frameHeight = first->header.frameHeight;
   auto numberOfPixels = frameWidth * frameHeight;
 
-  auto brightFieldMask = createAnnularMask(
-    frameWidth, frameHeight, 0, outerRadius, centerX, centerY);
-  auto darkFieldMask =
-    createAnnularMask(frameWidth, frameHeight, innerRadius,
-                      outerRadius, centerX, centerY);
+  vector<uint16_t*> brightFieldMasks;
+  vector<uint16_t*> darkFieldMasks;
 
 #ifdef VTKm
-  // Only transfer the mask once.
-  auto bright = vtkm::cont::make_ArrayHandle(brightFieldMask, numberOfPixels);
-  auto dark = vtkm::cont::make_ArrayHandle(darkFieldMask, numberOfPixels);
+  // Only transfer the masks once
+  vector<vtkm::cont::ArrayHandle<uint16_t>> brights;
+  vector<vtkm::cont::ArrayHandle<uint16_t>> darks;
 #endif
+
+  for (size_t i = 0; i < innerRadii.size(); ++i) {
+    brightFieldMasks.push_back(createAnnularMask(
+      frameWidth, frameHeight, 0, outerRadii[i], centerX, centerY));
+    darkFieldMasks.push_back(createAnnularMask(
+      frameWidth, frameHeight, innerRadii[i], outerRadii[i], centerX, centerY));
+
+#ifdef VTKm
+    brights.push_back(
+      vtkm::cont::make_ArrayHandle(brightFieldMasks.back(), numberOfPixels));
+    darks.push_back(
+      vtkm::cont::make_ArrayHandle(darkFieldMasks.back(), numberOfPixels));
+#endif
+  }
 
   // Run the calculations in a thread pool while the data is read from
   // the disk in the main thread.
@@ -212,39 +238,51 @@ STEMImage createSTEMImage(InputIt first, InputIt last, int innerRadius,
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
     Block b = std::move(*first);
+
+    for (size_t i = 0; i < brightFieldMasks.size(); ++i) {
+      auto& image = images[i];
 #ifdef VTKm
-    // Instead of calling _runCalculateSTEMValues directly, we use a
-    // lambda so that we can explicity delete the block. Otherwise,
-    // the block will not be deleted until the threads are destroyed.
-    futures.emplace_back(
-      pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
-        _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
-                                numberOfPixels, bright, dark, image);
-        // If we don't reset this, it won't get reset until the thread is
-        // destroyed.
-        b.data.reset();
-      }));
+      const auto& bright = brights[i];
+      const auto& dark = darks[i];
+
+      // Instead of calling _runCalculateSTEMValues directly, we use a
+      // lambda so that we can explicity delete the block. Otherwise,
+      // the block will not be deleted until the threads are destroyed.
+      futures.emplace_back(
+        pool.enqueue([b, numberOfPixels, &bright, &dark, &image]() mutable {
+          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+                                  numberOfPixels, bright, dark, image);
+          // If we don't reset this, it won't get reset until the thread is
+          // destroyed.
+          b.data.reset();
+        }));
 #else
-    futures.emplace_back(pool.enqueue(
-      [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
-        _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
-                                numberOfPixels, brightFieldMask, darkFieldMask,
-                                image);
-        // If we don't reset this, it won't get reset until the thread is
-        // destroyed.
-        b.data.reset();
-      }));
+      const auto& brightFieldMask = brightFieldMasks[i];
+      const auto& darkFieldMask = darkFieldMasks[i];
+
+      futures.emplace_back(pool.enqueue(
+        [b, numberOfPixels, brightFieldMask, darkFieldMask, &image]() mutable {
+          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+                                  numberOfPixels, brightFieldMask,
+                                  darkFieldMask, image);
+          // If we don't reset this, it won't get reset until the thread is
+          // destroyed.
+          b.data.reset();
+        }));
 #endif
+    }
   }
 
   // Make sure all threads are finished before continuing
   for (auto& future : futures)
     future.get();
 
-  delete[] brightFieldMask;
-  delete[] darkFieldMask;
+  for (const auto* p : brightFieldMasks)
+    delete[] p;
+  for (const auto* p : darkFieldMasks)
+    delete[] p;
 
-  return image;
+  return images;
 }
 
 vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
@@ -324,14 +362,18 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 }
 
 // Instantiate the ones that can be used
-template STEMImage createSTEMImage(StreamReader::iterator first,
-                                   StreamReader::iterator last, int width,
-                                   int height, int innerRadius,
-                                   int outerRadius, int centerX, int centerY);
-template STEMImage createSTEMImage(vector<Block>::iterator first,
-                                   vector<Block>::iterator last, int width,
-                                   int height, int innerRadius,
-                                   int outerRadius, int centerX, int centerY);
+template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
+                                            StreamReader::iterator last,
+                                            vector<int> innerRadii,
+                                            vector<int> outerRadii, int width,
+                                            int height, int centerX,
+                                            int centerY);
+template vector<STEMImage> createSTEMImages(vector<Block>::iterator first,
+                                            vector<Block>::iterator last,
+                                            vector<int> innerRadii,
+                                            vector<int> outerRadii, int width,
+                                            int height, int centerX,
+                                            int centerY);
 
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
