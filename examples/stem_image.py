@@ -29,6 +29,6 @@ imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
                                 height=160)
 
 for i, img in enumerate(imgs):
-  suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-  save_img(img.bright, 'bright_' + suffix)
-  save_img(img.dark, 'dark_' + suffix)
+    suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
+    save_img(img.bright, 'bright_' + suffix)
+    save_img(img.dark, 'dark_' + suffix)
