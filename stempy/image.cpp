@@ -485,7 +485,6 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
   return radialSums;
 }
 
-
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
                                             StreamReader::iterator last,
