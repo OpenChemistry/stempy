@@ -387,7 +387,6 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
                    std::vector<RadialSum>& radialSums)
 {
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
-    auto numberOfPixels = frameWidth*frameHeight;
     auto offset = i*numberOfPixels;
     auto radialSumsForFrame = radialSumFrame(centerX, centerY, data, offset,
         frameWidth, frameHeight,  radialSums.size());
