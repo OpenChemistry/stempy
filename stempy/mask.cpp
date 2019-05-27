@@ -23,8 +23,8 @@ uint16_t* createAnnularMask(int width, int height, int innerRadius,
   outerRadius = static_cast<int>(pow(outerRadius, 2.0));
 
   for (int i=0; i<numberOfElements; i++) {
-    auto x = i % height;
-    auto y = i / height;
+    auto x = i % width;
+    auto y = i / width;
 
     auto d = pow((x - centerX), 2.0) + pow((y - centerY), 2.0);
     mask[i] = d >= innerRadius && d < outerRadius ? 0xFFFF : 0;
