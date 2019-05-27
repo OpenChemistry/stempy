@@ -17,10 +17,10 @@ def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
     return create_stem_images(reader, (inner_radius,), (outer_radius,),
                               width, height, center_x, center_y)[0]
 
-def create_stem_images_sparse(data, inner_radius, outer_radius,
+def create_stem_images_sparse(data, inner_radii, outer_radii,
                               width, height, frame_width, frame_height,
                               center_x=-1, center_y=-1):
-    imgs = _image.create_stem_images_sparse(data, inner_radius, outer_radius,
+    imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
                                             width, height, frame_width,
                                             frame_height, center_x, center_y)
 
