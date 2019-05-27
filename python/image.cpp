@@ -43,4 +43,5 @@ PYBIND11_MODULE(_image, m)
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>);
   m.def("electron_count", &electronCount<StreamReader::iterator>);
   m.def("calculate_thresholds", &calculateThresholds);
+  m.def("radial_sum", &radialSum<StreamReader::iterator>);
 }

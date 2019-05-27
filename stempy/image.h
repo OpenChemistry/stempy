@@ -46,6 +46,11 @@ namespace stempy {
 
   template <typename InputIt>
   Image<double> calculateAverage(InputIt first, InputIt last);
+
+  using RadialSum = Image<uint64_t>;
+  template <typename InputIt>
+  std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth = 0, int scanHeight = 0,
+      int centerX = -1, int centerY = -1);
 }
 
 #endif

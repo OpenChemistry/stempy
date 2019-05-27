@@ -16,6 +16,7 @@
 #include <memory>
 #include <numeric>
 #include <sstream>
+#include <cmath>
 
 using namespace std;
 
@@ -355,6 +356,136 @@ Image<double> calculateAverage(InputIt first, InputIt last)
   return image;
 }
 
+double inline distance(int x1, int y1, int x2, int y2) {
+  return sqrt(pow((x1 - x2), 2.0) + pow((y1 - y2), 2.0));
+}
+
+std::vector<uint64_t> radialSumFrame(int centerX, int centerY, const uint16_t data[],
+    int offset, int frameWidth, int frameHeight, int maxRadius)
+{
+  auto numberOfPixels = frameWidth*frameHeight;
+  std::vector<uint64_t> radialSums(maxRadius, 0);
+  for (int i=0; i< numberOfPixels; i++) {
+    auto x = i % frameWidth;
+    auto y = i / frameWidth;
+    auto radius = static_cast<int>(
+        std::ceil(
+            distance(x, y, centerX, centerY)
+        )
+    );
+
+    radialSums[radius] += data[offset + i];
+  }
+
+  return radialSums;
+}
+
+void radialSumFrames(int centerX, int centerY, const uint16_t data[],
+                   int frameWidth, int frameHeight,
+                   std::vector<uint32_t>& imageNumbers,
+                   uint32_t numberOfPixels,
+                   std::vector<RadialSum>& radialSums)
+{
+  for (unsigned i = 0; i < imageNumbers.size(); ++i) {
+    auto numberOfPixels = frameWidth*frameHeight;
+    auto offset = i*numberOfPixels;
+    auto radialSumsForFrame = radialSumFrame(centerX, centerY, data, offset,
+        frameWidth, frameHeight,  radialSums.size());
+    for (size_t j = 0; j < radialSumsForFrame.size(); j++) {
+      radialSums[j].data[imageNumbers[i]] += radialSumsForFrame[j];
+    }
+  }
+}
+
+template <typename InputIt>
+std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int scanHeight,
+      int centerX, int centerY)
+{
+  if (first == last) {
+    ostringstream msg;
+    msg << "No blocks to read!";
+    throw invalid_argument(msg.str());
+  }
+
+  // If we haven't been provided with width and height, try the header.
+  if (scanWidth == 0 || scanHeight == 0) {
+    scanWidth = first->header.scanWidth;
+    scanHeight = first->header.scanHeight;
+  }
+
+  // Raise an exception if we still don't have valid width and height
+  if (scanWidth <= 0 || scanHeight <= 0) {
+    ostringstream msg;
+    msg << "No scan image size provided.";
+    throw invalid_argument(msg.str());
+  }
+
+  // Get image size from first block
+  auto frameWidth = first->header.frameWidth;
+  auto frameHeight = first->header.frameHeight;
+  auto numberOfPixels = frameWidth * frameHeight;
+
+  // Default the center if necessary
+  if (centerX < 0)
+    centerX = std::round(frameWidth / 2.0);
+
+  if (centerY < 0)
+    centerY = std::round(frameHeight / 2.0);
+
+  // Calculate the maximum possible radius for the frame, the maximum distance
+  // from all four corners
+  double max = 0.0;
+  for(int x=0; x<2; x++) {
+    for(int y=0; y<2; y++) {
+      auto dist = distance(x*frameWidth, y*frameHeight, centerX, centerY);
+      if (dist > max) {
+        max = dist;
+      }
+    }
+  }
+
+  int maxRadius = static_cast<int>(std::ceil(max));
+
+  // Run the calculations in a thread pool while the data is read from
+  // the disk in the main thread.
+  // We benchmarked this on a 10 core computer, and typically found
+  // 2 threads to be ideal.
+  int numThreads = 2;
+  ThreadPool pool(numThreads);
+  std::vector<RadialSum> radialSums;
+  // Initialize our RadialSum's
+  for(int i=0; i < maxRadius+1; i++) {
+    radialSums.push_back(RadialSum(scanWidth, scanHeight));
+  }
+
+
+  // Populate the worker pool
+  vector<future<void>> futures;
+  for (; first != last; ++first) {
+    // Move the block into the thread by copying... CUDA 10.1 won't allow
+    // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
+    Block b = std::move(*first);
+    // Instead of calling _runCalculateSTEMValues directly, we use a
+    // lambda so that we can explicity delete the block. Otherwise,
+    // the block will not be deleted until the threads are destroyed.
+    futures.emplace_back(
+      pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSums]() mutable {
+        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
+            numberOfPixels, radialSums);
+        // If we don't reset this, it won't get reset until the thread is
+        // destroyed.
+        b.data.reset();
+      }));
+  }
+
+  // Make sure all threads are finished before continuing
+  for (auto& future : futures)
+    future.get();
+
+  return radialSums;
+}
+
+
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
                                             StreamReader::iterator last,
@@ -373,4 +504,10 @@ template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
 template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
+
+template std::vector<RadialSum> radialSum(StreamReader::iterator first, StreamReader::iterator last,
+      int scanWidth, int scanHeight, int centerX, int centerY);
+template std::vector<RadialSum> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
+      int scanWidth, int scanHeight, int centerX, int centerY);
+
 }
