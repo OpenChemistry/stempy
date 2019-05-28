@@ -426,10 +426,10 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
 
   // Default the center if necessary
   if (centerX < 0)
-    centerX = std::round(frameWidth / 2.0);
+    centerX = static_cast<int>(std::round(frameWidth / 2.0));
 
   if (centerY < 0)
-    centerY = std::round(frameHeight / 2.0);
+    centerY = static_cast<int>(std::round(frameHeight / 2.0));
 
   // Calculate the maximum possible radius for the frame, the maximum distance
   // from all four corners
