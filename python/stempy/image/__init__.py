@@ -73,8 +73,7 @@ def electron_count(reader, darkreference, number_of_samples=40,
     return np.array([np.array(x) for x in events])
 
 def radial_sum(reader, center_x=-1, center_y=-1, scan_width=0, scan_height=0):
-    sums =  _image.radial_sum(reader.begin(), reader.end(), scan_width, scan_height,
+    sum =  _image.radial_sum(reader.begin(), reader.end(), scan_width, scan_height,
                               center_x, center_y)
-    sums = [np.array(sum, copy=False) for sum in sums]
 
-    return np.array(sums, copy=False)
+    return np.array(sum, copy=False)
