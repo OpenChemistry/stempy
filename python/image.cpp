@@ -41,8 +41,8 @@ PYBIND11_MODULE(_image, m)
     .def_buffer([](RadialSum<uint64_t>& r) {
        return py::buffer_info(
           r.data.get(),                                                 /* Pointer to buffer */
-          sizeof(double),                                               /* Size of one scalar */
-          py::format_descriptor<double>::format(),                    /* Python struct-style format descriptor */
+          sizeof(uint64_t),                                               /* Size of one scalar */
+          py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
           3,                                                            /* Number of dimensions */
           { r.radii, r.width, r.height},  /* Buffer dimensions */
           { sizeof(uint64_t) * r.width * r.height,                           /* Strides (in bytes) for each index */
