@@ -13,7 +13,7 @@ using namespace stempy;
 
 PYBIND11_MODULE(_image, m)
 {
-  py::class_<Image<uint64_t>>(m , "_image_int64", py::buffer_protocol())
+  py::class_<Image<uint64_t>>(m , "_image_uint64", py::buffer_protocol())
     .def_buffer([](Image<uint64_t>& i) {
        return py::buffer_info(
           i.data.get(),                                                 /* Pointer to buffer */
