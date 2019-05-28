@@ -43,6 +43,14 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
   return stemValues;
 }
 
+template <typename T>
+RadialSum<T>::RadialSum(uint32_t w, uint32_t h, uint32_t r)
+  : width(w), height(h), radii(r), data(new T[w * h * r], std::default_delete<T[]>())
+{
+  std::fill(this->data.get(), this->data.get() + width * height * radii, 0);
+}
+
+
 #ifdef VTKm
 namespace {
 struct MaskAndAdd
@@ -360,11 +368,10 @@ double inline distance(int x1, int y1, int x2, int y2) {
   return sqrt(pow((x1 - x2), 2.0) + pow((y1 - y2), 2.0));
 }
 
-std::vector<uint64_t> radialSumFrame(int centerX, int centerY, const uint16_t data[],
-    int offset, int frameWidth, int frameHeight, int maxRadius)
+void radialSumFrame(int centerX, int centerY, const uint16_t data[],
+    int offset, int frameWidth, int frameHeight, int imageNumber, RadialSum<uint64_t>& radialSum)
 {
   auto numberOfPixels = frameWidth*frameHeight;
-  std::vector<uint64_t> radialSums(maxRadius, 0);
   for (int i=0; i< numberOfPixels; i++) {
     auto x = i % frameWidth;
     auto y = i / frameWidth;
@@ -373,31 +380,28 @@ std::vector<uint64_t> radialSumFrame(int centerX, int centerY, const uint16_t da
             distance(x, y, centerX, centerY)
         )
     );
-
-    radialSums[radius] += data[offset + i];
+    // Use compiler intrinsic to ensure atomic add
+    auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height + imageNumber;
+    __sync_fetch_and_add(address, data[offset + i]);
   }
-
-  return radialSums;
 }
 
 void radialSumFrames(int centerX, int centerY, const uint16_t data[],
                    int frameWidth, int frameHeight,
                    std::vector<uint32_t>& imageNumbers,
                    uint32_t numberOfPixels,
-                   std::vector<RadialSum>& radialSums)
+                   RadialSum<uint64_t>& radialSum)
 {
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
     auto offset = i*numberOfPixels;
-    auto radialSumsForFrame = radialSumFrame(centerX, centerY, data, offset,
-        frameWidth, frameHeight,  radialSums.size());
-    for (size_t j = 0; j < radialSumsForFrame.size(); j++) {
-      radialSums[j].data[imageNumbers[i]] += radialSumsForFrame[j];
-    }
+    auto imageNumber = imageNumbers[i];
+    radialSumFrame(centerX, centerY, data, offset,
+        frameWidth, frameHeight, imageNumber, radialSum);
   }
 }
 
 template <typename InputIt>
-std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int scanHeight,
+RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int scanHeight,
       int centerX, int centerY)
 {
   if (first == last) {
@@ -426,10 +430,10 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
 
   // Default the center if necessary
   if (centerX < 0)
-    centerX = std::round(frameWidth / 2.0);
+    centerX = static_cast<int>(std::round(frameWidth / 2.0));
 
   if (centerY < 0)
-    centerY = std::round(frameHeight / 2.0);
+    centerY = static_cast<int>(std::round(frameHeight / 2.0));
 
   // Calculate the maximum possible radius for the frame, the maximum distance
   // from all four corners
@@ -451,11 +455,7 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
   // 2 threads to be ideal.
   int numThreads = 2;
   ThreadPool pool(numThreads);
-  std::vector<RadialSum> radialSums;
-  // Initialize our RadialSum's
-  for(int i=0; i < maxRadius+1; i++) {
-    radialSums.push_back(RadialSum(scanWidth, scanHeight));
-  }
+  RadialSum<uint64_t> radialSum(scanWidth, scanHeight, maxRadius+1);
 
 
   // Populate the worker pool
@@ -468,9 +468,9 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
     // lambda so that we can explicity delete the block. Otherwise,
     // the block will not be deleted until the threads are destroyed.
     futures.emplace_back(
-      pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSums]() mutable {
+      pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSum]() mutable {
         radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
-            numberOfPixels, radialSums);
+            numberOfPixels, radialSum);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
         b.data.reset();
@@ -481,7 +481,7 @@ std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth, int
   for (auto& future : futures)
     future.get();
 
-  return radialSums;
+  return radialSum;
 }
 
 // Instantiate the ones that can be used
@@ -503,9 +503,9 @@ template Image<double> calculateAverage(StreamReader::iterator first,
 template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
 
-template std::vector<RadialSum> radialSum(StreamReader::iterator first, StreamReader::iterator last,
+template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
-template std::vector<RadialSum> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
+template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
 
 }

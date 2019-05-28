@@ -25,6 +25,19 @@ namespace stempy {
     uint32_t imageNumber = -1;
   };
 
+  template <typename T>
+  struct RadialSum {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t radii = 0;
+    std::shared_ptr<T[]> data;
+
+    RadialSum() = default;
+    RadialSum(uint32_t width, uint32_t height, uint32_t radii);
+    RadialSum(RadialSum&& i) noexcept = default;
+    RadialSum& operator=(RadialSum&& i) noexcept = default;
+  };
+
   using STEMImage = Image<uint64_t>;
 
   template <typename InputIt>
@@ -47,10 +60,10 @@ namespace stempy {
   template <typename InputIt>
   Image<double> calculateAverage(InputIt first, InputIt last);
 
-  using RadialSum = Image<uint64_t>;
+
   template <typename InputIt>
-  std::vector<RadialSum> radialSum(InputIt first, InputIt last, int scanWidth = 0, int scanHeight = 0,
-      int centerX = -1, int centerY = -1);
+  RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0, int scanHeight = 0,
+        int centerX = -1, int centerY = -1);
 }
 
 #endif

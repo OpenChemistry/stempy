@@ -13,7 +13,7 @@ using namespace stempy;
 
 PYBIND11_MODULE(_image, m)
 {
-  py::class_<Image<uint64_t>>(m , "_image_int64", py::buffer_protocol())
+  py::class_<Image<uint64_t>>(m , "_image_uint64", py::buffer_protocol())
     .def_buffer([](Image<uint64_t>& i) {
        return py::buffer_info(
           i.data.get(),                                                 /* Pointer to buffer */
@@ -36,6 +36,20 @@ PYBIND11_MODULE(_image, m)
           { sizeof(double) * i.width,                           /* Strides (in bytes) for each index */
             sizeof(double) });
     });
+
+  py::class_<RadialSum<uint64_t>>(m , "_radial_sum_uint64", py::buffer_protocol())
+    .def_buffer([](RadialSum<uint64_t>& r) {
+       return py::buffer_info(
+          r.data.get(),                                                 /* Pointer to buffer */
+          sizeof(uint64_t),                                               /* Size of one scalar */
+          py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
+          3,                                                            /* Number of dimensions */
+          { r.radii, r.width, r.height},  /* Buffer dimensions */
+          { sizeof(uint64_t) * r.width * r.height,                           /* Strides (in bytes) for each index */
+            sizeof(uint64_t) * r.width,
+            sizeof(uint64_t) });
+    });
+
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>);
