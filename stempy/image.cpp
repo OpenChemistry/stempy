@@ -463,8 +463,7 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
 void radialSumFrames(int centerX, int centerY, const uint16_t data[],
                      int frameWidth, int frameHeight,
                      std::vector<uint32_t>& imageNumbers,
-                     uint32_t numberOfPixels,
-                     uint32_t numberOfScanPositions RadialSum<uint64_t>& radialSum)
+                     uint32_t numberOfPixels, RadialSum<uint64_t>& radialSum)
 {
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
     auto offset = i*numberOfPixels;
