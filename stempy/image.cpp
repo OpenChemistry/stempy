@@ -401,13 +401,13 @@ namespace {
 struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
 {
   vtkm::Vec<int, 2> m_center;
-  vtkm::Vec<int, 2> m_shape;
+  int m_width;
   int m_imageNumber;
   uint32_t m_numberOfScanPositions;
 
-  RadialSumWorklet(vtkm::Vec<int, 2> center, vtkm::Vec<int, 2> shape,
+  RadialSumWorklet(vtkm::Vec<int, 2> center, int width,
                    int imageNumber, uint32_t numberOfScanPositions)
-    : m_center(center), m_shape(shape), m_imageNumber(imageNumber),
+    : m_center(center), m_width(width), m_imageNumber(imageNumber),
       m_numberOfScanPositions(numberOfScanPositions){};
 
   using ControlSignature = void(FieldIn, AtomicArrayInOut);
@@ -418,8 +418,8 @@ struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
   VTKM_EXEC void operator()(const vtkm::UInt16& value,
                             AtomicInterface& radialSum, vtkm::Id i) const
   {
-    auto x = i % m_shape[0];
-    auto y = i / m_shape[0];
+    auto x = i % m_width;
+    auto y = i / m_width;
     auto radius =
       static_cast<int>(std::ceil(distance(x, y, m_center[0], m_center[1])));
 
@@ -429,23 +429,21 @@ struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
 
 void radialSumFrame(const vtkm::Vec<int, 2>& center,
                     const ArrayHandleView<vtkm::UInt16>& data,
-                    const vtkm::Vec<int, 2>& shape, int imageNumber,
+                    int frameWidth, int imageNumber,
                     uint32_t numberOfScanPositions,
                     vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
   vtkm::worklet::Invoker invoke;
-  invoke(RadialSumWorklet{ center, shape, imageNumber, numberOfScanPositions },
+  invoke(RadialSumWorklet{ center, frameWidth, imageNumber, numberOfScanPositions },
          data, radialSum);
 }
 
 void radialSumFrames(int centerX, int centerY, const uint16_t data[],
-                     int frameWidth, int frameHeight,
-                     std::vector<uint32_t>& imageNumbers,
+                     int frameWidth, std::vector<uint32_t>& imageNumbers,
                      uint32_t numberOfPixels, uint32_t numberOfScanPositions,
                      vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
   vtkm::Vec<int, 2> center = { centerX, centerY };
-  vtkm::Vec<int, 2> shape = { frameWidth, frameHeight };
   auto dataHandle =
     vtkm::cont::make_ArrayHandle(data, numberOfPixels * imageNumbers.size());
   // Use view to the array already transfered
@@ -454,7 +452,7 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
     auto view =
       vtkm::cont::make_ArrayHandleView(dataHandle, offset, numberOfPixels);
 
-    radialSumFrame(center, view, shape, imageNumbers[i], numberOfScanPositions,
+    radialSumFrame(center, view, frameWidth, imageNumbers[i], numberOfScanPositions,
                    radialSum);
   }
 }
@@ -552,9 +550,9 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 #ifdef VTKm
     auto numberOfScanPositions = radialSum.width * radialSum.height;
     futures.emplace_back(pool.enqueue(
-      [b, numberOfPixels, centerX, centerY, frameWidth, frameHeight,
+      [b, numberOfPixels, centerX, centerY, frameWidth,
        &radialSumHandle, numberOfScanPositions]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight,
+        radialSumFrames(centerX, centerY, b.data.get(), frameWidth,
                         b.header.imageNumbers, numberOfPixels,
                         numberOfScanPositions, radialSumHandle);
         // If we don't reset this, it won't get reset until the thread is
