@@ -182,9 +182,10 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   }
 
   vector<STEMImage> images;
-  for (const auto& r: innerRadii)
+  for (const auto& r : innerRadii) {
+    (void)r;
     images.push_back(STEMImage(width, height));
-
+  }
   // Get image size from first block
   auto frameWidth = first->header.frameWidth;
   auto frameHeight = first->header.frameHeight;
@@ -294,8 +295,10 @@ vector<STEMImage> createSTEMImagesSparse(
   auto numberOfPixels = frameWidth * frameHeight;
 
   vector<STEMImage> images;
-  for (const auto& r : innerRadii)
+  for (const auto& r : innerRadii) {
+    (void)r;
     images.push_back(STEMImage(width, height));
+  }
 
   vector<uint16_t*> masks;
 
