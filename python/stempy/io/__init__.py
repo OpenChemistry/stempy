@@ -77,7 +77,11 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
 
         frames[...] = events
 
-def save_stem_image(outputFile, image):
+def save_stem_images(outputFile, images, names):
+    if len(images) != len(names):
+        raise Exception('`images` and `names` must be the same length!')
+
     with h5py.File(outputFile, 'a') as f:
         stem_group = f.require_group('stem')
-        stem_group.create_dataset('data', data=image.data)
+        dataset = stem_group.create_dataset('images', data=images)
+        dataset.attrs['names'] = names

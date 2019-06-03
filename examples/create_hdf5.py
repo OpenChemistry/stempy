@@ -58,13 +58,17 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
     detector_nx = block.header.frame_width
     detector_ny = block.header.frame_height
 
+    inner_radii = [0, inner_radius]
+    outer_radii = [outer_radius, outer_radius]
+    names = ['bright', 'dark']
+
     reader.reset()
-    img = image.create_stem_image(reader, inner_radius, outer_radius,
-                                  width=width, height=height)
+    imgs = image.create_stem_images(reader, inner_radii, outer_radii,
+                                    width=width, height=height)
 
     io.save_electron_counts(output, frame_events, width, height, detector_nx,
                             detector_ny)
-    io.save_stem_image(output, img)
+    io.save_stem_images(output, imgs, names)
 
     if save_raw:
         reader.reset()
