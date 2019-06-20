@@ -149,7 +149,7 @@ int main (int argc, char *argv[])
     // generate histograms
     cout << "Generating STEM histograms" << endl;
     int numBins = 20;
-    std::vector<int> histogram = createSTEMHistograms(finalSTEMImage, 20);
+    std::vector<int> histogram = createSTEMHistograms(finalSTEMImage, 1000);
 
     // print the generated histogram
     cout << "Histogram of current STEM image is " << endl;
@@ -158,15 +158,6 @@ int main (int argc, char *argv[])
       cout << histogram[i] << " ";
     }
     cout << endl;
-
-    // display index STEM image
-    // STEMImage myImage = allImages[index];
-    // auto data = myImage.data;
-    // for (int i = 0; i < width*height; i++)
-    // {
-    //   cout << data[i] << ", ";
-    // }
-    // cout << endl;
 
   }
 

@@ -97,11 +97,6 @@ namespace stempy
                 {
                     histrogram[numBins-1] += 1;
                 }
-                else
-                {
-                    std::cout << "Unexpected error happens when generating histogram" << std::endl;
-                }
-                
             }
         }
 
