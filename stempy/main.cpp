@@ -148,8 +148,8 @@ int main (int argc, char *argv[])
 
     // generate histograms
     cout << "Generating STEM histograms" << endl;
-    int numBins = 20;
-    std::vector<int> histogram = createSTEMHistograms(finalSTEMImage, 1000);
+    int numBins = 100;
+    std::vector<int> histogram = createSTEMHistograms(finalSTEMImage, numBins);
 
     // print the generated histogram
     cout << "Histogram of current STEM image is " << endl;

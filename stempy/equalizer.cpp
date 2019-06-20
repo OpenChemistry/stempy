@@ -28,8 +28,7 @@ namespace stempy
             int height = inImage.height;
             auto curData = inImage.data;
             std::cout << "Input STEM Image has width = " << width << ", height = " << height << std::endl;
-            // std::cout << "curMin is " << curMin << std::endl;
-            // std::cout << "curMax is " << curMax << std::endl;
+
             // curImage.data is shared_ptr<uint64_t []>
             for (int i = 0; i < width*height; i++)
             {
@@ -55,12 +54,12 @@ namespace stempy
             container.push_back(max);
 
             // print the container binders
-            std::cout << "Container is " << std::endl;
-            for (int i = 0; i < container.size(); i++)
-            {
-                std::cout << container[i] << " ";
-            }
-            std::cout << std::endl;
+            // std::cout << "Container is " << std::endl;
+            // for (int i = 0; i < container.size(); i++)
+            // {
+            //     std::cout << container[i] << " ";
+            // }
+            // std::cout << std::endl;
 
             return container;
         }
