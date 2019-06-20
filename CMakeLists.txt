@@ -41,7 +41,8 @@ set(_vtkm_src
 )
 set(_src stempy/reader.cpp
   stempy/mask.cpp
-  stempy/electronthresholds.cpp)
+  stempy/electronthresholds.cpp
+  stempy/equalizer.cpp)
 
 if(SocketIOClientCpp_FOUND)
   list(APPEND _src stempy/sioclient.cpp)

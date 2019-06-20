@@ -114,51 +114,61 @@ std::vector<uint32_t> maximalPointsParallel(
 namespace stempy {
 
 // Implementation of modulus that "wraps" for negative numbers
+// for example, if x = 10, y = 50, x % 50 = 10
+// customized mod(10, 50) = ((10%50)+50) % 50 = 60%50 = 10
 inline uint16_t mod(uint16_t x, uint16_t y)
 {
   return ((x % y) + y) % y;
 }
 
-// Return the points in the frame with values larger than all 8 of their nearest
-// neighbors
+// Return the points in the frame with values larger than all 8 of their nearest neighbors
 std::vector<uint32_t> maximalPoints(
   const std::vector<uint16_t>& frame, int width, int height)
 {
   std::vector<uint32_t> events;
   auto numberOfPixels = height * width;
   for (int i = 0; i < numberOfPixels; i++) {
+    // int number row
     auto row = i / width;
     auto column = i % width;
+
+    // column number of left and right neighbor
+    // mod((column + 1), width) more consistent?
     auto rightNeighbourColumn = mod((i + 1), width);
     auto leftNeighbourColumn = mod((i - 1), width);
+
+    // row number of top and bottom neighbor
     auto topNeighbourRow = mod((row - 1), height);
     auto bottomNeighbourRow = mod((row + 1), height);
+
+    // pixel value at the current pixel
     auto pixelValue = frame[i];
+
+    // start index of the first element in a row
     auto bottomNeighbourRowIndex = bottomNeighbourRow * width;
     auto topNeighbourRowIndex = topNeighbourRow * width;
+
+    // is rowIndex the same as i?
     auto rowIndex = row * width;
 
-    // top
+    // if larger than top neighbor pixel value
     auto event = pixelValue > frame[topNeighbourRowIndex + column];
-    // top right
-    event =
-      event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
-    // right
+    // if larger than top right neighbor pixel value
+    event = event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
+    // if larger than right neighbor pixel value
     event = event && pixelValue > frame[rowIndex + rightNeighbourColumn];
-    // bottom right
-    event = event &&
-            pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
-    // bottom
+    // if larger than bottom right neighbor pixel value
+    event = event && pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
+    // if larger than bottom neighbor pixel value
     event = event && pixelValue > frame[bottomNeighbourRowIndex + column];
-    // bottom left
-    event = event &&
-            pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
+    // if larger than bottom left neighbor pixel value
+    event = event && pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
     // left
     event = event && pixelValue > frame[rowIndex + leftNeighbourColumn];
     // top left
-    event =
-      event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
+    event = event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
 
+    // cur i is the largest among neighbors
     if (event) {
       events.push_back(i);
     }

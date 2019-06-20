@@ -28,6 +28,7 @@ using namespace std;
 
 namespace stempy {
 
+// constructor
 template <typename T>
 Image<T>::Image(uint32_t w, uint32_t h)
   : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
@@ -35,6 +36,16 @@ Image<T>::Image(uint32_t w, uint32_t h)
   std::fill(this->data.get(), this->data.get() + width * height, 0);
 }
 
+// copy constructpr
+template <typename T>
+Image<T>::Image(const Image& image) 
+{
+  width = image.width; 
+  height = image.height;
+  data = image.data; 
+}
+
+// the sum of all the pixel values of a SINGLE diffraction image (data)
 STEMValues calculateSTEMValues(const uint16_t data[], int offset,
                                int numberOfPixels, uint16_t mask[],
                                uint32_t imageNumber)
@@ -266,6 +277,12 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   for (const auto* p : masks)
     delete[] p;
 
+  STEMImage myImage = images[10];
+  for (int i = 0; i < width*height; i++)
+  {
+    cout << myImage.data[i] << ", ";
+  }
+  cout << endl;
   return images;
 }
 
@@ -391,6 +408,7 @@ void radialSumFrame(int centerX, int centerY, const uint16_t data[],
     );
     // Use compiler intrinsic to ensure atomic add
     auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height + imageNumber;
+    // perform the operation suggested by the name, and returns the value that had previously been in memory
     __sync_fetch_and_add(address, data[offset + i]);
   }
 }

@@ -14,10 +14,14 @@ namespace stempy {
     uint32_t height = 0;
     std::shared_ptr<T[]> data;
 
+    // default constructor
     Image() = default;
+    // constructor
     Image(uint32_t width, uint32_t height);
-    Image(Image&& i) noexcept = default;
+    // Image(Image&& i) noexcept = default;
     Image& operator=(Image&& i) noexcept = default;
+    // copy constructor
+    Image(const Image& image);
   };
 
   struct STEMValues {
