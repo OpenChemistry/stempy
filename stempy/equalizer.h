@@ -9,7 +9,7 @@
 namespace stempy {
 
     // function that computes histogram for all the STEM images
-    std::vector<std::vector<int>> createSTEMHistograms (std::vector<STEMImage> allImages, const int numBins);
+    std::vector<int> createSTEMHistograms (STEMImage inImage, const int numBins);
 }
 
 #endif

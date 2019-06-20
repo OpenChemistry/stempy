@@ -277,12 +277,7 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   for (const auto* p : masks)
     delete[] p;
 
-  STEMImage myImage = images[10];
-  for (int i = 0; i < width*height; i++)
-  {
-    cout << myImage.data[i] << ", ";
-  }
-  cout << endl;
+  
   return images;
 }
 
