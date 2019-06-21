@@ -14,7 +14,7 @@ namespace stempy {
 // hide helper functions
 namespace {
 // helper function that returns the binding result
-std::vector<float> getContainer(const STEMImage inImage, const int numBins)
+std::vector<float> getContainer(const STEMImage& inImage, const int numBins)
 {
   // find the min and max value across all the input STEM images
   auto min = std::numeric_limits<float>::max();
@@ -49,21 +49,13 @@ std::vector<float> getContainer(const STEMImage inImage, const int numBins)
   // push the max value as the last number
   container.push_back(max);
 
-  // print the container binders
-  // std::cout << "Container is " << std::endl;
-  // for (int i = 0; i < container.size(); i++)
-  // {
-  //     std::cout << container[i] << " ";
-  // }
-  // std::cout << std::endl;
-
   return container;
 }
 } // namespace
 
 // function that computes histogram for all the STEM images
 // each histogram is a vector<int>
-std::vector<int> createSTEMHistograms(STEMImage inImage, const int numBins)
+std::vector<int> createSTEMHistogram(STEMImage inImage, const int numBins)
 {
   // get the container of the histogram
   std::vector<float> container = getContainer(inImage, numBins);
