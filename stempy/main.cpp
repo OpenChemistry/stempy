@@ -61,7 +61,7 @@ vector<string> GetDirectoryFiles(const string& dir)
   //   if (fs::is_regular_file(entry.status()))
   //   {
   //     allFiles.push_back(filename);
-  //   }    
+  //   }
   // }
 
   return allFiles;

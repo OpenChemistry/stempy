@@ -66,7 +66,7 @@ std::vector<float> getContainer(const STEMImage inImage, const int numBins)
 std::vector<int> createSTEMHistograms(STEMImage inImage, const int numBins)
 {
   // get the container of the histogram
-  std::vector<float> container = getcontainer(inImage, numBins);
+  std::vector<float> container = getContainer(inImage, numBins);
 
   // initialize output
   std::vector<std::vector<int>> allHistrograms;
