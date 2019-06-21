@@ -38,13 +38,13 @@ Image<T>::Image(uint32_t w, uint32_t h)
 }
 
 // copy constructpr
-template <typename T>
-Image<T>::Image(const Image& image)
-{
-  width = image.width;
-  height = image.height;
-  data = image.data;
-}
+// template <typename T>
+// Image<T>::Image(const Image& image)
+// {
+//   width = image.width;
+//   height = image.height;
+//   data = image.data;
+// }
 
 // the sum of all the pixel values of a SINGLE diffraction image (data)
 STEMValues calculateSTEMValues(const uint16_t data[], int offset,
@@ -597,8 +597,8 @@ namespace {
 std::vector<float> getContainer(const STEMImage& inImage, const int numBins)
 {
   // find the min and max value across all the input STEM images
-  auto min = std::numeric_limits<float>::max();
-  auto max = std::numeric_limits<float>::min();
+  // auto min = std::numeric_limits<float>::max();
+  // auto max = std::numeric_limits<float>::min();
 
   // information about input STEMImage
   int width = inImage.width;
@@ -607,17 +607,21 @@ std::vector<float> getContainer(const STEMImage& inImage, const int numBins)
   std::cout << "Input STEM Image has width = " << width
             << ", height = " << height << std::endl;
 
+  auto result = std::minmax_element(curData.get(), curData.get() + width * height);
+  uint64_t min = *result.first;
+  uint64_t max = *result.second;
+
   // curImage.data is shared_ptr<uint64_t []>
-  for (int i = 0; i < width * height; i++) {
-    // std::cout << "curData[" << i << "] = " << curData[i] << std::endl;
-    if (curData[i] < min)
-      min = curData[i];
-    if (curData[i] > max)
-      max = curData[i];
-  }
+  // for (int i = 0; i < width * height; i++) {
+  //   // std::cout << "curData[" << i << "] = " << curData[i] << std::endl;
+  //   if (curData[i] < min)
+  //     min = curData[i];
+  //   if (curData[i] > max)
+  //     max = curData[i];
+  // }
 
   // the "length" of each slot of the container
-  float length = (float)((max - min) / numBins);
+  float length = static_cast<float>((max - min) / numBins);
 
   std::vector<float> container;
   // push the min value first
@@ -636,7 +640,7 @@ std::vector<float> getContainer(const STEMImage& inImage, const int numBins)
 
 // function that computes histogram for all the STEM images
 // each histogram is a vector<int>
-std::vector<int> createSTEMHistogram(STEMImage inImage, const int numBins)
+std::vector<int> createSTEMHistogram(STEMImage& inImage, const int numBins)
 {
   // get the container of the histogram
   std::vector<float> container = getContainer(inImage, numBins);

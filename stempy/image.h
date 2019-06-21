@@ -19,10 +19,10 @@ struct Image
   Image() = default;
   // constructor
   Image(uint32_t width, uint32_t height);
-  // Image(Image&& i) noexcept = default;
+  Image(Image&& i) noexcept = default;
   Image& operator=(Image&& i) noexcept = default;
   // copy constructor
-  Image(const Image& image);
+  // Image(const Image& image);
 };
 
 struct STEMValues
@@ -73,7 +73,7 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0,
                               int centerY = -1);
 
 // function that computes histogram for all the STEM images
-std::vector<int> createSTEMHistogram(STEMImage inImage, const int numBins);
+std::vector<int> createSTEMHistogram(STEMImage& inImage, const int numBins);
 } // namespace stempy
 
 #endif

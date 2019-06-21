@@ -61,6 +61,7 @@ vector<string> GetDirectoryFiles(const string& dir)
 
 int main(int argc, char* argv[])
 {
+/*
   if (argc != 2) {
     cerr << "Usage: stem <data file path>" << endl;
     return 1;
@@ -137,7 +138,7 @@ int main(int argc, char* argv[])
     // sum up based on different radii
     vector<STEMImage> finalSTEMImages;
     for (int i = 0; i < numRadii; i++) {
-      STEMImage singleRadiiSTEMImage = allPartialSTEMImages[i][0];
+      STEMImage& singleRadiiSTEMImage = allPartialSTEMImages[i][0];
 
       // sum up based on different blocks
       for (int j = 1; j < allPartialSTEMImages[i].size(); j++)
@@ -167,7 +168,8 @@ int main(int argc, char* argv[])
     vector<vector<int>> allRadiiHistograms;
     for (int i = 0; i < numRadii; i++)
     {
-      std::vector<int> singleRadiiHistogram = createSTEMHistogram(finalSTEMImages[i], numBins);
+      STEMImage& singleRadiiImage = finalSTEMImages[i];
+      std::vector<int> singleRadiiHistogram = createSTEMHistogram(singleRadiiImage, numBins);
       allRadiiHistograms.push_back(singleRadiiHistogram);
     }
     
@@ -179,4 +181,5 @@ int main(int argc, char* argv[])
     }
     cout << endl;
   }
+*/
 }
