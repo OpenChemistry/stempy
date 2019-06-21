@@ -90,6 +90,8 @@ add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
   PRIVATE stem boost_filesystem boost_system)
+# target_link_libraries(stemcli
+#   PRIVATE stem)
 
 set_target_properties(stem
   PROPERTIES

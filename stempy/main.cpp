@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+// #include <experimental/filesystem>
 
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -12,6 +13,7 @@
 using namespace std;
 using namespace stempy;
 namespace fs = boost::filesystem;
+// namespace fs = std::experimental::filesystem;
 
 // Helper function that checks if given string path is of a Directory
 bool checkIfDirectory(std::string filePath)
@@ -53,6 +55,14 @@ vector<string> GetDirectoryFiles(const string& dir)
       std::cout << dir_itr->path().filename() << " " << ex.what() << std::endl;
     }
   }
+  // for (const auto& entry : fs::directory_iterator(pathObj))
+  // {
+  //   auto filename = entry.path().filename();
+  //   if (fs::is_regular_file(entry.status()))
+  //   {
+  //     allFiles.push_back(filename);
+  //   }    
+  // }
 
   return allFiles;
 }
