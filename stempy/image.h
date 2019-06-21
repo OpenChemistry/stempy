@@ -71,6 +71,9 @@ template <typename InputIt>
 RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0,
                               int scanHeight = 0, int centerX = -1,
                               int centerY = -1);
+
+// function that computes histogram for all the STEM images
+std::vector<int> createSTEMHistogram(STEMImage inImage, const int numBins);
 } // namespace stempy
 
 #endif

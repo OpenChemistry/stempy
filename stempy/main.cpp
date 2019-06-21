@@ -6,7 +6,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
 
-#include "equalizer.h"
 #include "image.h"
 #include "reader.h"
 
@@ -79,13 +78,14 @@ int main(int argc, char* argv[])
     int numFiles = files.size();
     cout << numFiles << " files have been found" << endl;
 
-    // all the STEM images that would be summed into one final STEM image
+    // each entry correspond to all partial images of a single radii
+    // each entry contains STEM images of all blocks
     vector<vector<STEMImage>> allPartialSTEMImages;
 
     // information about processing
     int width = 160;
     int height = 160;
-    // -1 indicate the center of the image
+    // -1 indicates the center of the image
     int centerX = -1;
     int centerY = -1;
     int numRadii = 1;
@@ -138,12 +138,13 @@ int main(int argc, char* argv[])
     vector<STEMImage> finalSTEMImages;
     for (int i = 0; i < numRadii; i++) {
       STEMImage singleRadiiSTEMImage = allPartialSTEMImages[i][0];
+
       // sum up based on different blocks
       for (int j = 1; j < allPartialSTEMImages[i].size(); j++)
       {
         for (int k = 0; k < width * height; k++)
         {
-          singleRadiiSTEMImage.data[k] = singleRadiiSTEMImage.data[k] + allPartialSTEMImages[i][0].data[k];
+          singleRadiiSTEMImage.data[k] += allPartialSTEMImages[i][j].data[k];
         }
       }
       // push into final results
