@@ -309,7 +309,7 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
 
 // function that computes histogram for all the STEM images
 // each histogram is a vector<int>
-std::vector<int> createSTEMHistogram(STEMImage& inImage, const int numBins, const std::vector<double> bins)
+std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins, const std::vector<double> bins)
 {
   // initialize output
   std::vector<int> frequencies(numBins, 0);

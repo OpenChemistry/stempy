@@ -69,9 +69,9 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0,
                               int centerY = -1);
 
 // bins for histogram
-std::vector<double> getContainer(STEMImage& inImage, const int numBins);
+std::vector<double> getContainer(const STEMImage& inImage, const int numBins);
 // histogram and bins for the input STEM image
-std::vector<int> createSTEMHistogram(STEMImage& inImage, const int numBins, const std::vector<double> bins);
+std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins, const std::vector<double> bins);
 } // namespace stempy
 
 #endif

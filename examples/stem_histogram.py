@@ -63,19 +63,22 @@ def main(argv):
     for i, img in enumerate(imgs):
         print('Generating histogram for STEM image ' + str(i))
         bins, freq = image.create_stem_histogram(img, numBins)
-        bins_np = np.array(bins, copy=False)
-        freq_np = np.array(freq, copy=False)
+        bins = [str(element) for element in bins]
+
         # plot histogram
         fig = plt.figure(1, figsize=(16, 8))
         myHist = fig.add_subplot(121)
-        myHist.bar(bins_np, height=freq_np)
+        # plt.bar considers the left boundary
+        x = np.arange(numBins)
+        myHist.bar(x, freq, align='edge')
         plt.title('My histogram')
+        plt.xticks(x, bins)
         plt.xlabel('Value')
         plt.ylabel('Frequency')
 
         npHist = fig.add_subplot(122)
         npHist.hist(img, normed=0)
-        plt.title('Histogram of STEM image with inner radii =' + str(inner_radii[i]) + ', outer radii =' + str(outer_radii[i]))
+        plt.title('Numpy histogram')
         plt.xlabel('Value')
         plt.ylabel('Frequency')
         # suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
