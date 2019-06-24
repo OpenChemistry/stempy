@@ -61,8 +61,8 @@ def main(argv):
     for i, img in enumerate(imgs):
         print('Generating histogram for STEM image' + str(i))
         suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        # curHistogram is int numpy array, convert to histogram
         curHistogram = image.create_stem_histogram(img, numBins)
+        # curHistogram is int numpy array, convert to histogram
         fig = plt.hist(a,normed=0)
         plt.title('Histogram of STEM image')
         plt.xlabel("Value")
