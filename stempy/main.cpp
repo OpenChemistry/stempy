@@ -3,61 +3,61 @@
 #include <string>
 // #include <experimental/filesystem>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/iterator_range.hpp>
+// #include <boost/filesystem.hpp>
+// #include <boost/range/iterator_range.hpp>
 
 #include "image.h"
 #include "reader.h"
 
 using namespace std;
 using namespace stempy;
-namespace fs = boost::filesystem;
-// namespace fs = std::experimental::filesystem;
+// namespace fs = boost::filesystem;
+// // namespace fs = std::experimental::filesystem;
 
-// Helper function that checks if given string path is of a Directory
-bool checkIfDirectory(std::string filePath)
-{
-  try {
-    // Create a Path object from given path string
-    fs::path pathObj(filePath);
-    // Check if path exists and is of a directory file
-    if (fs::exists(pathObj) && fs::is_directory(pathObj))
-      return true;
-  } catch (fs::filesystem_error& e) {
-    std::cerr << e.what() << std::endl;
-  }
-  return false;
-}
+// // Helper function that checks if given string path is of a Directory
+// bool checkIfDirectory(std::string filePath)
+// {
+//   try {
+//     // Create a Path object from given path string
+//     fs::path pathObj(filePath);
+//     // Check if path exists and is of a directory file
+//     if (fs::exists(pathObj) && fs::is_directory(pathObj))
+//       return true;
+//   } catch (fs::filesystem_error& e) {
+//     std::cerr << e.what() << std::endl;
+//   }
+//   return false;
+// }
 
 // helper function that gets all the file names in a directory
-vector<string> GetDirectoryFiles(const string& dir)
-{
-  vector<string> allFiles;
-  // Create a Path object from given path string
-  fs::path pathObj(dir);
+// vector<string> GetDirectoryFiles(const string& dir)
+// {
+//   vector<string> allFiles;
+//   // Create a Path object from given path string
+//   fs::path pathObj(dir);
 
-  fs::directory_iterator end_iter;
-  for (fs::directory_iterator dir_itr(pathObj); dir_itr != end_iter;
-       ++dir_itr) {
-    try {
-      if (fs::is_regular_file(dir_itr->status())) {
-        allFiles.push_back(dir_itr->path().filename().string());
-      }
-    } catch (const std::exception& ex) {
-      std::cout << dir_itr->path().filename() << " " << ex.what() << std::endl;
-    }
-  }
-  // for (const auto& entry : fs::directory_iterator(pathObj))
-  // {
-  //   auto filename = entry.path().filename();
-  //   if (fs::is_regular_file(entry.status()))
-  //   {
-  //     allFiles.push_back(filename);
-  //   }
-  // }
+//   fs::directory_iterator end_iter;
+//   for (fs::directory_iterator dir_itr(pathObj); dir_itr != end_iter;
+//        ++dir_itr) {
+//     try {
+//       if (fs::is_regular_file(dir_itr->status())) {
+//         allFiles.push_back(dir_itr->path().filename().string());
+//       }
+//     } catch (const std::exception& ex) {
+//       std::cout << dir_itr->path().filename() << " " << ex.what() << std::endl;
+//     }
+//   }
+//   // for (const auto& entry : fs::directory_iterator(pathObj))
+//   // {
+//   //   auto filename = entry.path().filename();
+//   //   if (fs::is_regular_file(entry.status()))
+//   //   {
+//   //     allFiles.push_back(filename);
+//   //   }
+//   // }
 
-  return allFiles;
-}
+//   return allFiles;
+// }
 
 int main(int argc, char* argv[])
 {

@@ -32,10 +32,6 @@ include_directories(
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-# add boost support for file system
-find_package(Boost REQUIRED COMPONENTS filesystem system)
-include_directories(${Boost_INCLUDE_DIRS}) 
-
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 
@@ -88,9 +84,7 @@ target_link_libraries(stem
 add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
-  PRIVATE stem boost_filesystem boost_system)
-# target_link_libraries(stemcli
-#   PRIVATE stem)
+  PRIVATE stem)
 
 set_target_properties(stem
   PROPERTIES

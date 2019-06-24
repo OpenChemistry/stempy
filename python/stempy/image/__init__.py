@@ -8,14 +8,15 @@ def create_stem_images(reader, inner_radii,
                                      inner_radii, outer_radii, width, height,
                                      center_x, center_y)
 
-    images = [np.array(img, copy=False) for img in imgs]
-    return np.array(images, copy=False)
+    # images = [np.array(img, copy=False) for img in imgs]
+    # return np.array(images, copy=False)
+    return imgs
 
 def create_stem_histogram(inImage, numBins):
-    histogram = _image.create_stem_histogram(inImage, numBins)
-    histogram = np.array(histogram, copy=False)
+    bins = _image.get_container(inImage, numBins)
+    freq = _image.create_stem_histogram(inImage, numBins, bins)
 
-    return histogram
+    return bins, freq
 
 # This one exists for backward compatibility
 def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,

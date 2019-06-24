@@ -33,15 +33,16 @@ def main(argv):
     # create output directory if it does not exit
     if not os.path.exists(outDir):
         os.mkdir(outDir)
-        print("Output directory", outDir , "created ")
+        print('Output directory', outDir , 'created')
     else:    
-        print("Outout directory", outDir , "already exists")
+        print('Outout directory', outDir , 'already exists')
 
     # get the all the data files
     files = []
     for f in glob.glob(dataDir):
         files.append(f)
 
+    # inner and outer radius of mask
     inner_radii = [40]
     outer_radii = [288]
 
@@ -51,23 +52,36 @@ def main(argv):
 
     # save the STEM images
     for i, img in enumerate(imgs):
+        # convert the type to numpy array
+        img_np = np.array(img, copy=False)
         suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        save_img(img, outDir + 'img_' + suffix)
-
-    print("STEM images have been saved")
+        save_img(img_np, outDir + 'img_' + suffix)
+        print('STEM image with inner radius = ' + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]) + ' has been saved')
 
     # generate histograms
     numBins = 100
     for i, img in enumerate(imgs):
-        print('Generating histogram for STEM image' + str(i))
-        suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        curHistogram = image.create_stem_histogram(img, numBins)
-        # curHistogram is int numpy array, convert to histogram
-        fig = plt.hist(a,normed=0)
-        plt.title('Histogram of STEM image')
-        plt.xlabel("Value")
-        plt.ylabel("Frequency")
-        plt.savefig(outDir + 'histogram_' + suffix)
+        print('Generating histogram for STEM image ' + str(i))
+        bins, freq = image.create_stem_histogram(img, numBins)
+        bins_np = np.array(bins, copy=False)
+        freq_np = np.array(freq, copy=False)
+        # plot histogram
+        fig = plt.figure(1, figsize=(16, 8))
+        myHist = fig.add_subplot(121)
+        myHist.bar(bins_np, height=freq_np)
+        plt.title('My histogram')
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+
+        npHist = fig.add_subplot(122)
+        npHist.hist(img, normed=0)
+        plt.title('Histogram of STEM image with inner radii =' + str(inner_radii[i]) + ', outer radii =' + str(outer_radii[i]))
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+        # suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
+        # plt.savefig(outDir + 'histogram_' + suffix)
+
+        plt.show()
 
 
 if __name__ == "__main__":
