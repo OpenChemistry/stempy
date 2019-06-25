@@ -27,6 +27,7 @@ outer_radii = [288, 288]
 reader = io.reader(files)
 imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
                                 height=160)
+imgs = [np.array(img, copy=False) for img in imgs]
 
 for i, img in enumerate(imgs):
     suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'

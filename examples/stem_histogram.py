@@ -44,8 +44,8 @@ def main(argv):
         files.append(f)
 
     # inner and outer radius of mask
-    inner_radii = [0, 40]
-    outer_radii = [288, 288]
+    inner_radii = [40]
+    outer_radii = [288]
 
     reader = io.reader(files)
     imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,

@@ -2,6 +2,7 @@ import click
 from stempy import io, image
 import sys
 import time
+import numpy as np
 
 # Beware of disk caching when using this benchmark
 @click.command()
@@ -23,6 +24,7 @@ def run_benchmarks(files, num_runs):
 
         reader = io.reader(files)
         img = image.create_stem_image(reader, 40, 288, width=160, height=160)
+        img = np.array(img, copy=False)
 
         end = time.time()
         times.append(end - start)

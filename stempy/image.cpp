@@ -277,15 +277,13 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
   int width = inImage.width;
   int height = inImage.height;
   auto curData = inImage.data;
-  std::cout << "Input STEM Image has width = " << width
-            << ", height = " << height << std::endl;
 
   auto result = std::minmax_element(curData.get(), curData.get() + width * height);
   double min = *result.first;
   double max = *result.second;
 
   // the "length" of each slot of the container
-  double length = static_cast<double>((max - min) / numBins);
+  double length = (max - min) / numBins;
 
   std::vector<double> container;
   // push all the intermediate values
@@ -312,14 +310,14 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins
   for (int i = 0; i < width * height; i++) {
     auto value = curData[i];
     // check which bin it belongs to
-    for (int i = 0; i < numBins; i++) {
-      if (value >= bins[i] && value < bins[i + 1]) {
-        frequencies[i] += 1;
+    for (int j = 0; j < numBins; j++) {
+      if (value >= bins[j] && value < bins[j + 1]) {
+        ++frequencies[j];
       }
-      // the max value is put in the last slot
-      else if (value == bins[numBins]) {
-        frequencies[numBins - 1] += 1;
-      }
+    }
+    // the max value is put in the last slot
+    if (value == bins[numBins]) {
+        ++frequencies[numBins-1];
     }
   }
 
