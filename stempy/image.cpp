@@ -442,12 +442,12 @@ void radialSumFrame(int centerX, int centerY, const uint16_t data[],
     auto x = i % frameWidth;
     auto y = i / frameWidth;
     auto radius = static_cast<int>(
-      std::ceil(
-          distance(x, y, centerX, centerY)
-      )
+        std::ceil(
+            distance(x, y, centerX, centerY)
+        )
     );
     // Use compiler intrinsic to ensure atomic add
-    auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height+imageNumber;
+    auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height + imageNumber;
     __sync_fetch_and_add(address, data[offset + i]);
   }
 }
@@ -655,8 +655,8 @@ template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
 
 template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
-                                       int scanWidth, int scanHeight, int centerX, int centerY);
+      int scanWidth, int scanHeight, int centerX, int centerY);
 template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
-                                       int scanWidth, int scanHeight, int centerX, int centerY);
+      int scanWidth, int scanHeight, int centerX, int centerY);
 
-} // namespace stempy
+}
