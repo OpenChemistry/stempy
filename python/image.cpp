@@ -58,4 +58,7 @@ PYBIND11_MODULE(_image, m)
   m.def("electron_count", &electronCount<StreamReader::iterator>);
   m.def("calculate_thresholds", &calculateThresholds);
   m.def("radial_sum", &radialSum<StreamReader::iterator>);
+
+  m.def("get_container", &getContainer);
+  m.def("create_stem_histogram", &createSTEMHistogram);
 }

@@ -23,6 +23,7 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 #include <numeric>
 #include <sstream>
 #include <cmath>
+#include <algorithm>
 
 using namespace std;
 
@@ -267,6 +268,62 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
     delete[] p;
 
   return images;
+}
+
+// returns the binding result
+std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
+{
+  // information about input STEMImage
+  int width = inImage.width;
+  int height = inImage.height;
+  auto curData = inImage.data;
+  std::cout << "Input STEM Image has width = " << width
+            << ", height = " << height << std::endl;
+
+  auto result = std::minmax_element(curData.get(), curData.get() + width * height);
+  double min = *result.first;
+  double max = *result.second;
+
+  // the "length" of each slot of the container
+  double length = static_cast<double>((max - min) / numBins);
+
+  std::vector<double> container;
+  // push all the intermediate values
+  for (int i = 0; i <= numBins; i++) {
+    container.push_back(min + i * length);
+  }
+
+  return container;
+}
+
+// function that computes histogram for all the STEM images
+// each histogram is a vector<int>
+std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins, const std::vector<double> bins)
+{
+  // initialize output
+  std::vector<int> frequencies(numBins, 0);
+
+  // STEMImage info
+  int width = inImage.width;
+  int height = inImage.height;
+  auto curData = inImage.data;
+  
+  // get a histrogram
+  for (int i = 0; i < width * height; i++) {
+    auto value = curData[i];
+    // check which bin it belongs to
+    for (int i = 0; i < numBins; i++) {
+      if (value >= bins[i] && value < bins[i + 1]) {
+        frequencies[i] += 1;
+      }
+      // the max value is put in the last slot
+      else if (value == bins[numBins]) {
+        frequencies[numBins - 1] += 1;
+      }
+    }
+  }
+
+  return frequencies;
 }
 
 vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
