@@ -430,22 +430,24 @@ Image<double> calculateAverage(InputIt first, InputIt last)
   return image;
 }
 
-double inline distance(int x1, int y1, int x2, int y2)
-{
+double inline distance(int x1, int y1, int x2, int y2) {
   return sqrt(pow((x1 - x2), 2.0) + pow((y1 - y2), 2.0));
 }
 
-void radialSumFrame(int centerX, int centerY, const uint16_t data[], int offset,
-                    int frameWidth, int frameHeight, int imageNumber,
-                    RadialSum<uint64_t>& radialSum)
+void radialSumFrame(int centerX, int centerY, const uint16_t data[],
+    int offset, int frameWidth, int frameHeight, int imageNumber, RadialSum<uint64_t>& radialSum)
 {
   auto numberOfPixels = frameWidth*frameHeight;
   for (int i=0; i<numberOfPixels; i++) {
     auto x = i % frameWidth;
     auto y = i / frameWidth;
-    auto radius = static_cast<int>(std::ceil(distance(x, y, centerX, centerY)));
+    auto radius = static_cast<int>(
+      std::ceil(
+          distance(x, y, centerX, centerY)
+      )
+    );
     // Use compiler intrinsic to ensure atomic add
-    auto address = radialSum.data.get() + radius * radialSum.width * radialSum.height + imageNumber;
+    auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height+imageNumber;
     __sync_fetch_and_add(address, data[offset + i]);
   }
 }
@@ -483,8 +485,8 @@ struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
 };
 
 void radialSumFrame(const vtkm::Vec<int, 2>& center,
-                    const ArrayHandleView<vtkm::UInt16>& data, 
-                    int frameWidth, int imageNumber, 
+                    const ArrayHandleView<vtkm::UInt16>& data,
+                    int frameWidth, int imageNumber,
                     uint32_t numberOfScanPositions,
                     vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
@@ -566,8 +568,8 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
   // Calculate the maximum possible radius for the frame, the maximum distance
   // from all four corners
   double max = 0.0;
-  for (int x=0; x<2; x++) {
-    for (int y=0; y<2; y++) {
+  for(int x=0; x<2; x++) {
+    for(int y=0; y<2; y++) {
       auto dist = distance(x*frameWidth, y*frameHeight, centerX, centerY);
       if (dist > max) {
         max = dist;
@@ -652,13 +654,9 @@ template Image<double> calculateAverage(StreamReader::iterator first,
 template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
 
-template RadialSum<uint64_t> radialSum(StreamReader::iterator first,
-                                       StreamReader::iterator last,
-                                       int scanWidth, int scanHeight,
-                                       int centerX, int centerY);
-template RadialSum<uint64_t> radialSum(vector<Block>::iterator,
-                                       vector<Block>::iterator last,
-                                       int scanWidth, int scanHeight,
-                                       int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
+                                       int scanWidth, int scanHeight, int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
+                                       int scanWidth, int scanHeight, int centerX, int centerY);
 
 } // namespace stempy

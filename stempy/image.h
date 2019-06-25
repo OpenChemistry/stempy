@@ -3,8 +3,8 @@
 
 #include "reader.h"
 
-#include <memory>
 #include <vector>
+#include <memory>
 
 namespace stempy {
 

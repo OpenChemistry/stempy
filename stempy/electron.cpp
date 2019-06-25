@@ -141,22 +141,22 @@ std::vector<uint32_t> maximalPoints(
     // top
     auto event = pixelValue > frame[topNeighbourRowIndex + column];
     // top right
-    event = 
+    event =
       event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
     // right
     event = event && pixelValue > frame[rowIndex + rightNeighbourColumn];
     // bottom right
-    event = event && 
+    event = event &&
             pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
     // bottom
     event = event && pixelValue > frame[bottomNeighbourRowIndex + column];
     // bottom left
-    event = event && 
+    event = event &&
             pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
     // left
     event = event && pixelValue > frame[rowIndex + leftNeighbourColumn];
     // top left
-    event = 
+    event =
       event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
 
     if (event) {
