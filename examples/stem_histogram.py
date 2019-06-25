@@ -44,8 +44,8 @@ def main(argv):
         files.append(f)
 
     # inner and outer radius of mask
-    inner_radii = [40]
-    outer_radii = [288]
+    inner_radii = [0, 40]
+    outer_radii = [288, 288]
 
     reader = io.reader(files)
     imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
@@ -69,19 +69,13 @@ def main(argv):
 
         # plot histogram
         fig = plt.figure(1, figsize=(16, 8))
-        myHist = fig.add_subplot(121)
+        myHist = fig.add_subplot(111)
         # plt.bar considers the left boundary
         x = np.arange(numBins+1)
         myHist.bar(x[:-1], freq, align='edge')
         plt.xticks(x[::20], bins[::20])
-        plt.title('My histogram')
-        plt.xlabel('Value')
-        plt.ylabel('Frequency')
-
-        # histogram using built-in python histogram
-        npHist = fig.add_subplot(122)
-        npHist.hist(img, normed=0)
-        plt.title('Numpy histogram')
+        plt.title('Histogram of STEM image with inner radius = ' 
+                    + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
         plt.xlabel('Value')
         plt.ylabel('Frequency')
 
@@ -95,4 +89,3 @@ def main(argv):
 if __name__ == "__main__":
     main(sys.argv[1:])
 
-    
