@@ -66,6 +66,7 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
     imgs = image.create_stem_images(reader, inner_radii, outer_radii,
                                     width=width, height=height)
     imgs = [np.array(img, copy=False) for img in imgs]
+    imgs = np.array(imgs, copy=False)
 
     io.save_electron_counts(output, frame_events, width, height, detector_nx,
                             detector_ny)
