@@ -5,6 +5,7 @@ from stempy import io, image
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 def print_help():
     print(
@@ -55,8 +56,9 @@ def main(argv):
         # convert the type to numpy array
         img_np = np.array(img, copy=False)
         suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        save_img(img_np, outDir + 'img_' + suffix)
-        print('STEM image with inner radius = ' + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]) + ' has been saved')
+        save_img(img_np, outDir + '/img_' + suffix)
+        print('STEM image with inner radius = ' + str(inner_radii[i]) 
+              + ', outer radius = ' + str(outer_radii[i]) + ' has been saved')
 
     # generate histograms
     numBins = 100
@@ -69,21 +71,24 @@ def main(argv):
         fig = plt.figure(1, figsize=(16, 8))
         myHist = fig.add_subplot(121)
         # plt.bar considers the left boundary
-        x = np.arange(numBins)
-        myHist.bar(x, freq, align='edge')
+        x = np.arange(numBins+1)
+        myHist.bar(x[:-1], freq, align='edge')
+        plt.xticks(x[::20], bins[::20])
         plt.title('My histogram')
-        plt.xticks(x, bins)
         plt.xlabel('Value')
         plt.ylabel('Frequency')
 
+        # histogram using built-in python histogram
         npHist = fig.add_subplot(122)
         npHist.hist(img, normed=0)
         plt.title('Numpy histogram')
         plt.xlabel('Value')
         plt.ylabel('Frequency')
-        # suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        # plt.savefig(outDir + 'histogram_' + suffix)
 
+        # save to local
+        suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
+        plt.savefig(outDir + '/histogram_' + suffix)
+        
         plt.show()
 
 
