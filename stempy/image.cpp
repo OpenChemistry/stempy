@@ -17,19 +17,18 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 
 #endif
 
-#include <cmath>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <sstream>
+#include <cmath>
 #include <algorithm>
 
 using namespace std;
 
 namespace stempy {
 
-// constructor
 template <typename T>
 Image<T>::Image(uint32_t w, uint32_t h)
   : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
@@ -37,23 +36,13 @@ Image<T>::Image(uint32_t w, uint32_t h)
   std::fill(this->data.get(), this->data.get() + width * height, 0);
 }
 
-// copy constructpr
-// template <typename T>
-// Image<T>::Image(const Image& image)
-// {
-//   width = image.width;
-//   height = image.height;
-//   data = image.data;
-// }
-
-// the sum of all the pixel values of a SINGLE diffraction image (data)
 STEMValues calculateSTEMValues(const uint16_t data[], int offset,
                                int numberOfPixels, uint16_t mask[],
                                uint32_t imageNumber)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
-  for (int i = 0; i < numberOfPixels; i++) {
+  for (int i=0; i<numberOfPixels; i++) {
     auto value = data[offset + i];
     stemValues.data += value & mask[i];
   }
@@ -63,11 +52,11 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
 
 template <typename T>
 RadialSum<T>::RadialSum(uint32_t w, uint32_t h, uint32_t r)
-  : width(w), height(h), radii(r),
-    data(new T[w * h * r], std::default_delete<T[]>())
+  : width(w), height(h), radii(r), data(new T[w * h * r], std::default_delete<T[]>())
 {
   std::fill(this->data.get(), this->data.get() + width * height * radii, 0);
 }
+
 
 #ifdef VTKm
 namespace {
@@ -105,7 +94,7 @@ struct MaskAndAdd
     return a + b;
   }
 };
-} // namespace
+}
 
 template <typename Storage>
 STEMValues calculateSTEMValuesParallel(
@@ -417,7 +406,7 @@ Image<double> calculateAverage(InputIt first, InputIt last)
 {
   auto frameWidth = first->header.frameWidth;
   auto frameHeight = first->header.frameHeight;
-  auto numDetectorPixels = frameWidth * frameHeight;
+  auto numDetectorPixels = frameWidth*frameHeight;
   Image<double> image(frameWidth, frameHeight);
 
   std::fill(image.data.get(), image.data.get() + numDetectorPixels, 0.0);
@@ -429,7 +418,7 @@ Image<double> calculateAverage(InputIt first, InputIt last)
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
       for (unsigned j = 0; j < numberOfPixels; j++) {
-        image.data[j] += blockData[i * numberOfPixels + j];
+        image.data[j] += blockData[i*numberOfPixels+j];
       }
     }
   }
@@ -450,16 +439,13 @@ void radialSumFrame(int centerX, int centerY, const uint16_t data[], int offset,
                     int frameWidth, int frameHeight, int imageNumber,
                     RadialSum<uint64_t>& radialSum)
 {
-  auto numberOfPixels = frameWidth * frameHeight;
-  for (int i = 0; i < numberOfPixels; i++) {
+  auto numberOfPixels = frameWidth*frameHeight;
+  for (int i=0; i<numberOfPixels; i++) {
     auto x = i % frameWidth;
     auto y = i / frameWidth;
     auto radius = static_cast<int>(std::ceil(distance(x, y, centerX, centerY)));
     // Use compiler intrinsic to ensure atomic add
-    auto address = radialSum.data.get() +
-                   radius * radialSum.width * radialSum.height + imageNumber;
-    // perform the operation suggested by the name, and returns the value that
-    // had previously been in memory
+    auto address = radialSum.data.get() + radius * radialSum.width * radialSum.height + imageNumber;
     __sync_fetch_and_add(address, data[offset + i]);
   }
 }
@@ -474,8 +460,8 @@ struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
   int m_imageNumber;
   uint32_t m_numberOfScanPositions;
 
-  RadialSumWorklet(vtkm::Vec<int, 2> center, int width, int imageNumber,
-                   uint32_t numberOfScanPositions)
+  RadialSumWorklet(vtkm::Vec<int, 2> center, int width,
+                   int imageNumber, uint32_t numberOfScanPositions)
     : m_center(center), m_width(width), m_imageNumber(imageNumber),
       m_numberOfScanPositions(numberOfScanPositions){};
 
@@ -497,14 +483,14 @@ struct RadialSumWorklet : public vtkm::worklet::WorkletMapField
 };
 
 void radialSumFrame(const vtkm::Vec<int, 2>& center,
-                    const ArrayHandleView<vtkm::UInt16>& data, int frameWidth,
-                    int imageNumber, uint32_t numberOfScanPositions,
+                    const ArrayHandleView<vtkm::UInt16>& data, 
+                    int frameWidth, int imageNumber, 
+                    uint32_t numberOfScanPositions,
                     vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
   vtkm::worklet::Invoker invoke;
-  invoke(
-    RadialSumWorklet{ center, frameWidth, imageNumber, numberOfScanPositions },
-    data, radialSum);
+  invoke(RadialSumWorklet{ center, frameWidth, imageNumber, numberOfScanPositions },
+         data, radialSum);
 }
 
 void radialSumFrames(int centerX, int centerY, const uint16_t data[],
@@ -521,8 +507,8 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
     auto view =
       vtkm::cont::make_ArrayHandleView(dataHandle, offset, numberOfPixels);
 
-    radialSumFrame(center, view, frameWidth, imageNumbers[i],
-                   numberOfScanPositions, radialSum);
+    radialSumFrame(center, view, frameWidth, imageNumbers[i], numberOfScanPositions,
+                   radialSum);
   }
 }
 
@@ -533,18 +519,18 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
                      uint32_t numberOfPixels, RadialSum<uint64_t>& radialSum)
 {
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
-    auto offset = i * numberOfPixels;
+    auto offset = i*numberOfPixels;
     auto imageNumber = imageNumbers[i];
-    radialSumFrame(centerX, centerY, data, offset, frameWidth, frameHeight,
-                   imageNumber, radialSum);
+    radialSumFrame(centerX, centerY, data, offset,
+        frameWidth, frameHeight, imageNumber, radialSum);
   }
 }
 #endif
-} // namespace
+}
 
 template <typename InputIt>
-RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth,
-                              int scanHeight, int centerX, int centerY)
+RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int scanHeight,
+      int centerX, int centerY)
 {
   if (first == last) {
     ostringstream msg;
@@ -580,9 +566,9 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth,
   // Calculate the maximum possible radius for the frame, the maximum distance
   // from all four corners
   double max = 0.0;
-  for (int x = 0; x < 2; x++) {
-    for (int y = 0; y < 2; y++) {
-      auto dist = distance(x * frameWidth, y * frameHeight, centerX, centerY);
+  for (int x=0; x<2; x++) {
+    for (int y=0; y<2; y++) {
+      auto dist = distance(x*frameWidth, y*frameHeight, centerX, centerY);
       if (dist > max) {
         max = dist;
       }
@@ -597,7 +583,7 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth,
   // 2 threads to be ideal.
   int numThreads = 2;
   ThreadPool pool(numThreads);
-  RadialSum<uint64_t> radialSum(scanWidth, scanHeight, maxRadius + 1);
+  RadialSum<uint64_t> radialSum(scanWidth, scanHeight, maxRadius+1);
 
 #ifdef VTKm
   // We need the reinterpret_cast as vtkm currently doesn't support atomic
@@ -618,9 +604,9 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth,
     // the block will not be deleted until the threads are destroyed.
 #ifdef VTKm
     auto numberOfScanPositions = radialSum.width * radialSum.height;
-    futures.emplace_back(
-      pool.enqueue([b, numberOfPixels, centerX, centerY, frameWidth,
-                    &radialSumHandle, numberOfScanPositions]() mutable {
+    futures.emplace_back(pool.enqueue(
+      [b, numberOfPixels, centerX, centerY, frameWidth,
+       &radialSumHandle, numberOfScanPositions]() mutable {
         radialSumFrames(centerX, centerY, b.data.get(), frameWidth,
                         b.header.imageNumbers, numberOfPixels,
                         numberOfScanPositions, radialSumHandle);
@@ -630,10 +616,9 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth,
       }));
 #else
     futures.emplace_back(
-      pool.enqueue([b, numberOfPixels, centerX, centerY, frameWidth,
-                    frameHeight, &radialSum]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight,
-                        b.header.imageNumbers, numberOfPixels, radialSum);
+      pool.enqueue([b, numberOfPixels, centerX, centerY, frameWidth, frameHeight, &radialSum]() mutable {
+        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
+            numberOfPixels, radialSum);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
         b.data.reset();

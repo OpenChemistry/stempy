@@ -119,7 +119,8 @@ inline uint16_t mod(uint16_t x, uint16_t y)
   return ((x % y) + y) % y;
 }
 
-// Return the points in the frame with values larger than all 8 of their nearest neighbors
+// Return the points in the frame with values larger than all 8 of their nearest
+// neighbors
 std::vector<uint32_t> maximalPoints(
   const std::vector<uint16_t>& frame, int width, int height)
 {
@@ -128,11 +129,8 @@ std::vector<uint32_t> maximalPoints(
   for (int i = 0; i < numberOfPixels; i++) {
     auto row = i / width;
     auto column = i % width;
-
-    // column number of left and right neighbor
     auto rightNeighbourColumn = mod((i + 1), width);
     auto leftNeighbourColumn = mod((i - 1), width);
-
     auto topNeighbourRow = mod((row - 1), height);
     auto bottomNeighbourRow = mod((row + 1), height);
     auto pixelValue = frame[i];
@@ -143,19 +141,23 @@ std::vector<uint32_t> maximalPoints(
     // top
     auto event = pixelValue > frame[topNeighbourRowIndex + column];
     // top right
-    event = event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
+    event = 
+      event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
     // right
     event = event && pixelValue > frame[rowIndex + rightNeighbourColumn];
     // bottom right
-    event = event && pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
+    event = event && 
+            pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
     // bottom
     event = event && pixelValue > frame[bottomNeighbourRowIndex + column];
     // bottom left
-    event = event && pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
+    event = event && 
+            pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
     // left
     event = event && pixelValue > frame[rowIndex + leftNeighbourColumn];
     // top left
-    event = event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
+    event = 
+      event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
 
     if (event) {
       events.push_back(i);
