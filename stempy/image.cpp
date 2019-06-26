@@ -17,13 +17,13 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 
 #endif
 
+#include <algorithm>
+#include <cmath>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <sstream>
-#include <cmath>
-#include <algorithm>
 
 using namespace std;
 
@@ -278,7 +278,8 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
   int height = inImage.height;
   auto curData = inImage.data;
 
-  auto result = std::minmax_element(curData.get(), curData.get() + width * height);
+  auto result =
+    std::minmax_element(curData.get(), curData.get() + width * height);
   double min = *result.first;
   double max = *result.second;
 
@@ -296,7 +297,9 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
 
 // function that computes histogram for all the STEM images
 // each histogram is a vector<int>
-std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins, const std::vector<double> bins)
+std::vector<int> createSTEMHistogram(const STEMImage& inImage,
+                                     const int numBins,
+                                     const std::vector<double> bins)
 {
   // initialize output
   std::vector<int> frequencies(numBins, 0);
@@ -317,7 +320,7 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins
     }
     // the max value is put in the last slot
     if (value == bins[numBins]) {
-        ++frequencies[numBins-1];
+      ++frequencies[numBins - 1];
     }
   }
 
