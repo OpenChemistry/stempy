@@ -2,7 +2,6 @@ import click
 from stempy import io, image
 import sys
 import time
-import numpy as np
 
 # Beware of disk caching when using this benchmark
 @click.command()

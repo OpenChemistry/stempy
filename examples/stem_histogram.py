@@ -1,4 +1,3 @@
-import click
 import glob
 import sys
 import os
