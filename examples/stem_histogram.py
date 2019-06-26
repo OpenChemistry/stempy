@@ -52,14 +52,14 @@ def main(argv):
     # generate histograms
     numBins = 100
     print('Generating histograms for input data')
-    allBins, allFreqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
+    all_bins, all_freqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
                                                     width=160, height=160)
 
     # plot histogram
-    for i in range(len(allBins)):
+    for i in range(len(all_bins)):
         # obtain current bins and freq
-        bins = [str(element) for element in allBins[i]]
-        freq = allFreqs[i]
+        bins = [str(element) for element in all_bins[i]]
+        freq = all_freqs[i]
         # init figure
         fig = plt.figure(1, figsize=(16, 8))
         myHist = fig.add_subplot(111)
