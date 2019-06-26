@@ -1,4 +1,3 @@
-import glob
 import sys
 import os
 from stempy import io, image
@@ -27,20 +26,21 @@ def save_img(stem_image_data, name):
 
 def main(argv):
     print_help()
-    dataDir = argv[0] if len(argv) > 0
-    outDir = argv[1] if len(argv) > 1
+    dataDir = argv[0]
+    outDir = argv[1]
 
     # create output directory if it does not exit
     if not os.path.exists(outDir):
         os.mkdir(outDir)
         print('Output directory', outDir , 'created')
-    else:    
-        print('Outout directory', outDir , 'already exists')
+    else:
+        print('Output directory', outDir , 'already exists')
 
     # get the all the data files
     files = []
-    for f in glob.glob(dataDir):
-        files.append(f)
+    for root, dirs, fs in os.walk(dataDir):
+        for f in fs:
+            files.append(os.path.join(root, f))
 
     # inner and outer radius of mask
     inner_radii = [0, 40]
@@ -54,7 +54,7 @@ def main(argv):
     print('Generating histograms for input data')
     allBins, allFreqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
                                                     width=160, height=160)
-            
+
     # plot histogram
     for i in range(len(allBins)):
         # obtain current bins and freq
@@ -67,7 +67,7 @@ def main(argv):
         x = np.arange(numBins+1)
         myHist.bar(x[:-1], freq, align='edge')
         plt.xticks(x[::20], bins[::20])
-        plt.title('Histogram of STEM image with inner radius = ' 
+        plt.title('Histogram of STEM image with inner radius = '
                     + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
         plt.xlabel('Value')
         plt.ylabel('Frequency')
@@ -75,10 +75,9 @@ def main(argv):
         # save to local
         suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
         plt.savefig(outDir + '/histogram_' + suffix)
-        
+
         plt.show()
 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-

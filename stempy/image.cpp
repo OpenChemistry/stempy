@@ -305,7 +305,7 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage, const int numBins
   int width = inImage.width;
   int height = inImage.height;
   auto curData = inImage.data;
-  
+
   // get a histrogram
   for (int i = 0; i < width * height; i++) {
     auto value = curData[i];
