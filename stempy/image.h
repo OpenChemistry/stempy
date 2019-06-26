@@ -64,6 +64,13 @@ namespace stempy {
   template <typename InputIt>
   RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0, int scanHeight = 0,
         int centerX = -1, int centerY = -1);
-}
+
+  // bins for histogram
+  std::vector<double> getContainer(const STEMImage& inImage, const int numBins);
+  // histogram and bins for the input STEM image
+  std::vector<int> createSTEMHistogram(const STEMImage& inImage,
+                                       const int numBins,
+                                       const std::vector<double> bins);
+  } // namespace stempy
 
 #endif

@@ -17,12 +17,13 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 
 #endif
 
+#include <algorithm>
+#include <cmath>
 #include <future>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <sstream>
-#include <cmath>
 
 using namespace std;
 
@@ -267,6 +268,63 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
     delete[] p;
 
   return images;
+}
+
+// returns the binding result
+std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
+{
+  // information about input STEMImage
+  int width = inImage.width;
+  int height = inImage.height;
+  auto curData = inImage.data;
+
+  auto result =
+    std::minmax_element(curData.get(), curData.get() + width * height);
+  double min = *result.first;
+  double max = *result.second;
+
+  // the "length" of each slot of the container
+  double length = (max - min) / numBins;
+
+  std::vector<double> container;
+  // push all the intermediate values
+  for (int i = 0; i <= numBins; i++) {
+    container.push_back(min + i * length);
+  }
+
+  return container;
+}
+
+// function that computes histogram for all the STEM images
+// each histogram is a vector<int>
+std::vector<int> createSTEMHistogram(const STEMImage& inImage,
+                                     const int numBins,
+                                     const std::vector<double> bins)
+{
+  // initialize output
+  std::vector<int> frequencies(numBins, 0);
+
+  // STEMImage info
+  int width = inImage.width;
+  int height = inImage.height;
+  auto curData = inImage.data;
+
+  // get a histrogram
+  for (int i = 0; i < width * height; i++) {
+    auto value = curData[i];
+    // check which bin it belongs to
+    for (int j = 0; j < numBins; j++) {
+      if (value >= bins[j] && value < bins[j + 1]) {
+        ++frequencies[j];
+      }
+    }
+    // the max value is put in the last slot
+    if (value == bins[numBins]) {
+      ++frequencies[numBins - 1];
+    }
+  }
+
+  return frequencies;
 }
 
 vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
