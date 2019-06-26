@@ -24,7 +24,6 @@ def run_benchmarks(files, num_runs):
 
         reader = io.reader(files)
         img = image.create_stem_image(reader, 40, 288, width=160, height=160)
-        img = np.array(img, copy=False)
 
         end = time.time()
         times.append(end - start)

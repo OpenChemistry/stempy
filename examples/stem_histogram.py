@@ -1,3 +1,4 @@
+import click
 import glob
 import sys
 import os
@@ -25,11 +26,10 @@ def save_img(stem_image_data, name):
     img = Image.fromarray(stem_image_data)
     img.save(name)
 
-
 def main(argv):
     print_help()
-    dataDir = argv[0] if len(argv) > 0 else '/home/zhuokai/Desktop/data/data*.dat'
-    outDir = argv[1] if len(argv) > 1 else '/home/zhuokai/Desktop/stempy/examples/output/'
+    dataDir = argv[0] if len(argv) > 0
+    outDir = argv[1] if len(argv) > 1
 
     # create output directory if it does not exit
     if not os.path.exists(outDir):
@@ -44,30 +44,24 @@ def main(argv):
         files.append(f)
 
     # inner and outer radius of mask
-    inner_radii = [40]
-    outer_radii = [288]
+    inner_radii = [0, 40]
+    outer_radii = [288, 288]
 
+    # file reader
     reader = io.reader(files)
-    imgs = image.create_stem_images(reader, inner_radii, outer_radii, width=160,
-                                    height=160)
-
-    # save the STEM images
-    for i, img in enumerate(imgs):
-        # convert the type to numpy array
-        img_np = np.array(img, copy=False)
-        suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        save_img(img_np, outDir + '/img_' + suffix)
-        print('STEM image with inner radius = ' + str(inner_radii[i]) 
-              + ', outer radius = ' + str(outer_radii[i]) + ' has been saved')
 
     # generate histograms
     numBins = 100
-    for i, img in enumerate(imgs):
-        print('Generating histogram for STEM image ' + str(i))
-        bins, freq = image.create_stem_histogram(img, numBins)
-        bins = [str(element) for element in bins]
-
-        # plot histogram
+    print('Generating histograms for input data')
+    allBins, allFreqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
+                                                    width=160, height=160)
+            
+    # plot histogram
+    for i in range(len(allBins)):
+        # obtain current bins and freq
+        bins = [str(element) for element in allBins[i]]
+        freq = allFreqs[i]
+        # init figure
         fig = plt.figure(1, figsize=(16, 8))
         myHist = fig.add_subplot(111)
         # plt.bar considers the left boundary

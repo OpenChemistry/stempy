@@ -32,6 +32,5 @@ outer_radius = 288
 img = image.create_stem_image_sparse(frames, inner_radius, outer_radius,
                                      scan_width, scan_height, frame_width,
                                      frame_height)
-img = np.array(img, copy=False)
 
 save_img(img, 'img.png', scan_width, scan_height)
