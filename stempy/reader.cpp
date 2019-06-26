@@ -13,8 +13,16 @@
 #include <iomanip>
 #include <ThreadPool.h>
 
-using namespace std;
-
+using std::copy;
+using std::invalid_argument;
+using std::ios;
+using std::istream;
+using std::move;
+using std::ofstream;
+using std::ostringstream;
+using std::streamsize;
+using std::string;
+using std::vector;
 
 namespace stempy {
 

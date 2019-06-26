@@ -2,8 +2,7 @@
 
 #include <cmath>
 
-
-using namespace std;
+using std::pow;
 
 namespace stempy {
 

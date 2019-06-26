@@ -25,7 +25,12 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 #include <numeric>
 #include <sstream>
 
-using namespace std;
+using std::begin;
+using std::end;
+using std::future;
+using std::invalid_argument;
+using std::ostringstream;
+using std::vector;
 
 namespace stempy {
 
