@@ -20,7 +20,6 @@ setup(
     package_dir={'':'python'},
     install_requires=[
         'numpy',
-        'h5py',
-        'click'
+        'h5py'
     ]
 )
