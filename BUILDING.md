@@ -59,7 +59,7 @@ cmake \
   -Dstempy_ENABLE_VTKm=ON \
   -Dstempy_ENABLE_CUDA=OFF \
   -DVTKm_DIR=$PWD/../vtkm-build/install/lib/cmake/vtkm-1.4 \
-  ../../src/stempy -G Ninja
+  ../stempy -G Ninja
 ninja
 ```
 
