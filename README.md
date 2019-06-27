@@ -1,5 +1,7 @@
 Toolkit for processing 4D STEM image data on HPC.
 
+Build instructions may be found [here](BUILDING.md).
+
 Example usage
 -------------
 
