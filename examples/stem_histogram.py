@@ -10,8 +10,8 @@ def print_help():
     print(
     '''
     Usage:
-    python3 stem_histogram.py [dataDir -- path to the data directory]
-                              [outDir -- path to the output image directory]
+    python3 stem_histogram.py [data_dir -- path to the data directory]
+                              [out_dir -- path to the output image directory]
     ''')
 
 def save_img(stem_image_data, name):
@@ -26,57 +26,69 @@ def save_img(stem_image_data, name):
 
 def main(argv):
     print_help()
-    dataDir = argv[0]
-    outDir = argv[1]
+    data_dir = argv[0]
+    out_dir = argv[1]
 
     # create output directory if it does not exit
-    if not os.path.exists(outDir):
-        os.mkdir(outDir)
-        print('Output directory', outDir , 'created')
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+        print('Output directory', out_dir , 'created')
     else:
-        print('Output directory', outDir , 'already exists')
+        print('Output directory', out_dir , 'already exists')
 
     # get the all the data files
     files = []
-    for root, dirs, fs in os.walk(dataDir):
+    for root, dirs, fs in os.walk(data_dir):
         for f in fs:
             files.append(os.path.join(root, f))
 
     # inner and outer radius of mask
-    inner_radii = [0, 40]
-    outer_radii = [288, 288]
+    inner_radii = [40]
+    outer_radii = [288]
 
     # file reader
     reader = io.reader(files)
 
     # generate histograms
-    numBins = 100
+    num_bins = 100
+    # how many sub-histograms in one image
+    num_hist = 5
     print('Generating histograms for input data')
-    all_bins, all_freqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
-                                                    width=160, height=160)
+    all_bins, all_freqs = image.create_stem_histogram(num_bins, num_hist, reader,
+                                                      inner_radii, outer_radii,
+                                                      width=160, height=160)
 
     # plot histogram
     for i in range(len(all_bins)):
         # obtain current bins and freq
         bins = [str(element) for element in all_bins[i]]
         freq = all_freqs[i]
-        # init figure
-        fig = plt.figure(1, figsize=(16, 8))
-        myHist = fig.add_subplot(111)
         # plt.bar considers the left boundary
-        x = np.arange(numBins+1)
-        myHist.bar(x[:-1], freq, align='edge')
-        plt.xticks(x[::20], bins[::20])
-        plt.title('Histogram of STEM image with inner radius = '
-                    + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
-        plt.xlabel('Value')
-        plt.ylabel('Frequency')
+        x = np.arange(num_bins+1)
+        for j in range(num_hist):
+            # init figure
+            fig = plt.figure(j, figsize=(16, 8))
+            myHist = fig.add_subplot(111)
+            myHist.bar(x[:-1], freq[j], align='edge')
+            plt.xticks(x[::20], bins[::20])
+            if (j == 1):
+                plt.title(str(j) + 'st histogram of STEM image with inner radius = '
+                        + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
+            elif (j == 2):
+                plt.title(str(j) + 'nd histogram of STEM image with inner radius = '
+                        + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
+            else:
+                plt.title(str(j) + 'th histogram of STEM image with inner radius = '
+                        + str(inner_radii[i]) + ', outer radius = ' + str(outer_radii[i]))
+            plt.xlabel('Value')
+            plt.ylabel('Frequency')
 
-        # save to local
-        suffix = str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
-        plt.savefig(outDir + '/histogram_' + suffix)
+            # save to local
+            suffix = str(j) + '_' + str(inner_radii[i]) + '_' + str(outer_radii[i]) + '.png'
+            plt.savefig(out_dir + '/histogram_' + suffix)
+            print('histogram_' + suffix + ' has been saved')
 
-        plt.show()
+            # plt.show()
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ def create_stem_images(reader, inner_radii,
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
-def create_stem_histogram(numBins, reader, inner_radii,
+def create_stem_histogram(num_bins, num_hist, reader, inner_radii,
                           outer_radii, width=0, height=0,
                           center_x=-1, center_y=-1):
     # create stem images
@@ -19,17 +19,19 @@ def create_stem_histogram(numBins, reader, inner_radii,
                                      inner_radii, outer_radii, width, height,
                                      center_x, center_y)
 
-    allBins = []
-    allFreqs = []
-    for inImage in imgs:
-        bins = _image.get_container(inImage, numBins)
-        freq = _image.create_stem_histogram(inImage, numBins, bins)
+    all_bins = []
+    all_freqs = []
+
+    for in_image in imgs:
+        bins = _image.get_container(in_image, num_bins)
+        # each image can have numHist histograms, but all with the same bins
+        freq = _image.create_stem_histogram(in_image, num_hist, num_bins, bins)
         bins = np.array(bins, copy=False)
         freq = np.array(freq, copy=False)
-        allBins.append(bins)
-        allFreqs.append(freq)
+        all_bins.append(bins)
+        all_freqs.append(freq)
 
-    return allBins, allFreqs
+    return all_bins, all_freqs
 
 # This one exists for backward compatibility
 def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,

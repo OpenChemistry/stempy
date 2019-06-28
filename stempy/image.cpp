@@ -295,36 +295,67 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
   return container;
 }
 
-// function that computes histogram for all the STEM images
+// function that computes numHist histograms for input STEM image
 // each histogram is a vector<int>
-std::vector<int> createSTEMHistogram(const STEMImage& inImage,
-                                     const int numBins,
-                                     const std::vector<double> bins)
+std::vector<std::vector<int>> createSTEMHistogram(const STEMImage& inImage,
+                                                  const int numHist,
+                                                  const int numBins,
+                                                  const std::vector<double> bins)
 {
-  // initialize output
-  std::vector<int> frequencies(numBins, 0);
-
   // STEMImage info
   int width = inImage.width;
   int height = inImage.height;
   auto curData = inImage.data;
 
-  // get a histrogram
-  for (int i = 0; i < width * height; i++) {
-    auto value = curData[i];
-    // check which bin it belongs to
-    for (int j = 0; j < numBins; j++) {
-      if (value >= bins[j] && value < bins[j + 1]) {
-        ++frequencies[j];
-      }
-    }
-    // the max value is put in the last slot
-    if (value == bins[numBins]) {
-      ++frequencies[numBins - 1];
-    }
+  // initialize output - the input image can have numHist histograms
+  // where each corresponds to a piece of original image
+  std::vector<std::vector<int>> allFrequencies;
+
+  // initialize total data with potential zero-padding
+  int numData = width*height;
+  if (numData % numHist != 0)
+  {
+    numData += numData % numHist;
+  }
+  vector<int> totalData(numData, 0);
+  // zero-padded area (numData > width*height) remains 0
+  for (int i = 0; i < width*height; i++)
+  {
+    totalData[i] = curData[i];
   }
 
-  return frequencies;
+  // length of individual data
+  int subLength = numData / numHist;
+
+  // generate all the individual histograms
+  for (int i = 0; i < numHist; i++)
+  {
+    // histogram of current piece
+    std::vector<int> curFrequencies(numBins, 0);
+
+    // get the histrogram of current area
+    for (int j = 0; j < subLength; j++)
+    {
+      auto value = totalData[i*subLength + j];
+      // check which bin it belongs to
+      for (int k = 0; k < numBins; k++)
+      {
+        if (value >= bins[k] && value < bins[k + 1])
+        {
+          ++curFrequencies[k];
+        }
+      }
+      // the max value is put in the last slot
+      if (value == bins[numBins])
+      {
+        ++curFrequencies[numBins - 1];
+      }
+    }
+    // put current area histogram into output vector
+    allFrequencies.push_back(curFrequencies);
+  }
+
+  return allFrequencies;
 }
 
 vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
