@@ -297,10 +297,9 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
 
 // function that computes numHist histograms for input STEM image
 // each histogram is a vector<int>
-std::vector<std::vector<int>> createSTEMHistogram(const STEMImage& inImage,
-                                                  const int numHist,
-                                                  const int numBins,
-                                                  const std::vector<double> bins)
+std::vector<std::vector<int>> createSTEMHistogram(
+  const STEMImage& inImage, const int numHist, const int numBins,
+  const std::vector<double> bins)
 {
   // STEMImage info
   int width = inImage.width;
@@ -312,15 +311,13 @@ std::vector<std::vector<int>> createSTEMHistogram(const STEMImage& inImage,
   std::vector<std::vector<int>> allFrequencies;
 
   // initialize total data with potential zero-padding
-  int numData = width*height;
-  if (numData % numHist != 0)
-  {
+  int numData = width * height;
+  if (numData % numHist != 0) {
     numData += numData % numHist;
   }
   vector<int> totalData(numData, 0);
   // zero-padded area (numData > width*height) remains 0
-  for (int i = 0; i < width*height; i++)
-  {
+  for (int i = 0; i < width * height; i++) {
     totalData[i] = curData[i];
   }
 
@@ -328,26 +325,21 @@ std::vector<std::vector<int>> createSTEMHistogram(const STEMImage& inImage,
   int subLength = numData / numHist;
 
   // generate all the individual histograms
-  for (int i = 0; i < numHist; i++)
-  {
+  for (int i = 0; i < numHist; i++) {
     // histogram of current piece
     std::vector<int> curFrequencies(numBins, 0);
 
     // get the histrogram of current area
-    for (int j = 0; j < subLength; j++)
-    {
-      auto value = totalData[i*subLength + j];
+    for (int j = 0; j < subLength; j++) {
+      auto value = totalData[i * subLength + j];
       // check which bin it belongs to
-      for (int k = 0; k < numBins; k++)
-      {
-        if (value >= bins[k] && value < bins[k + 1])
-        {
+      for (int k = 0; k < numBins; k++) {
+        if (value >= bins[k] && value < bins[k + 1]) {
           ++curFrequencies[k];
         }
       }
       // the max value is put in the last slot
-      if (value == bins[numBins])
-      {
+      if (value == bins[numBins]) {
         ++curFrequencies[numBins - 1];
       }
     }
