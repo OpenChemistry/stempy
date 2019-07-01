@@ -3,7 +3,9 @@
 
 #include "reader.h"
 
-using namespace std;
+using std::cerr;
+using std::cout;
+using std::endl;
 
 int main (int argc, char *argv[])
 {

@@ -2,8 +2,7 @@
 
 #include <iostream>
 
-using namespace std;
-
+using std::string;
 
 namespace stempy {
 
