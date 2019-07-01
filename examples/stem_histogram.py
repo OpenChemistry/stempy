@@ -52,7 +52,7 @@ def main(argv):
     # generate histograms
     num_bins = 100
     # how many sub-histograms in one image
-    num_hist = 5
+    num_hist = 11
     print('Generating histograms for input data')
     all_bins, all_freqs = image.create_stem_histogram(num_bins, num_hist, reader,
                                                       inner_radii, outer_radii,

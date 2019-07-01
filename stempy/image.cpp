@@ -318,7 +318,7 @@ std::vector<std::vector<int>> createSTEMHistogram(
   // initialize total data with potential zero-padding
   int numData = width * height;
   if (numData % numHist != 0) {
-    numData += numData % numHist;
+    numData += (numHist - numData % numHist);
   }
   vector<int> totalData(numData, 0);
   // zero-padded area (numData > width*height) remains 0
@@ -341,6 +341,7 @@ std::vector<std::vector<int>> createSTEMHistogram(
       for (int k = 0; k < numBins; k++) {
         if (value >= bins[k] && value < bins[k + 1]) {
           ++curFrequencies[k];
+          break;
         }
       }
       // the max value is put in the last slot
