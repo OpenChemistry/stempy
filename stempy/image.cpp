@@ -299,7 +299,7 @@ std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
 // each histogram is a vector<int>
 std::vector<std::vector<int>> createSTEMHistogram(
   const STEMImage& inImage, const int numHist, const int numBins,
-  const std::vector<double> bins)
+  const std::vector<double>& bins)
 {
   // STEMImage info
   int width = inImage.width;

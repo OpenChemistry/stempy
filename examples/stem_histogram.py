@@ -68,8 +68,8 @@ def main(argv):
         for j in range(num_hist):
             # init figure
             fig = plt.figure(j, figsize=(16, 8))
-            myHist = fig.add_subplot(111)
-            myHist.bar(x[:-1], freq[j], align='edge')
+            my_hist = fig.add_subplot(111)
+            my_hist.bar(x[:-1], freq[j], align='edge')
             plt.xticks(x[::20], bins[::20])
             if (j == 1):
                 plt.title(str(j) + 'st histogram of STEM image with inner radius = '

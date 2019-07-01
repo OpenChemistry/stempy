@@ -70,7 +70,7 @@ namespace stempy {
   // histogram and bins for the input STEM image
   std::vector<std::vector<int>> createSTEMHistogram(
     const STEMImage& inImage, const int numHist, const int numBins,
-    const std::vector<double> bins);
+    const std::vector<double>& bins);
   } // namespace stempy
 
 #endif
