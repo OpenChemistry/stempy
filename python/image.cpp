@@ -52,13 +52,21 @@ PYBIND11_MODULE(_image, m)
 
 
   // Add more template instantiations as we add more types of iterators
-  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>);
-  m.def("create_stem_images_sparse", &createSTEMImagesSparse);
-  m.def("calculate_average", &calculateAverage<StreamReader::iterator>);
-  m.def("electron_count", &electronCount<StreamReader::iterator>);
-  m.def("calculate_thresholds", &calculateThresholds);
-  m.def("radial_sum", &radialSum<StreamReader::iterator>);
+  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images_sparse", &createSTEMImagesSparse,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count", &electronCount<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds", &calculateThresholds,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("radial_sum", &radialSum<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
 
-  m.def("get_container", &getContainer);
-  m.def("create_stem_histogram", &createSTEMHistogram);
+  m.def("get_container", &getContainer,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_histogram", &createSTEMHistogram,
+        py::call_guard<py::gil_scoped_release>());
 }
