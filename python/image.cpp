@@ -61,4 +61,5 @@ PYBIND11_MODULE(_image, m)
 
   m.def("get_container", &getContainer);
   m.def("create_stem_histogram", &createSTEMHistogram);
+  m.def("standard_HE", &standardHE);
 }

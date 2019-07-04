@@ -36,7 +36,7 @@ def main(argv):
     else:
         print('Output directory', out_dir , 'already exists')
 
-    # get the all the data files
+    # get all the data files
     files = []
     for root, dirs, fs in os.walk(data_dir):
         for f in fs:

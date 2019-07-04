@@ -67,10 +67,16 @@ namespace stempy {
 
   // bins for histogram
   std::vector<double> getContainer(const STEMImage& inImage, const int numBins);
+
   // histogram and bins for the input STEM image
   std::vector<std::vector<int>> createSTEMHistogram(
     const STEMImage& inImage, const int numHist, const int numBins,
     const std::vector<double>& bins);
+
+  // performs standard Histogram Equalization (SHE)
+  STEMImage standardHE(STEMImage& inImage,
+                        const std::vector<double>& bins,
+                        std::vector<int>& inHist);
   } // namespace stempy
 
 #endif

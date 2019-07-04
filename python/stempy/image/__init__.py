@@ -11,6 +11,17 @@ def create_stem_images(reader, inner_radii,
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
+# same as create_stem_images
+# only different is that it does not return numpy directly
+def _create_stem_images(reader, inner_radii,
+                       outer_radii, width=0, height=0,
+                       center_x=-1, center_y=-1):
+    imgs = _image.create_stem_images(reader.begin(), reader.end(),
+                                     inner_radii, outer_radii, width, height,
+                                     center_x, center_y)
+
+    return imgs
+
 def create_stem_histogram(num_bins, num_hist, reader, inner_radii,
                           outer_radii, width=0, height=0,
                           center_x=-1, center_y=-1):
@@ -32,6 +43,39 @@ def create_stem_histogram(num_bins, num_hist, reader, inner_radii,
         all_freqs.append(freq)
 
     return all_bins, all_freqs
+
+def histograms_from_images(imgs, num_bins, num_hist):
+
+    all_bins = []
+    all_freqs = []
+
+    for in_image in imgs:
+        bins = _image.get_container(in_image, num_bins)
+        # each image can have numHist histograms, but all with the same bins
+        freq = _image.create_stem_histogram(in_image, num_hist, num_bins, bins)
+        bins = np.array(bins, copy=False)
+        freq = np.array(freq, copy=False)
+        all_bins.append(bins)
+        all_freqs.append(freq)
+
+    return all_bins, all_freqs
+
+def standard_histogram_equalization(imgs, num_bins):
+
+    out_imgs = []
+
+    for in_image in imgs:
+        # generate histograms
+        bins = _image.get_container(in_image, num_bins)
+        # standard HE only allows 1 histogram per image
+        num_hist = 1
+        freq = _image.create_stem_histogram(in_image, num_hist, num_bins, bins)
+        for hist in freq:
+            # perform equalization
+            out_image = _image.standard_HE(in_image, bins, hist)
+            out_imgs.append(out_image)
+
+    return out_imgs
 
 # This one exists for backward compatibility
 def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,

@@ -356,6 +356,65 @@ std::vector<std::vector<int>> createSTEMHistogram(
   return allFrequencies;
 }
 
+// performs standard Histogram Equalization (SHE)
+STEMImage standardHE(STEMImage& inImage,
+                     const std::vector<double>& bins,
+                     std::vector<int>& inHist)
+{
+  STEMImage outImage(inImage.width, inImage.height);
+  // STEMImage info
+  int width = inImage.width;
+  int height = inImage.height;
+  auto curData = inImage.data;
+
+  // in standard histogram equalization, one image corresponds to one histogram
+  // number of intensity levels, which is essentially the number of bins in Histogram
+  int L = inHist.size();
+  // total number of samples in the inImage
+  int n = width * height;
+  // pdf r_k
+  std::vector<double> PDF(L, 0.0);
+  for (int k = 0; k < L; k++)
+  {
+    int n_k = inHist[k];
+    PDF[k] = static_cast<double>(n_k) / static_cast<double>(n);
+  }
+
+  // cdf c_k
+  std::vector<double> CDF(L, 0.0);
+  for (int k = 0; k < L; k++)
+  {
+    double curSum = 0.0;
+    for (int j = 0; j < k; j++)
+    {
+      curSum += PDF[j];
+    }
+    CDF[k] = curSum;
+  }
+
+  // intensity transformation function
+  for (int i = 0; i < n; i++)
+  {
+    int k;
+    // get the intensity level (bin assignment) of current point
+    for (k = 0; k < L; k++)
+    {
+      if (curData[i] >= bins[k] && curData[i] < bins[k + 1]) {
+        break;
+      }
+    }
+    // the max value is put in the last slot
+    if (curData[i] == bins[L])
+    {
+      k = L - 1;
+    }
+
+    outImage.data[i] = curData[i]*CDF[k];
+  }
+
+  return outImage;
+}
+
 vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
                                       size_t numPixels)
 {
