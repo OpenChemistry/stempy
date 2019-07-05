@@ -47,8 +47,5 @@ PYBIND11_MODULE(_io, m)
     .def("reset", &StreamReader::reset)
     .def("begin",
          (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
-    .def("end", (StreamReader::iterator(StreamReader::*)()) & StreamReader::end)
-    .def("process", &StreamReader::process, "", py::arg("stream_id"),
-         py::arg("concurrency") = -1, py::arg("width") = 160,
-         py::arg("height") = 160, py::arg("url") = "http://127.0.0.1:5000");
+    .def("end", (StreamReader::iterator(StreamReader::*)()) & StreamReader::end);
 }
