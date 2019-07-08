@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 class Pipeline(abc.ABC):
 
-    def execute(self, **kwargs):
+    def execute(self, files, **kwargs):
         """
         Execute pipeline
         """
