@@ -1,5 +1,6 @@
 import abc
 from functools import wraps
+from collections import OrderedDict
 
 class Pipeline(abc.ABC):
 
@@ -10,7 +11,7 @@ class Pipeline(abc.ABC):
 
 def _ensure_parameters(f):
     if not hasattr(f, 'PARAMETERS'):
-        setattr(f, 'PARAMETERS', {})
+        setattr(f, 'PARAMETERS', OrderedDict())
 
 def pipeline(name=None, description=None):
 
