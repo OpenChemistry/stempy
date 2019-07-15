@@ -149,6 +149,8 @@ Header StreamReader::readHeaderVersion2() {
   return header;
 }
 
+// This was the documented format, but the current firmware implementation
+// has the x y order reversed.
 // unsigned int32 scan_number;
 // unsigned int32 frame_number;
 // unsigned int16 total_number_of_stem_x_positions_in_scan;
@@ -178,12 +180,13 @@ Header StreamReader::readHeaderVersion3()
   index = 0;
   read(headerPositions, 4 * sizeof(uint16_t));
 
-  header.scanWidth = headerPositions[index++];
+  // Note: The order is currently reversed y then x rather than the other way around
   header.scanHeight = headerPositions[index++];
+  header.scanWidth = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanXPosition = headerPositions[index++];
   auto scanYPosition = headerPositions[index++];
+  auto scanXPosition = headerPositions[index++];
   header.imageNumbers.push_back(scanYPosition * header.scanWidth  + scanXPosition);
 
   return header;

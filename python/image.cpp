@@ -20,7 +20,7 @@ PYBIND11_MODULE(_image, m)
           sizeof(uint64_t),                                             /* Size of one scalar */
           py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
           2,                                                            /* Number of dimensions */
-          { i.width, i.height },  /* Buffer dimensions */
+          { i.height, i.width },  /* Buffer dimensions */
           { sizeof(uint64_t) * i.width,                           /* Strides (in bytes) for each index */
             sizeof(uint64_t) });
     });
@@ -32,7 +32,7 @@ PYBIND11_MODULE(_image, m)
           sizeof(double),                                               /* Size of one scalar */
           py::format_descriptor<double>::format(),                    /* Python struct-style format descriptor */
           2,                                                            /* Number of dimensions */
-          { i.width, i.height },  /* Buffer dimensions */
+          { i.height, i.width},  /* Buffer dimensions */
           { sizeof(double) * i.width,                           /* Strides (in bytes) for each index */
             sizeof(double) });
     });
@@ -44,7 +44,7 @@ PYBIND11_MODULE(_image, m)
           sizeof(uint64_t),                                               /* Size of one scalar */
           py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
           3,                                                            /* Number of dimensions */
-          { r.radii, r.width, r.height},  /* Buffer dimensions */
+          { r.radii, r.height, r.width},  /* Buffer dimensions */
           { sizeof(uint64_t) * r.width * r.height,                           /* Strides (in bytes) for each index */
             sizeof(uint64_t) * r.width,
             sizeof(uint64_t) });
