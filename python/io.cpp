@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <stempy/reader.h>
+#include <python/reader_h5.h>
 
 namespace py = pybind11;
 
@@ -51,4 +52,15 @@ PYBIND11_MODULE(_io, m)
     .def("process", &StreamReader::process, "", py::arg("stream_id"),
          py::arg("concurrency") = -1, py::arg("width") = 160,
          py::arg("height") = 160, py::arg("url") = "http://127.0.0.1:5000");
+   
+
+  py::class_<H5Reader::iterator>(m, "_h5reader_iterator")
+    .def(py::init<H5Reader*>());
+
+  py::class_<H5Reader>(m, "_h5reader")
+    .def(py::init<py::object, std::vector<uint32_t>&, uint32_t, uint32_t, uint32_t,uint32_t,uint32_t,uint32_t,uint32_t>())
+    .def("read", (Block(H5Reader::*)()) & H5Reader::read)
+    .def("begin",(H5Reader::iterator(H5Reader::*)()) & H5Reader::begin)
+    .def("end", (H5Reader::iterator(H5Reader::*)()) & H5Reader::end);
+  
 }

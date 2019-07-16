@@ -1,9 +1,40 @@
 from stempy import _image
+from stempy import _io
 import numpy as np
+import h5py
 
-def create_stem_images(reader, inner_radii,
+
+def get_hdf5_reader(h5file):
+    # the initialization is at the io.cpp
+    dset_frame=h5file['frames']
+    dset_frame_shape=dset_frame.shape
+    totalImgNum=dset_frame_shape[0]
+    imagewidth=dset_frame_shape[1]
+    imageheight=dset_frame_shape[2]
+    
+    dset_stem_shape=h5file['stem/images'].shape
+    scanwidth=dset_stem_shape[1]
+    scanheight=dset_stem_shape[2]
+    
+    # the number here are same with the smallscan data
+    blocksize=32
+    blockNumInFile=25
+    image_numbers = []
+    
+    h5reader = _io._h5reader(dset_frame, image_numbers, imagewidth, imageheight, scanwidth, scanheight, blocksize, blockNumInFile, totalImgNum)
+    return h5reader
+
+def create_stem_images(input, inner_radii,
                        outer_radii, width=0, height=0,
                        center_x=-1, center_y=-1):
+    # check if the input is the hdf5 dataset
+    if(isinstance(input, h5py._hl.files.File)):
+        reader = get_hdf5_reader(input)
+        print("hdf5 reader is used")
+    else:
+        reader = input
+        print("file stream reader is used")
+    
     imgs = _image.create_stem_images(reader.begin(), reader.end(),
                                      inner_radii, outer_radii, width, height,
                                      center_x, center_y)

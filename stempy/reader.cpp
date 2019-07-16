@@ -26,6 +26,30 @@ using std::vector;
 
 namespace stempy {
 
+Header::Header(uint32_t frameWidth, uint32_t frameHeight,
+               uint32_t imageNumInBlock,uint32_t blockNumInFile, uint32_t scanWidth, 
+               uint32_t scanHeight, uint32_t startPosition, vector<uint32_t>& imageNumbers)
+{
+    this->frameWidth = frameWidth;
+    this->frameHeight=frameHeight;
+    this->imagesInBlock = imageNumInBlock;
+    this->scanHeight=scanHeight;
+    this->scanWidth=scanWidth;
+    //if there is no imageNumbers in original data set, reconstruct it
+    if(imageNumbers.size()!=0){
+      this->imageNumbers=imageNumbers;
+    }else{
+      //this reconstruction is only tested ok for big_stem_image.hdf5
+      uint32_t offset1 = startPosition/(imageNumInBlock*blockNumInFile);
+      uint32_t offset2 = startPosition%(imageNumInBlock*blockNumInFile);
+
+      for (int i = 0; i < imageNumInBlock; i++) {
+          this->imageNumbers.push_back(offset1+(offset2+i)*imageNumInBlock);
+      }
+    }
+
+}
+
 Block::Block(const Header& h)
   : header(h),
     data(new uint16_t[h.frameWidth * h.frameHeight * h.imagesInBlock],

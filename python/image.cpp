@@ -6,6 +6,7 @@
 #include <stempy/electronthresholds.h>
 #include <stempy/image.h>
 #include <stempy/reader.h>
+#include "reader_h5.h"
 
 namespace py = pybind11;
 
@@ -64,9 +65,9 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-
   m.def("get_container", &getContainer,
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_histogram", &createSTEMHistogram,
         py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images", &createSTEMImages<H5Reader::iterator>);
 }

@@ -1,4 +1,5 @@
 #include "image.h"
+#include "python/reader_h5.h"
 
 #include "config.h"
 #include "mask.h"
@@ -648,13 +649,19 @@ template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
+
+template vector<STEMImage> createSTEMImages(H5Reader::iterator first,
+                                            H5Reader::iterator last,
+                                            vector<int> innerRadii,
+                                            vector<int> outerRadii, int width,
+                                            int height, int centerX,
+                                            int centerY);
 template vector<STEMImage> createSTEMImages(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
-
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
 template Image<double> calculateAverage(vector<Block>::iterator first,

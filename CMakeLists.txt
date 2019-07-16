@@ -32,6 +32,8 @@ include_directories(
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+find_package(pybind11 REQUIRED)
+
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 
@@ -39,7 +41,7 @@ set(_vtkm_src
   stempy/image.cpp
   stempy/electron.cpp
 )
-set(_src stempy/reader.cpp
+set(_src stempy/reader.cpp python/reader_h5.cpp
   stempy/mask.cpp
   stempy/electronthresholds.cpp)
 
@@ -81,10 +83,14 @@ endif()
 target_link_libraries(stem
   PRIVATE ${_libs})
 
+include_directories(stem
+  ${PYTHON_INCLUDE_PATH}
+  ${pybind11_INCLUDE_DIRS}
+)
 add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
-  PRIVATE stem)
+  PRIVATE stem pybind11::embed)
 
 set_target_properties(stem
   PROPERTIES
@@ -99,3 +105,4 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 add_subdirectory(python)
+

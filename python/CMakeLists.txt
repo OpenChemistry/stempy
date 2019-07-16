@@ -8,8 +8,8 @@ include_directories(SYSTEM
   ${pybind11_INCLUDE_DIRS}
   )
 
-pybind11_add_module(_io io.cpp)
-pybind11_add_module(_image image.cpp)
+pybind11_add_module(_io io.cpp reader_h5.cpp)
+pybind11_add_module(_image image.cpp reader_h5.cpp)
 
 target_link_libraries(_io
   PRIVATE
