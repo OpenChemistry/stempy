@@ -41,13 +41,13 @@ Image<T>::Image(uint32_t w, uint32_t h)
   std::fill(this->data.get(), this->data.get() + width * height, 0);
 }
 
-STEMValues calculateSTEMValues(const uint16_t data[], int offset,
+STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
                                int numberOfPixels, uint16_t mask[],
                                uint32_t imageNumber)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
-  for (int i=0; i<numberOfPixels; i++) {
+  for (size_t i = 0; i < numberOfPixels; i++) {
     auto value = data[offset + i];
     stemValues.data += value & mask[i];
   }
