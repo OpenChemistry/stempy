@@ -64,26 +64,6 @@ RUN mkdir -p /build/vtk-m && \
   /source/vtk-m-master . && \
   make -j4
 
-# Build boost
-RUN cd /source && \
-  wget https://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.tar.gz/download -O boost_1_55_0.tar.gz && \
-  tar xzvf boost_1_55_0.tar.gz && \
-  cd boost_1_55_0/ && \
-  ./bootstrap.sh && \
-  ./b2 install cxxflags=-fPIC cflags=-fPIC --with-date_time --with-system --with-date_time --with-random
-
-# Build socket.io-client-cpp
-RUN cd /source && \
-  git clone --recurse-submodules https://github.com/cjh1/socket.io-client-cpp
-
-RUN mkdir -p /build/socket.io-client-cpp && \
-  mkdir -p /install/socket.io-client-cpp && \
-  cd /build/socket.io-client-cpp && \
-  cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-  -DCMAKE_INSTALL_PREFIX:PATH=/install/socket.io-client-cpp \
-  /source/socket.io-client-cpp . && \
-  make -j4 install
-
 # Build stempy
 COPY . /source/stempy
 
@@ -92,7 +72,6 @@ RUN mkdir -p /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.3 \
-  -DSocketIOClientCpp_DIR=/install/socket.io-client-cpp/lib/cmake \
   /source/stempy . && \
   make -j4
 
