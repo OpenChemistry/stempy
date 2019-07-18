@@ -54,7 +54,7 @@ namespace stempy {
     int centerY = -1);
 
   STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
-                                 int numberOfPixels, uint16_t mask[],
+                                 uint32_t numberOfPixels, uint16_t mask[],
                                  uint32_t imageNumber = -1);
 
   template <typename InputIt>
