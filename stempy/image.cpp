@@ -337,8 +337,9 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 {
   vector<uint16_t> ret(data.size() * numPixels, 0);
   for (size_t i = 0; i < data.size(); ++i) {
-    for (auto pos : data[i])
+    for (auto pos : data[i]) {
       ret[i * numPixels + pos] = 1;
+    }
   }
 
   return ret;
