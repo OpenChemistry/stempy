@@ -20,10 +20,6 @@ include_directories(SYSTEM
 )
 
 find_package(Threads)
-find_package(SocketIOClientCpp QUIET)
-include_directories(SYSTEM
-  ${SocketIOClientCpp_INCLUDE_DIRS}
-)
 
 include_directories(
   SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/least-squares-cpp/include
@@ -42,10 +38,6 @@ set(_vtkm_src
 set(_src stempy/reader.cpp
   stempy/mask.cpp
   stempy/electronthresholds.cpp)
-
-if(SocketIOClientCpp_FOUND)
-  list(APPEND _src stempy/sioclient.cpp)
-endif()
 
 set(_libs Threads::Threads)
 
@@ -74,10 +66,6 @@ endif()
 
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-if(SocketIOClientCpp_FOUND)
-  list(APPEND _libs sioclient)
-endif()
-
 target_link_libraries(stem
   PRIVATE ${_libs})
 
@@ -92,7 +80,6 @@ set_target_properties(stem
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
 
-set(SocketIOClientCpp ${SocketIOClientCpp_FOUND})
 set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
