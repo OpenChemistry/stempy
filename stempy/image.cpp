@@ -245,22 +245,22 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
       // the block will not be deleted until the threads are destroyed.
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, &maskHandle, &image]() mutable {
-          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+          _runCalculateSTEMValues(b.getData().get(), b.header.imageNumbers,
                                   numberOfPixels, maskHandle, image);
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
-          b.data.reset();
+          b.getData().reset();
         }));
 #else
       const auto& mask = masks[i];
 
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, mask, &image]() mutable {
-          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
+          _runCalculateSTEMValues(b.getData().get(), b.header.imageNumbers,
                                   numberOfPixels, mask, image);
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
-          b.data.reset();
+          b.getData().reset();
         }));
 #endif
     }
@@ -420,7 +420,7 @@ Image<double> calculateAverage(InputIt first, InputIt last)
   uint64_t numberOfImages = 0;
   for (; first != last; ++first) {
     auto block = std::move(*first);
-    auto blockData = block.data.get();
+    auto blockData = block.getData().get();
     numberOfImages += block.header.imagesInBlock;
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
@@ -616,21 +616,21 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
     futures.emplace_back(pool.enqueue(
       [b, numberOfPixels, centerX, centerY, frameWidth,
        &radialSumHandle, numberOfScanPositions]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth,
+        radialSumFrames(centerX, centerY, b.getData().get(), frameWidth,
                         b.header.imageNumbers, numberOfPixels,
                         numberOfScanPositions, radialSumHandle);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
-        b.data.reset();
+        b.getData().reset();
       }));
 #else
     futures.emplace_back(
       pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSum]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
+        radialSumFrames(centerX, centerY, b.getData().get(), frameWidth, frameHeight, b.header.imageNumbers,
             numberOfPixels, radialSum);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
-        b.data.reset();
+        b.getData().reset();
       }));
 #endif
   }

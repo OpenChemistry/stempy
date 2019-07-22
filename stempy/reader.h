@@ -6,6 +6,8 @@
 #include <memory>
 #include <fstream>
 
+
+
 namespace stempy {
 
 struct EofException : public std::exception
@@ -32,13 +34,14 @@ struct Header {
 struct Block {
   Header header;
   std::shared_ptr<uint16_t> data;
-
   Block() = default;
   Block(const Block&) = default;
   Block(const Header& header);
   Block(Block&& i) noexcept = default;
   Block& operator=(Block&& i) noexcept = default;
+  virtual std::shared_ptr<uint16_t> getData();
 };
+
 
 class StreamReader {
 

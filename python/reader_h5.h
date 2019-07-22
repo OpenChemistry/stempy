@@ -11,6 +11,14 @@ namespace py = pybind11;
 
 namespace stempy {
 
+struct PyBlock:Block{
+  std::shared_ptr<py::buffer_info> m_buffer=nullptr;
+  //std::shared_ptr<py::array> m_array=nullptr;
+  PyBlock() = default;
+  PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound);
+  std::shared_ptr<uint16_t> getData();
+};
+
 class H5Reader
 {
 
@@ -44,7 +52,7 @@ public:
       }
       // read data at first time
       m_block = m_H5Reader->read();
-      if (!m_block.data) {
+      if (m_block.getData()==nullptr) {
         std::cout<<"m_H5Reader is null" << std::endl;
         m_H5Reader = nullptr;
       }
@@ -53,7 +61,7 @@ public:
     self_type operator++()
     {
       m_block = m_H5Reader->read();
-      if (!m_block.data) {
+      if (!m_block.getData()) {
         std::cout<<"data in Block is empty, data loading is finished"<<std::endl;
         this->m_H5Reader = nullptr;
       }

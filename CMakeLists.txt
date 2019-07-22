@@ -32,10 +32,21 @@ include_directories(
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-find_package(pybind11 REQUIRED)
+#find_package(pybind11 REQUIRED)
+add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
+find_package(PythonInterp 3 REQUIRED)
+find_package(PythonLibs 3 REQUIRED)
+set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
+set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
+
+include_directories(SYSTEM
+  ${PYTHON_INCLUDE_PATH}
+  ${PYBIND11_INCLUDE_DIR}
+)
+
+message(STATUS "include path for pybind11 is: " ${PYBIND11_INCLUDE_DIR})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
-
 
 set(_vtkm_src
   stempy/image.cpp
@@ -83,10 +94,6 @@ endif()
 target_link_libraries(stem
   PRIVATE ${_libs})
 
-include_directories(stem
-  ${PYTHON_INCLUDE_PATH}
-  ${pybind11_INCLUDE_DIRS}
-)
 add_executable(stemcli stempy/main.cpp)
 
 target_link_libraries(stemcli
@@ -103,6 +110,5 @@ set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 add_subdirectory(python)
 

@@ -1,12 +1,4 @@
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
-set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
-set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
-include_directories(SYSTEM
-  ${PYTHON_INCLUDE_PATH}
-  ${pybind11_INCLUDE_DIRS}
-  )
 
 pybind11_add_module(_io io.cpp reader_h5.cpp)
 pybind11_add_module(_image image.cpp reader_h5.cpp)
