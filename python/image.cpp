@@ -53,7 +53,7 @@ PYBIND11_MODULE(_image, m)
 
 
   // Add more template instantiations as we add more types of iterators
-  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
+  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator, Block>,
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images_sparse", &createSTEMImagesSparse,
         py::call_guard<py::gil_scoped_release>());
@@ -69,5 +69,6 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_histogram", &createSTEMHistogram,
         py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images", &createSTEMImages<H5Reader::iterator>);
+  m.def("create_stem_images", &createSTEMImages<H5Reader::iterator, PyBlock>,
+        py::call_guard<py::gil_scoped_release>());
 }

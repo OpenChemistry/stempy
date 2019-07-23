@@ -1,4 +1,3 @@
-
 #ifndef stempyreaderh5_h
 #define stempyreaderh5_h
 
@@ -11,12 +10,15 @@ namespace py = pybind11;
 
 namespace stempy {
 
-struct PyBlock:Block{
+struct PyBlock{
+  Header header;
   std::shared_ptr<py::buffer_info> m_buffer=nullptr;
+  std::shared_ptr<uint16_t> data =nullptr;
   //std::shared_ptr<py::array> m_array=nullptr;
   PyBlock() = default;
   PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound);
   std::shared_ptr<uint16_t> getData();
+  //~PyBlock() = default;
 };
 
 class H5Reader
@@ -28,7 +30,7 @@ public:
           uint32_t scanHeight, uint32_t blockSize,
           uint32_t blockNumInFile, uint32_t totalImageNum);
 
-  Block read();
+  PyBlock read();
 
   class iterator;
   iterator begin();
@@ -39,9 +41,9 @@ public:
 
   public:
     using self_type = iterator;
-    using value_type = Block;
-    using reference = Block&;
-    using pointer = Block*;
+    using value_type = PyBlock;
+    using reference = PyBlock&;
+    using pointer = PyBlock*;
     using iterator_category = std::input_iterator_tag;
     using difference_type = void; // Differences not allowed here
 
@@ -52,10 +54,12 @@ public:
       }
       // read data at first time
       m_block = m_H5Reader->read();
-      if (m_block.getData()==nullptr) {
+      std::cout<<"debug ok to get block from read in iterator" << std::endl;
+      if (m_block.getData().get()==nullptr) {
         std::cout<<"m_H5Reader is null" << std::endl;
         m_H5Reader = nullptr;
       }
+      std::cout<<"ok to init iterator"<<std::endl;
     }
 
     self_type operator++()

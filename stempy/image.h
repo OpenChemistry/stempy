@@ -40,7 +40,7 @@ namespace stempy {
 
   using STEMImage = Image<uint64_t>;
 
-  template <typename InputIt>
+  template <typename InputIt, typename BlockType>
   std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
                                           std::vector<int> innerRadii,
                                           std::vector<int> outerRadii,

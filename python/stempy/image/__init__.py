@@ -35,7 +35,12 @@ def create_stem_images(input, inner_radii,
         reader = input
         print("file stream reader is used")
     
-    imgs = _image.create_stem_images(reader.begin(), reader.end(),
+    print("hdf5 reader start in python")
+    rbegin = reader.begin()
+    print("hdf5 reader begin ok in python")
+    rend =  reader.end()
+    print("hdf5 reader end ok in python")
+    imgs = _image.create_stem_images(rbegin, rend,
                                      inner_radii, outer_radii, width, height,
                                      center_x, center_y)
 

@@ -49,8 +49,12 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
   for (int i=0; i<numberOfPixels; i++) {
+
+     std::cout<<"---debug index: "<< i << std::endl;
     auto value = data[offset + i];
+     std::cout<<"---value---"<< value << std::endl;
     stemValues.data += value & mask[i];
+
   }
 
   return stemValues;
@@ -137,6 +141,9 @@ void _runCalculateSTEMValues(const uint16_t data[],
                              STEMImage& image)
 #endif
 {
+  
+  std::cout<<"debug start to execute _runCalculateSTEMValues" <<std::endl;
+
 #ifdef VTKm
   // Transfer the entire block of data at once.
   auto dataHandle =
@@ -149,20 +156,24 @@ void _runCalculateSTEMValues(const uint16_t data[],
                                                  numberOfPixels);
     auto stemValues = calculateSTEMValuesParallel(view, mask);
 #else
+    std::cout<< " start to execute calculateSTEMValues " <<std::endl;
     auto stemValues =
       calculateSTEMValues(data, i * numberOfPixels, numberOfPixels, mask);
+    std::cout<< " ok to execute calculateSTEMValues " <<std::endl;
+
 #endif
     image.data[imageNumbers[i]] = stemValues.data;
   }
 }
 } // end namespace
 
-template <typename InputIt>
+template <typename InputIt, typename BlockType>
 vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
                                    vector<int> innerRadii,
                                    vector<int> outerRadii, int width,
                                    int height, int centerX, int centerY)
 {
+  std::cout<<"debug createImage, start function"<<std::endl;
   if (first == last) {
     ostringstream msg;
     msg << "No blocks to read!";
@@ -225,19 +236,23 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   // the disk in the main thread.
   // We benchmarked this on a 10 core computer, and typically found
   // 2 threads to be ideal.
-  int numThreads = 2;
+  int numThreads = 1;
   ThreadPool pool(numThreads);
 
   // Populate the worker pool
   vector<future<void>> futures;
+  std::cout<<"debug createImage, start for loop"<<std::endl;
   for (; first != last; ++first) {
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
-    Block b = std::move(*first);
+    BlockType b = std::move(*first);
+    std::cout<<"debug createImage, ok to get block"<<std::endl;
+
 
     for (size_t i = 0; i < masks.size(); ++i) {
       auto& image = images[i];
 #ifdef VTKm
+      std::cout<<"vtk-m is used"<<std::endl;
       const auto& maskHandle = maskHandles[i];
 
       // Instead of calling _runCalculateSTEMValues directly, we use a
@@ -245,26 +260,48 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
       // the block will not be deleted until the threads are destroyed.
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, &maskHandle, &image]() mutable {
-          _runCalculateSTEMValues(b.getData().get(), b.header.imageNumbers,
+          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
                                   numberOfPixels, maskHandle, image);
+
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
-          b.getData().reset();
+          b.data.reset();
         }));
 #else
       const auto& mask = masks[i];
+        std::cout<<"start to put block into lambda"<<std::endl;
+
+            std::cout<< "check data in block"<<std::endl;
+
+  for (int i = 0; i < 10; i++) {
+    std::cout << *(b.data.get() + i) << std::endl;
+  }
+
+      std::cout<< "check header in block"<<std::endl;
+ for (int i = 0; i < 10; i++) {
+      std::cout<<"image number " << b.header.imageNumbers[i] <<std::endl;
+}
+
+      std::cout<< "check numberOfPixels "<< numberOfPixels <<std::endl;
+      std::cout<< "check mask "<< *mask <<std::endl;
+
 
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, mask, &image]() mutable {
-          _runCalculateSTEMValues(b.getData().get(), b.header.imageNumbers,
+          _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
                                   numberOfPixels, mask, image);
           // If we don't reset this, it won't get reset until the thread is
           // destroyed.
-          b.getData().reset();
+          b.data.reset();
         }));
+
+        std::cout<<"ok to put block into lambda1"<<std::endl;
+
 #endif
     }
   }
+
+  std::cout<<"ok to put block into lambda2"<<std::endl;
 
   // Make sure all threads are finished before continuing
   for (auto& future : futures)
@@ -420,7 +457,7 @@ Image<double> calculateAverage(InputIt first, InputIt last)
   uint64_t numberOfImages = 0;
   for (; first != last; ++first) {
     auto block = std::move(*first);
-    auto blockData = block.getData().get();
+    auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
@@ -616,21 +653,21 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
     futures.emplace_back(pool.enqueue(
       [b, numberOfPixels, centerX, centerY, frameWidth,
        &radialSumHandle, numberOfScanPositions]() mutable {
-        radialSumFrames(centerX, centerY, b.getData().get(), frameWidth,
+        radialSumFrames(centerX, centerY, b.data.get(), frameWidth,
                         b.header.imageNumbers, numberOfPixels,
                         numberOfScanPositions, radialSumHandle);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
-        b.getData().reset();
+        b.data.reset();
       }));
 #else
     futures.emplace_back(
       pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSum]() mutable {
-        radialSumFrames(centerX, centerY, b.getData().get(), frameWidth, frameHeight, b.header.imageNumbers,
+        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
             numberOfPixels, radialSum);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
-        b.getData().reset();
+        b.data.reset();
       }));
 #endif
   }
@@ -643,25 +680,27 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 }
 
 // Instantiate the ones that can be used
-template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
+template vector<STEMImage> createSTEMImages<StreamReader::iterator,Block>(StreamReader::iterator first,
                                             StreamReader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
 
-template vector<STEMImage> createSTEMImages(H5Reader::iterator first,
+template vector<STEMImage> createSTEMImages<H5Reader::iterator,PyBlock>(H5Reader::iterator first,
                                             H5Reader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
-template vector<STEMImage> createSTEMImages(vector<Block>::iterator first,
+
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator,Block>(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
+
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
 template Image<double> calculateAverage(vector<Block>::iterator first,

@@ -59,7 +59,7 @@ PYBIND11_MODULE(_io, m)
 
   py::class_<H5Reader>(m, "_h5reader")
     .def(py::init<py::object, std::vector<uint32_t>&, uint32_t, uint32_t, uint32_t,uint32_t,uint32_t,uint32_t,uint32_t>())
-    .def("read", (Block(H5Reader::*)()) & H5Reader::read)
+    .def("read", (PyBlock(H5Reader::*)()) & H5Reader::read)
     .def("begin",(H5Reader::iterator(H5Reader::*)()) & H5Reader::begin)
     .def("end", (H5Reader::iterator(H5Reader::*)()) & H5Reader::end);
   
