@@ -10,15 +10,24 @@ namespace py = pybind11;
 
 namespace stempy {
 
+struct DataHolder{
+  DataHolder()=default;
+  uint16_t* innerdata = nullptr;
+  uint16_t* get() {return innerdata;}
+  void set(uint16_t*inputdata) {innerdata=inputdata;}
+  void reset(){return;}
+};
+
+
 struct PyBlock{
   Header header;
   std::shared_ptr<py::buffer_info> m_buffer=nullptr;
-  std::shared_ptr<uint16_t> data =nullptr;
+  py::array m_array;
+  DataHolder data ;
   //std::shared_ptr<py::array> m_array=nullptr;
   PyBlock() = default;
   PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound);
-  std::shared_ptr<uint16_t> getData();
-  //~PyBlock() = default;
+  //~PyBlock() {std::cout <<"Pyblock is destructed" << std::endl;}
 };
 
 class H5Reader
@@ -55,7 +64,7 @@ public:
       // read data at first time
       m_block = m_H5Reader->read();
       std::cout<<"debug ok to get block from read in iterator" << std::endl;
-      if (m_block.getData().get()==nullptr) {
+      if (m_block.data.get()==nullptr) {
         std::cout<<"m_H5Reader is null" << std::endl;
         m_H5Reader = nullptr;
       }
@@ -65,7 +74,7 @@ public:
     self_type operator++()
     {
       m_block = m_H5Reader->read();
-      if (!m_block.getData()) {
+      if (!m_block.data.get()) {
         std::cout<<"data in Block is empty, data loading is finished"<<std::endl;
         this->m_H5Reader = nullptr;
       }

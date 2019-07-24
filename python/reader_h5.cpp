@@ -13,14 +13,16 @@ PyBlock::PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound)
   
   m_array=dataarray;
 
-  py::buffer_info* persistDataBuf = new py::buffer_info();
+  //py::buffer_info* persistDataBuf = new py::buffer_info();
 
   // if it is ok to only move the pointer in it???
   //*persistDataBuf = std::move(dataarray.request());
 
-  this->data.reset((uint16_t*)(persistDataBuf->ptr));
+  this->data=(DataHolder());
 
-  this->m_buffer.reset(persistDataBuf);
+  this->data.set((uint16_t*)(m_array.request().ptr));
+
+  //this->m_buffer.reset(persistDataBuf);
 
   std::cout << "construct pyblock with index " << lowerBound << "and "
             << upperBound << std::endl;
@@ -31,15 +33,7 @@ PyBlock::PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound)
 //  std::cout << "~PyBlock" << std::endl;/
 //}
 
-std::shared_ptr<uint16_t> PyBlock::getData()
-{
 
-  std::cout << "pyblock get data is called " << std::endl;
-
-  std::cout << "pyblock ok to return shared pointer " << std::endl;
-
-  return this->data;
-}
 
 H5Reader::H5Reader(py::object h5DataSet, std::vector<uint32_t>& imageNumbers,
                    uint32_t imageWidth, uint32_t imageHeight,
@@ -96,7 +90,7 @@ PyBlock H5Reader::read()
   //std::shared_ptr<uint16_t> data = b.getData();
 
   for (int i = 0; i < 10; i++) {
-    std::cout << *(b.getData().get() + i) << std::endl;
+    std::cout << *(b.data.get() + i) << std::endl;
   }
 
   m_currIndex = upperBound;
