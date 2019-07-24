@@ -56,10 +56,6 @@ Block::Block(const Header& h)
          std::default_delete<uint16_t[]>())
 {}
 
-std::shared_ptr<uint16_t> Block::getData(){
-  return this->data;
-}
-
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   : m_files(files), m_version(version)
 {

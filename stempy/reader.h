@@ -39,7 +39,6 @@ struct Block {
   Block(const Header& header);
   Block(Block&& i) noexcept = default;
   Block& operator=(Block&& i) noexcept = default;
-  virtual std::shared_ptr<uint16_t> getData();
 };
 
 

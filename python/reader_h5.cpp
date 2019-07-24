@@ -3,24 +3,28 @@
 
 namespace stempy {
 
-PyBlock::PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound)
+PyBlock::PyBlock(py::object& h5dataSet, uint32_t lowerBound, uint32_t upperBound)
 {
 
   auto getItems = h5dataSet.attr("__getitem__");
   auto sliceIndex = py::slice(lowerBound, upperBound, 1);
-  auto partArray = getItems(sliceIndex);
-  py::array dataarray = py::array(partArray);
+  m_array = getItems(sliceIndex);
+
+  //py::array* persistArray = new py::array();
+  //m_array = std::move(py::array(tempArray));
+  //this->m_array.reset(persistArray);
   
-  m_array=dataarray;
+  //m_array=dataarray;
 
   //py::buffer_info* persistDataBuf = new py::buffer_info();
 
   // if it is ok to only move the pointer in it???
   //*persistDataBuf = std::move(dataarray.request());
-
+  // this->data.reset((uint16_t*)(m_array.request().ptr));
+   
   this->data=(DataHolder());
-
-  this->data.set((uint16_t*)(m_array.request().ptr));
+  this->data.innerdata=(uint16_t*)(m_array.request().ptr);
+  //this->data.set((uint16_t*)(m_array.request().ptr));
 
   //this->m_buffer.reset(persistDataBuf);
 

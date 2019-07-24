@@ -21,12 +21,15 @@ struct DataHolder{
 
 struct PyBlock{
   Header header;
-  std::shared_ptr<py::buffer_info> m_buffer=nullptr;
+  //std::shared_ptr<py::buffer_info> m_buffer=nullptr;
+  //std::shared_ptr<py::array> m_array;
   py::array m_array;
   DataHolder data ;
+  //std::shared_ptr<uint16_t> data=nullptr;
   //std::shared_ptr<py::array> m_array=nullptr;
   PyBlock() = default;
-  PyBlock(py::object h5dataSet, uint32_t lowerBound, uint32_t upperBound);
+  PyBlock(py::object& h5dataSet, uint32_t lowerBound, uint32_t upperBound);
+  //PyBlock& operator=(PyBlock&& i) = default;
   //~PyBlock() {std::cout <<"Pyblock is destructed" << std::endl;}
 };
 
