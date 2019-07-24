@@ -50,9 +50,9 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
   stemValues.imageNumber = imageNumber;
   for (int i=0; i<numberOfPixels; i++) {
 
-     std::cout<<"---debug index: "<< i << std::endl;
+    // std::cout<<"---debug index: "<< i << std::endl;
     auto value = data[offset + i];
-     std::cout<<"---value---"<< value << std::endl;
+    // std::cout<<"---value---"<< value << std::endl;
     stemValues.data += value & mask[i];
 
   }

@@ -3,12 +3,20 @@
 
 namespace stempy {
 
-PyBlock::PyBlock(py::object& h5dataSet, uint32_t lowerBound, uint32_t upperBound)
+PyBlock::PyBlock(py::array pyarray)
 {
+  //std::cout << "debug construct1---" <<lowerBound<<std::endl;
+  //auto getItems = h5dataSet.attr("__getitem__");
+  //  std::cout << "debug construct2---" <<lowerBound<<std::endl;
 
-  auto getItems = h5dataSet.attr("__getitem__");
-  auto sliceIndex = py::slice(lowerBound, upperBound, 1);
-  m_array = getItems(sliceIndex);
+  //auto sliceIndex = py::slice(lowerBound, upperBound, 1);
+  //    std::cout << "debug construct3---" <<lowerBound<<std::endl;
+
+  //m_array = getItems(sliceIndex);
+  //      std::cout << "debug construct4---" <<lowerBound<<std::endl;
+
+  m_array = pyarray;
+
 
   //py::array* persistArray = new py::array();
   //m_array = std::move(py::array(tempArray));
@@ -27,9 +35,6 @@ PyBlock::PyBlock(py::object& h5dataSet, uint32_t lowerBound, uint32_t upperBound
   //this->data.set((uint16_t*)(m_array.request().ptr));
 
   //this->m_buffer.reset(persistDataBuf);
-
-  std::cout << "construct pyblock with index " << lowerBound << "and "
-            << upperBound << std::endl;
 
 }
 
@@ -60,20 +65,20 @@ PyBlock H5Reader::read()
     return PyBlock();
   }
 
+  // get the data pointer from the py object
+  auto getItems = m_h5dataset.attr("__getitem__");
   uint32_t upperBound = m_currIndex + m_imageNumInBlock;
 
   if (upperBound > m_totalImageNum) {
     upperBound = m_totalImageNum;
   }
 
-  // auto sliceIndex = py::slice(m_currIndex, upperBound, 1);
-  // auto partArray = getItems(sliceIndex);
+  auto sliceIndex = py::slice(m_currIndex, upperBound, 1);
+  auto part = getItems(sliceIndex);
 
-  // py::array pyarray = py::array(partArray);
-
-  // get the data pointer from the py object
-  // auto getItems = m_h5dataset.attr("__getitem__");
-  PyBlock b(m_h5dataset, m_currIndex, upperBound);
+  py::array pyarray = py::array(part);
+  
+  PyBlock* b = new PyBlock(pyarray);
 
   // py::buffer_info buf = pyarray.request();
   // uint32_t arraySize = pyarray.size();
@@ -83,7 +88,7 @@ PyBlock H5Reader::read()
   // getData
   // return this->ptr;
 
-  b.header = std::move(Header(m_imageWidth, m_imageHeight, m_imageNumInBlock, m_blockNumInFile,
+  b->header = std::move(Header(m_imageWidth, m_imageHeight, m_imageNumInBlock, m_blockNumInFile,
            m_scanWidth, m_scanHeight, m_currIndex, m_imageNumbers));
 
   // std::copy(ptr, ptr + arraySize, b.data.get());
@@ -94,14 +99,14 @@ PyBlock H5Reader::read()
   //std::shared_ptr<uint16_t> data = b.getData();
 
   for (int i = 0; i < 10; i++) {
-    std::cout << *(b.data.get() + i) << std::endl;
+    std::cout << *(b->data.get() + i) << std::endl;
   }
 
   m_currIndex = upperBound;
 
   std::cout << "ok for get getData, return block" << std::endl;
 
-  return b;
+  return *b;
 }
 
 H5Reader::iterator H5Reader::begin()
