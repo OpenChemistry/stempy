@@ -89,8 +89,8 @@ PyBlock H5Reader::read()
   // getData
   // return this->ptr;
 
-  b->header = std::move(Header(m_imageWidth, m_imageHeight, m_imageNumInBlock, m_blockNumInFile,
-           m_scanWidth, m_scanHeight, m_currIndex, m_imageNumbers));
+  b.header = Header(pyarray.shape()[2], pyarray.shape()[1], pyarray.shape()[0], m_blockNumInFile,
+           m_scanWidth, m_scanHeight, m_currIndex, m_imageNumbers);
 
   // std::copy(ptr, ptr + arraySize, b.data.get());
 
