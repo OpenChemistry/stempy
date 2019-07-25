@@ -58,6 +58,7 @@ H5Reader::H5Reader(py::object h5DataSet, std::vector<uint32_t>& imageNumbers,
 
 PyBlock H5Reader::read()
 {
+  py::gil_scoped_acquire acquire;
 
   // get to the end of the file, return empty Block
   if (m_currIndex >= m_totalImageNum) {
