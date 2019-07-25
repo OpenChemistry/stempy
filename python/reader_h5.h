@@ -28,7 +28,7 @@ struct PyBlock{
   //std::shared_ptr<uint16_t> data=nullptr;
   //std::shared_ptr<py::array> m_array=nullptr;
   PyBlock() = default;
-  PyBlock(py::array pyarray);
+  PyBlock(py::array_t<uint16_t> pyarray);
   //PyBlock& operator=(PyBlock&& i) = default;
   //~PyBlock() {std::cout <<"Pyblock is destructed" << std::endl;}
 };

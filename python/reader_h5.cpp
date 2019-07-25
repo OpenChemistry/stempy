@@ -3,7 +3,7 @@
 
 namespace stempy {
 
-PyBlock::PyBlock(py::array pyarray)
+PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
 {
   //std::cout << "debug construct1---" <<lowerBound<<std::endl;
   //auto getItems = h5dataSet.attr("__getitem__");
@@ -77,9 +77,9 @@ PyBlock H5Reader::read()
   auto sliceIndex = py::slice(m_currIndex, upperBound, 1);
   auto part = getItems(sliceIndex);
 
-  py::array pyarray = py::array(part);
-  
-  PyBlock* b = new PyBlock(pyarray);
+  py::array_t<uint16_t> pyarray = py::array(part);
+
+  PyBlock b(pyarray);
 
   // py::buffer_info buf = pyarray.request();
   // uint32_t arraySize = pyarray.size();
@@ -100,14 +100,14 @@ PyBlock H5Reader::read()
   //std::shared_ptr<uint16_t> data = b.getData();
 
   for (int i = 0; i < 10; i++) {
-    std::cout << *(b->data.get() + i) << std::endl;
+    std::cout << *(b.data.get() + i) << std::endl;
   }
 
   m_currIndex = upperBound;
 
   std::cout << "ok for get getData, return block" << std::endl;
 
-  return *b;
+  return b;
 }
 
 H5Reader::iterator H5Reader::begin()
