@@ -163,7 +163,7 @@ void _runCalculateSTEMValues(const uint16_t data[],
 }
 } // end namespace
 
-template <typename InputIt, typename BlockType>
+template <typename InputIt>
 vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
                                    vector<int> innerRadii,
                                    vector<int> outerRadii, int width,
@@ -242,7 +242,7 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   for (; first != last; ++first) {
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
-    BlockType b = std::move(*first);
+    auto b = std::move(*first);
     //std::cout<< "debug, get block with image num "<< b.header.imageNumbers[0] << std::endl;
 
 
@@ -661,21 +661,21 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 }
 
 // Instantiate the ones that can be used
-template vector<STEMImage> createSTEMImages<StreamReader::iterator, Block>(StreamReader::iterator first,
+template vector<STEMImage> createSTEMImages<StreamReader::iterator>(StreamReader::iterator first,
                                             StreamReader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
 
-template vector<STEMImage> createSTEMImages<H5Reader::iterator, PyBlock>(H5Reader::iterator first,
+template vector<STEMImage> createSTEMImages<H5Reader::iterator>(H5Reader::iterator first,
                                             H5Reader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
 
-template vector<STEMImage> createSTEMImages<vector<Block>::iterator, Block>(vector<Block>::iterator first,
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
