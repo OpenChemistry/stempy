@@ -85,8 +85,8 @@ public:
       return *this;
     }
 
-    reference operator*() { 
-      return m_block;  
+    reference operator*() {
+      return m_block;
     }
 
     pointer operator->() { return &m_block; }

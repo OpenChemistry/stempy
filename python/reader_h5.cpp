@@ -10,7 +10,7 @@ PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
   this->data.innerdata=(uint16_t*)(m_array.request().ptr);
 }
 
- 
+
 H5Reader::H5Reader(py::object h5DataSet, std::vector<uint32_t>& imageNumbers,
                    uint32_t imageWidth, uint32_t imageHeight,
                    uint32_t scanWidth, uint32_t scanHeight, uint32_t blockSize,
