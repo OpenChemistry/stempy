@@ -25,6 +25,7 @@ using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
 #include <memory>
 #include <numeric>
 #include <sstream>
+#include <type_traits>
 
 using std::begin;
 using std::end;
@@ -50,9 +51,7 @@ STEMValues calculateSTEMValues(const uint16_t data[], int offset,
   stemValues.imageNumber = imageNumber;
   for (int i=0; i<numberOfPixels; i++) {
 
-    // std::cout<<"---debug index: "<< i << std::endl;
     auto value = data[offset + i];
-    // std::cout<<"---value---"<< value << std::endl;
     stemValues.data += value & mask[i];
 
   }
@@ -142,7 +141,6 @@ void _runCalculateSTEMValues(const uint16_t data[],
 #endif
 {
   
-  std::cout<<"debug start to execute _runCalculateSTEMValues" <<std::endl;
 
 #ifdef VTKm
   // Transfer the entire block of data at once.
@@ -156,10 +154,8 @@ void _runCalculateSTEMValues(const uint16_t data[],
                                                  numberOfPixels);
     auto stemValues = calculateSTEMValuesParallel(view, mask);
 #else
-    std::cout<< " start to execute calculateSTEMValues " <<std::endl;
     auto stemValues =
       calculateSTEMValues(data, i * numberOfPixels, numberOfPixels, mask);
-    std::cout<< " ok to execute calculateSTEMValues " <<std::endl;
 
 #endif
     image.data[imageNumbers[i]] = stemValues.data;
@@ -173,7 +169,9 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
                                    vector<int> outerRadii, int width,
                                    int height, int centerX, int centerY)
 {
-  std::cout<<"debug createImage, start function"<<std::endl;
+  //todo: get the blockType used by the reader
+  //using BlockType = std::decay(decltype(*first));
+
   if (first == last) {
     ostringstream msg;
     msg << "No blocks to read!";
@@ -236,23 +234,21 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   // the disk in the main thread.
   // We benchmarked this on a 10 core computer, and typically found
   // 2 threads to be ideal.
-  int numThreads = 1;
+  int numThreads = 2;
   ThreadPool pool(numThreads);
 
   // Populate the worker pool
   vector<future<void>> futures;
-  std::cout<<"debug createImage, start for loop"<<std::endl;
   for (; first != last; ++first) {
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
     BlockType b = std::move(*first);
-    std::cout<<"debug createImage, ok to get block"<<std::endl;
+    //std::cout<< "debug, get block with image num "<< b.header.imageNumbers[0] << std::endl;
 
 
     for (size_t i = 0; i < masks.size(); ++i) {
       auto& image = images[i];
 #ifdef VTKm
-      std::cout<<"vtk-m is used"<<std::endl;
       const auto& maskHandle = maskHandles[i];
 
       // Instead of calling _runCalculateSTEMValues directly, we use a
@@ -269,23 +265,6 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
         }));
 #else
       const auto& mask = masks[i];
-        std::cout<<"start to put block into lambda"<<std::endl;
-
-            std::cout<< "check data in block"<<std::endl;
-
-  for (int i = 0; i < 10; i++) {
-    std::cout << *(b.data.get() + i) << std::endl;
-  }
-
-      std::cout<< "check header in block"<<std::endl;
- for (int i = 0; i < 10; i++) {
-      std::cout<<"image number " << b.header.imageNumbers[i] <<std::endl;
-}
-
-      std::cout<< "check numberOfPixels "<< numberOfPixels <<std::endl;
-      std::cout<< "check mask "<< *mask <<std::endl;
-
-
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, mask, &image]() mutable {
           _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
@@ -295,20 +274,22 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
           b.data.reset();
         }));
 
-        std::cout<<"ok to put block into lambda1"<<std::endl;
-
 #endif
     }
   }
 
-  std::cout<<"ok to put block into lambda2"<<std::endl;
-
   // Make sure all threads are finished before continuing
+  std::cout << "debug out of the for loop" << std::endl;
   for (auto& future : futures)
     future.get();
 
+  std::cout << "debug ok for future get" << std::endl;
+ 
+
   for (const auto* p : masks)
     delete[] p;
+
+  std::cout << "debug ok to delete" << std::endl;
 
   return images;
 }
@@ -680,21 +661,21 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 }
 
 // Instantiate the ones that can be used
-template vector<STEMImage> createSTEMImages<StreamReader::iterator,Block>(StreamReader::iterator first,
+template vector<STEMImage> createSTEMImages<StreamReader::iterator, Block>(StreamReader::iterator first,
                                             StreamReader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
 
-template vector<STEMImage> createSTEMImages<H5Reader::iterator,PyBlock>(H5Reader::iterator first,
+template vector<STEMImage> createSTEMImages<H5Reader::iterator, PyBlock>(H5Reader::iterator first,
                                             H5Reader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
 
-template vector<STEMImage> createSTEMImages<vector<Block>::iterator,Block>(vector<Block>::iterator first,
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator, Block>(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,

@@ -44,6 +44,7 @@ def create_stem_images(input, inner_radii,
                                      inner_radii, outer_radii, width, height,
                                      center_x, center_y)
 
+    print("hdf5 create_stem_images in python")
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
