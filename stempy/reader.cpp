@@ -23,6 +23,18 @@ using std::vector;
 
 namespace stempy {
 
+Header::Header(uint32_t frameWidth, uint32_t frameHeight,
+               uint32_t imageNumInBlock, uint32_t scanWidth, 
+               uint32_t scanHeight, uint32_t startPosition, vector<uint32_t>& imageNumbers)
+{
+    this->frameWidth = frameWidth;
+    this->frameHeight=frameHeight;
+    this->imagesInBlock = imageNumInBlock;
+    this->scanHeight=scanHeight;
+    this->scanWidth=scanWidth;
+    this->imageNumbers=imageNumbers;
+}
+
 Block::Block(const Header& h)
   : header(h),
     data(new uint16_t[h.frameWidth * h.frameHeight * h.imagesInBlock],

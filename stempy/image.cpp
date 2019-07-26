@@ -1,4 +1,5 @@
 #include "image.h"
+#include "python/pyreader.h"
 
 #include "config.h"
 #include "mask.h"
@@ -232,7 +233,7 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   for (; first != last; ++first) {
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
-    Block b = std::move(*first);
+    auto b = std::move(*first);
 
     for (size_t i = 0; i < masks.size(); ++i) {
       auto& image = images[i];
@@ -252,7 +253,6 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
         }));
 #else
       const auto& mask = masks[i];
-
       futures.emplace_back(
         pool.enqueue([b, numberOfPixels, mask, &image]() mutable {
           _runCalculateSTEMValues(b.data.get(), b.header.imageNumbers,
@@ -642,13 +642,21 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 }
 
 // Instantiate the ones that can be used
-template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
+template vector<STEMImage> createSTEMImages<StreamReader::iterator>(StreamReader::iterator first,
                                             StreamReader::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
                                             int height, int centerX,
                                             int centerY);
-template vector<STEMImage> createSTEMImages(vector<Block>::iterator first,
+
+template vector<STEMImage> createSTEMImages<PyReader::iterator>(PyReader::iterator first,
+                                            PyReader::iterator last,
+                                            vector<int> innerRadii,
+                                            vector<int> outerRadii, int width,
+                                            int height, int centerX,
+                                            int centerY);
+
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
                                             vector<int> innerRadii,
                                             vector<int> outerRadii, int width,
