@@ -12,8 +12,8 @@ namespace stempy {
 
 struct DataHolder{
   DataHolder()=default;
-  uint16_t* innerdata = nullptr;
-  uint16_t* get() {return innerdata;}
+  const uint16_t* innerdata;
+  const uint16_t* get() {return innerdata;}
   void set(uint16_t*inputdata) {innerdata=inputdata;}
   void reset(){return;}
 };

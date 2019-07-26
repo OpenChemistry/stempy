@@ -7,7 +7,7 @@ PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
 {
   m_array = pyarray;
   this->data=(DataHolder());
-  this->data.innerdata=(uint16_t*)(m_array.request().ptr);
+  this->data.innerdata=m_array.data();
 }
 
 
