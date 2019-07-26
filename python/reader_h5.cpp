@@ -43,9 +43,7 @@ PyBlock H5Reader::read()
   }
 
   auto sliceIndex = py::slice(m_currIndex, upperBound, 1);
-  auto part = getItems(sliceIndex);
-
-  py::array_t<uint16_t> pyarray = part;
+  py::array_t<uint16_t> pyarray = getItems(sliceIndex);;
 
   PyBlock b(pyarray);
 
