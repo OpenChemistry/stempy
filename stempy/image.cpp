@@ -140,7 +140,7 @@ void _runCalculateSTEMValues(const uint16_t data[],
                              STEMImage& image)
 #endif
 {
-  
+
 
 #ifdef VTKm
   // Transfer the entire block of data at once.
@@ -284,7 +284,7 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
     future.get();
 
   std::cout << "debug ok for future get" << std::endl;
- 
+
 
   for (const auto* p : masks)
     delete[] p;
