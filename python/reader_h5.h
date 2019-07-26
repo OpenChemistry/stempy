@@ -23,7 +23,7 @@ struct PyBlock{
   Header header;
   //std::shared_ptr<py::buffer_info> m_buffer=nullptr;
   //std::shared_ptr<py::array> m_array;
-  py::array m_array;
+  py::array_t<uint16_t> m_array;
   DataHolder data ;
   //std::shared_ptr<uint16_t> data=nullptr;
   //std::shared_ptr<py::array> m_array=nullptr;
