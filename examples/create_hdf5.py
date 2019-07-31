@@ -49,14 +49,12 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
     dark = image.calculate_average(reader)
 
     reader = io.reader(files, version=reader_version)
-    frame_events = image.electron_count(reader, dark, scan_width=width,
-                                        scan_height=height)
+    data = image.electron_count(reader, dark, scan_width=width,
+                                scan_height=height)
 
-    # Read one block in to get the detector frames
-    reader.reset()
-    block = reader.read()
-    detector_nx = block.header.frame_width
-    detector_ny = block.header.frame_height
+    frame_events = data.data
+    detector_nx = data.frame_height
+    detector_ny = data.frame_width
 
     inner_radii = [0, inner_radius]
     outer_radii = [outer_radius, outer_radius]

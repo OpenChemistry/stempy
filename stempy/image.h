@@ -42,16 +42,21 @@ namespace stempy {
 
   template <typename InputIt>
   std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
-                                          std::vector<int> innerRadii,
-                                          std::vector<int> outerRadii,
+                                          const std::vector<int>& innerRadii,
+                                          const std::vector<int>& outerRadii,
                                           int scanWidth = 0, int scanHeight = 0,
                                           int centerX = -1, int centerY = -1);
 
   std::vector<STEMImage> createSTEMImagesSparse(
     const std::vector<std::vector<uint32_t>>& sparseData,
-    std::vector<int> innerRadii, std::vector<int> outerRadii, int rows,
-    int columns, int frameWidth, int frameHeight, int centerX = -1,
+    const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
+    int rows, int columns, int frameWidth, int frameHeight, int centerX = -1,
     int centerY = -1);
+
+  struct ElectronCountedData;
+  std::vector<STEMImage> createSTEMImagesSparse(
+    const ElectronCountedData& sparseData, const std::vector<int>& innerRadii,
+    const std::vector<int>& outerRadii, int centerX = -1, int centerY = -1);
 
   STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
                                  uint32_t numberOfPixels, uint16_t mask[],
