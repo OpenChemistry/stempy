@@ -41,13 +41,13 @@ Image<T>::Image(uint32_t w, uint32_t h)
   std::fill(this->data.get(), this->data.get() + width * height, 0);
 }
 
-STEMValues calculateSTEMValues(const uint16_t data[], int offset,
-                               int numberOfPixels, uint16_t mask[],
+STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
+                               uint32_t numberOfPixels, uint16_t mask[],
                                uint32_t imageNumber)
 {
   STEMValues stemValues;
   stemValues.imageNumber = imageNumber;
-  for (int i=0; i<numberOfPixels; i++) {
+  for (size_t i = 0; i < numberOfPixels; i++) {
     auto value = data[offset + i];
     stemValues.data += value & mask[i];
   }
@@ -142,14 +142,19 @@ void _runCalculateSTEMValues(const uint16_t data[],
     vtkm::cont::make_ArrayHandle(data, numberOfPixels * imageNumbers.size());
 #endif
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
+    // We need to ensure we are using uint64_t to prevent overflow.
+    auto offset = static_cast<uint64_t>(i) * numberOfPixels;
 #ifdef VTKm
     // Use view to the array already transfered
-    auto view = vtkm::cont::make_ArrayHandleView(dataHandle, i * numberOfPixels,
+    // Note: We need to ensure the offset is pass as a uint64 to prevent
+    // overflow.
+    auto view = vtkm::cont::make_ArrayHandleView(dataHandle, offset,
                                                  numberOfPixels);
     auto stemValues = calculateSTEMValuesParallel(view, mask);
 #else
     auto stemValues =
-      calculateSTEMValues(data, i * numberOfPixels, numberOfPixels, mask);
+      calculateSTEMValues(data, offset,
+                          numberOfPixels, mask, imageNumbers[i]);
 #endif
     image.data[imageNumbers[i]] = stemValues.data;
   }
@@ -337,8 +342,9 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 {
   vector<uint16_t> ret(data.size() * numPixels, 0);
   for (size_t i = 0; i < data.size(); ++i) {
-    for (auto pos : data[i])
+    for (auto pos : data[i]) {
       ret[i * numPixels + pos] = 1;
+    }
   }
 
   return ret;
@@ -441,7 +447,8 @@ double inline distance(int x1, int y1, int x2, int y2) {
 }
 
 void radialSumFrame(int centerX, int centerY, const uint16_t data[],
-    int offset, int frameWidth, int frameHeight, int imageNumber, RadialSum<uint64_t>& radialSum)
+                    uint64_t offset, int frameWidth, int frameHeight,
+                    int imageNumber, RadialSum<uint64_t>& radialSum)
 {
   auto numberOfPixels = frameWidth*frameHeight;
   for (int i=0; i< numberOfPixels; i++) {
@@ -511,7 +518,8 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
     vtkm::cont::make_ArrayHandle(data, numberOfPixels * imageNumbers.size());
   // Use view to the array already transfered
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
-    auto offset = i * numberOfPixels;
+    // We need to ensure we are using uint64_t to prevent overflow.
+    auto offset = static_cast<uint64_t>(i) * numberOfPixels;
     auto view =
       vtkm::cont::make_ArrayHandleView(dataHandle, offset, numberOfPixels);
 
@@ -527,7 +535,8 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
                      uint32_t numberOfPixels, RadialSum<uint64_t>& radialSum)
 {
   for (unsigned i = 0; i < imageNumbers.size(); ++i) {
-    auto offset = i*numberOfPixels;
+    // We need to ensure we are using int64_t to prevent overflow.
+    auto offset = static_cast<int64_t>(i) * numberOfPixels;
     auto imageNumber = imageNumbers[i];
     radialSumFrame(centerX, centerY, data, offset,
         frameWidth, frameHeight, imageNumber, radialSum);
