@@ -168,11 +168,11 @@ std::vector<uint32_t> maximalPoints(
 }
 
 template <typename InputIt>
-std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
-                                                 Image<double>& darkReference,
-                                                 double backgroundThreshold,
-                                                 double xRayThreshold,
-                                                 int scanWidth, int scanHeight)
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  Image<double>& darkReference,
+                                  double backgroundThreshold,
+                                  double xRayThreshold, int scanWidth,
+                                  int scanHeight)
 {
   if (first == last) {
     std::ostringstream msg;
@@ -193,25 +193,27 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
     throw std::invalid_argument(msg.str());
   }
 
+  // Store the frameWidth and frameHeight from the first block
+  // It should be the same for all blocks
+  uint32_t frameWidth = first->header.frameWidth;
+  uint32_t frameHeight = first->header.frameHeight;
+
   // Matrix to hold electron events.
   std::vector<std::vector<uint32_t>> events(scanWidth * scanHeight);
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart =
-        data + i * block.header.frameHeight * block.header.frameWidth;
-      std::vector<uint16_t> frame(
-        frameStart,
-        frameStart + block.header.frameHeight * block.header.frameWidth);
+      auto frameStart = data + i * frameWidth * frameHeight;
+      std::vector<uint16_t> frame(frameStart,
+                                  frameStart + frameHeight * frameWidth);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, block.header.frameWidth, block.header.frameHeight,
-        darkReference.data.get(), backgroundThreshold, xRayThreshold);
+        frame, frameWidth, frameHeight, darkReference.data.get(),
+        backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < block.header.frameHeight * block.header.frameWidth;
-           j++) {
+      for (int j = 0; j < frameHeight * frameWidth; j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference.data[j];
         // Threshold the electron events
@@ -221,17 +223,26 @@ std::vector<std::vector<uint32_t>> electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, block.header.frameWidth, block.header.frameHeight);
+        maximalPoints(frame, frameWidth, frameHeight);
 #endif
     }
   }
 
-  return events;
+  ElectronCountedData ret;
+  ret.data = events;
+  ret.scanWidth = scanWidth;
+  ret.scanHeight = scanHeight;
+  ret.frameWidth = frameWidth;
+  ret.frameHeight = frameHeight;
+
+  return ret;
 }
 
 // Instantiate the ones that can be used
-template std::vector<std::vector<uint32_t>> electronCount(
-  StreamReader::iterator first, StreamReader::iterator last,
-  Image<double>& darkReference, double backgroundThreshold,
-  double xRayThreshold, int scanRows, int scanColumns);
+template ElectronCountedData electronCount(StreamReader::iterator first,
+                                           StreamReader::iterator last,
+                                           Image<double>& darkReference,
+                                           double backgroundThreshold,
+                                           double xRayThreshold, int scanRows,
+                                           int scanColumns);
 }

@@ -1,4 +1,6 @@
 from stempy import _image
+
+from collections import namedtuple
 import numpy as np
 
 def create_stem_images(reader, inner_radii,
@@ -38,18 +40,29 @@ def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
                               width, height, center_x, center_y)[0]
 
 def create_stem_images_sparse(data, inner_radii, outer_radii,
-                              width, height, frame_width, frame_height,
-                              center_x=-1, center_y=-1):
-    imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
-                                            width, height, frame_width,
-                                            frame_height, center_x, center_y)
+                              width=None, height=None, frame_width=None,
+                              frame_height=None, center_x=-1, center_y=-1):
+    """
+    width, height, frame_width, and frame_height are required if
+    "data" is of type np.ndarray.
+    """
+    if not isinstance(data, np.ndarray):
+        # Assume it is an ElectronCountedData named tuple
+        imgs = _image.create_stem_images_sparse(data._electron_counted_data,
+                                                inner_radii, outer_radii,
+                                                center_x, center_y)
+    else:
+        imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
+                                                width, height, frame_width,
+                                                frame_height, center_x,
+                                                center_y)
 
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             width, height, frame_width, frame_height,
-                             center_x=-1, center_y=-1):
+                             width=None, height=None, frame_width=None,
+                             frame_height=None, center_x=-1, center_y=-1):
     return create_stem_images_sparse(data, [inner_radius], [outer_radius],
                                      width, height, frame_width, frame_height,
                                      center_x, center_y)[0]
@@ -86,11 +99,25 @@ def electron_count(reader, darkreference, number_of_samples=40,
     # Reset the reader
     reader.reset()
 
-    events = _image.electron_count(reader.begin(), reader.end(), darkreference._image,
-                                   background_threshold, xray_threshold, scan_width, scan_height)
+    data = _image.electron_count(reader.begin(), reader.end(),
+                                 darkreference._image, background_threshold,
+                                 xray_threshold, scan_width, scan_height)
 
-    # Convert to numpy and return
-    return np.array([np.array(x) for x in events])
+    electron_counted_data = namedtuple('ElectronCountedData',
+                                       ['data', 'scan_width', 'scan_height',
+                                        'frame_width', 'frame_height'])
+
+    # Convert to numpy array
+    electron_counted_data.data = np.array([np.array(x) for x in data.data])
+    electron_counted_data.scan_width = data.scan_width
+    electron_counted_data.scan_height = data.scan_height
+    electron_counted_data.frame_width = data.frame_width
+    electron_counted_data.frame_height = data.frame_height
+
+    # Store a copy of the underlying C++ object in case we need it later
+    electron_counted_data._electron_counted_data = data
+
+    return electron_counted_data
 
 def radial_sum(reader, center_x=-1, center_y=-1, scan_width=0, scan_height=0):
     sum =  _image.radial_sum(reader.begin(), reader.end(), scan_width, scan_height,

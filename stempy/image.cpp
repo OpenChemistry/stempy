@@ -1,6 +1,7 @@
 #include "image.h"
 
 #include "config.h"
+#include "electron.h"
 #include "mask.h"
 
 #include <ThreadPool.h>
@@ -163,8 +164,8 @@ void _runCalculateSTEMValues(const uint16_t data[],
 
 template <typename InputIt>
 vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
-                                   vector<int> innerRadii,
-                                   vector<int> outerRadii, int width,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii, int width,
                                    int height, int centerX, int centerY)
 {
   if (first == last) {
@@ -351,8 +352,8 @@ vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
 }
 
 vector<STEMImage> createSTEMImagesSparse(
-  const vector<vector<uint32_t>>& sparseData, vector<int> innerRadii,
-  vector<int> outerRadii, int width, int height, int frameWidth,
+  const vector<vector<uint32_t>>& sparseData, const vector<int>& innerRadii,
+  const vector<int>& outerRadii, int width, int height, int frameWidth,
   int frameHeight, int centerX, int centerY)
 {
   if (innerRadii.empty() || outerRadii.empty()) {
@@ -411,6 +412,16 @@ vector<STEMImage> createSTEMImagesSparse(
     delete[] p;
 
   return images;
+}
+
+vector<STEMImage> createSTEMImagesSparse(const ElectronCountedData& data,
+                                         const vector<int>& innerRadii,
+                                         const vector<int>& outerRadii,
+                                         int centerX, int centerY)
+{
+  return createSTEMImagesSparse(
+    data.data, innerRadii, outerRadii, data.scanWidth, data.scanHeight,
+    data.frameWidth, data.frameHeight, centerX, centerY);
 }
 
 template <typename InputIt>
@@ -653,15 +664,15 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages(StreamReader::iterator first,
                                             StreamReader::iterator last,
-                                            vector<int> innerRadii,
-                                            vector<int> outerRadii, int width,
-                                            int height, int centerX,
+                                            const vector<int>& innerRadii,
+                                            const vector<int>& outerRadii,
+                                            int width, int height, int centerX,
                                             int centerY);
 template vector<STEMImage> createSTEMImages(vector<Block>::iterator first,
                                             vector<Block>::iterator last,
-                                            vector<int> innerRadii,
-                                            vector<int> outerRadii, int width,
-                                            int height, int centerX,
+                                            const vector<int>& innerRadii,
+                                            const vector<int>& outerRadii,
+                                            int width, int height, int centerX,
                                             int centerY);
 
 template Image<double> calculateAverage(StreamReader::iterator first,

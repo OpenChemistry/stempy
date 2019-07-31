@@ -9,6 +9,7 @@
 
 namespace py = pybind11;
 
+using std::vector;
 using namespace stempy;
 
 PYBIND11_MODULE(_image, m)
@@ -50,11 +51,27 @@ PYBIND11_MODULE(_image, m)
             sizeof(uint64_t) });
     });
 
+  py::class_<ElectronCountedData>(m, "_electron_counted_data",
+                                  py::buffer_protocol())
+    .def_readonly("data", &ElectronCountedData::data)
+    .def_readonly("scan_width", &ElectronCountedData::scanWidth)
+    .def_readonly("scan_height", &ElectronCountedData::scanHeight)
+    .def_readonly("frame_width", &ElectronCountedData::frameWidth)
+    .def_readonly("frame_height", &ElectronCountedData::frameHeight);
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images_sparse", &createSTEMImagesSparse,
+  m.def(
+    "create_stem_images_sparse",
+    (vector<STEMImage>(*)(const vector<vector<uint32_t>>&, const vector<int>&,
+                          const vector<int>&, int, int, int, int, int, int)) &
+      createSTEMImagesSparse,
+    py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images_sparse",
+        (vector<STEMImage>(*)(const ElectronCountedData&, const vector<int>&,
+                              const vector<int>&, int, int)) &
+          createSTEMImagesSparse,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
