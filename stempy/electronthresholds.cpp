@@ -52,8 +52,8 @@ private:
 std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
                                               Image<double>& darkReference,
                                               int numberOfSamples,
-                                              int backgroundThresholdNSigma,
-                                              int xRayThresholdNSigma)
+                                              double backgroundThresholdNSigma,
+                                              double xRayThresholdNSigma)
 {
   auto frameWidth = blocks[0].header.frameWidth;
   auto frameHeight = blocks[0].header.frameHeight;

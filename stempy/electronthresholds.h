@@ -8,8 +8,8 @@ namespace stempy {
 std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
                                               Image<double>& darkreference,
                                               int numberOfSamples = 20,
-                                              int backgroundThresholdNSigma = 4,
-                                              int xRayThresholdNSigma = 10);
+                                              double backgroundThresholdNSigma = 4,
+                                              double xRayThresholdNSigma = 10);
 }
 
 #endif /* STEMPY_ELECTRONTHRESHOLDS_H_ */
