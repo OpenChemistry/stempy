@@ -2,9 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <random>
 
 #include <lsq/lsqcpp.h>
+
+using std::cerr;
+using std::cout;
+using std::endl;
 
 namespace stempy {
 
@@ -49,11 +54,9 @@ private:
   const std::vector<uint64_t>& histogram;
 };
 
-std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
-                                              Image<double>& darkReference,
-                                              int numberOfSamples,
-                                              double backgroundThresholdNSigma,
-                                              double xRayThresholdNSigma)
+std::pair<double, double> calculateThresholds(
+  std::vector<Block>& blocks, Image<double>& darkReference, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma, bool verbose)
 {
   auto frameWidth = blocks[0].header.frameWidth;
   auto frameHeight = blocks[0].header.frameHeight;
@@ -142,6 +145,21 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
   }
   auto backgroundThreshold =
     result.state[1] + result.state[2] * backgroundThresholdNSigma;
+
+  if (verbose) {
+    cout << "****Statistics for calculating electron thresholds****" << endl;
+    cout << "numberOfSamples: " << numberOfSamples << endl;
+    cout << "min: " << minSample << endl;
+    cout << "max: " << maxSample << endl;
+    cout << "mean: " << mean << endl;
+    cout << "variance: " << variance << endl;
+    cout << "stdDev: " << stdDev << endl;
+    cout << "numberOfBins: " << numberOfBins << endl;
+    cout << "xRayThresholdNSigma: " << xRayThresholdNSigma << endl;
+    cout << "backgroundThresholdNSigma: " << backgroundThresholdNSigma << endl;
+    cout << "xrayThreshold: " << xrayThreshold << endl;
+    cout << "backgroundThreshold: " << backgroundThreshold << endl;
+  }
 
   return std::make_pair(backgroundThreshold, xrayThreshold);
 }

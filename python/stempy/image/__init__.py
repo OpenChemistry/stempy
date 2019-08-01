@@ -86,7 +86,8 @@ def calculate_average(reader):
 
 def electron_count(reader, darkreference, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
-                   threshold_num_blocks=1, scan_width=0, scan_height=0):
+                   threshold_num_blocks=1, scan_width=0, scan_height=0,
+                   verbose=False):
 
     blocks = []
     for i in range(threshold_num_blocks):
@@ -94,7 +95,7 @@ def electron_count(reader, darkreference, number_of_samples=40,
 
     background_threshold, xray_threshold = _image.calculate_thresholds(
         [b._block for b in blocks], darkreference._image, number_of_samples,
-        background_threshold_n_sigma, xray_threshold_n_sigma)
+        background_threshold_n_sigma, xray_threshold_n_sigma, verbose)
 
     # Reset the reader
     reader.reset()
