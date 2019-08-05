@@ -49,11 +49,11 @@ private:
   const std::vector<uint64_t>& histogram;
 };
 
-std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
-                                              Image<double>& darkReference,
-                                              int numberOfSamples,
-                                              double backgroundThresholdNSigma,
-                                              double xRayThresholdNSigma)
+CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma)
 {
   auto frameWidth = blocks[0].header.frameWidth;
   auto frameHeight = blocks[0].header.frameHeight;
@@ -143,7 +143,20 @@ std::pair<double, double> calculateThresholds(std::vector<Block>& blocks,
   auto backgroundThreshold =
     result.state[1] + result.state[2] * backgroundThresholdNSigma;
 
-  return std::make_pair(backgroundThreshold, xrayThreshold);
+  CalculateThresholdsResults ret;
+  ret.numberOfSamples = numberOfSamples;
+  ret.minSample = minSample;
+  ret.maxSample = maxSample;
+  ret.mean = mean;
+  ret.variance = variance;
+  ret.stdDev = stdDev;
+  ret.numberOfBins = numberOfBins;
+  ret.xRayThresholdNSigma = xRayThresholdNSigma;
+  ret.backgroundThresholdNSigma = backgroundThresholdNSigma;
+  ret.xRayThreshold = xrayThreshold;
+  ret.backgroundThreshold = backgroundThreshold;
+
+  return ret;
 }
 
 }
