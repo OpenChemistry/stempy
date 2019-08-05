@@ -71,7 +71,7 @@ RUN mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
-  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.3 \
+  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.4 \
   /source/stempy . && \
   make -j4
 
