@@ -51,6 +51,24 @@ PYBIND11_MODULE(_image, m)
             sizeof(uint64_t) });
     });
 
+  py::class_<CalculateThresholdsResults>(m, "_calculate_thresholds_results",
+                                         py::buffer_protocol())
+    .def_readonly("background_threshold",
+                  &CalculateThresholdsResults::backgroundThreshold)
+    .def_readonly("xray_threshold", &CalculateThresholdsResults::xRayThreshold)
+    .def_readonly("number_of_samples",
+                  &CalculateThresholdsResults::numberOfSamples)
+    .def_readonly("min_sample", &CalculateThresholdsResults::minSample)
+    .def_readonly("max_sample", &CalculateThresholdsResults::maxSample)
+    .def_readonly("mean", &CalculateThresholdsResults::mean)
+    .def_readonly("variance", &CalculateThresholdsResults::variance)
+    .def_readonly("std_dev", &CalculateThresholdsResults::stdDev)
+    .def_readonly("number_of_bins", &CalculateThresholdsResults::numberOfBins)
+    .def_readonly("xray_threshold_n_sigma",
+                  &CalculateThresholdsResults::xRayThresholdNSigma)
+    .def_readonly("background_threshold_n_sigma",
+                  &CalculateThresholdsResults::backgroundThresholdNSigma);
+
   py::class_<ElectronCountedData>(m, "_electron_counted_data",
                                   py::buffer_protocol())
     .def_readonly("data", &ElectronCountedData::data)

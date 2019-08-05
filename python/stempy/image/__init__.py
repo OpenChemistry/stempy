@@ -93,9 +93,27 @@ def electron_count(reader, darkreference, number_of_samples=40,
     for i in range(threshold_num_blocks):
         blocks.append(next(reader))
 
-    background_threshold, xray_threshold = _image.calculate_thresholds(
+    res = _image.calculate_thresholds(
         [b._block for b in blocks], darkreference._image, number_of_samples,
-        background_threshold_n_sigma, xray_threshold_n_sigma, verbose)
+        background_threshold_n_sigma, xray_threshold_n_sigma)
+
+    background_threshold = res.background_threshold
+    xray_threshold = res.xray_threshold
+
+    if verbose:
+        print('****Statistics for calculating electron thresholds****')
+        print('number of samples:', res.number_of_samples)
+        print('min sample:', res.min_sample)
+        print('max sample:', res.max_sample)
+        print('mean:', res.mean)
+        print('variance:', res.variance)
+        print('std dev:', res.std_dev)
+        print('number of bins:', res.number_of_bins)
+        print('x-ray threshold n sigma:', res.xray_threshold_n_sigma)
+        print('background threshold n sigma:',
+              res.background_threshold_n_sigma)
+        print('background threshold:', background_threshold)
+        print('xray threshold:', xray_threshold)
 
     # Reset the reader
     reader.reset()
