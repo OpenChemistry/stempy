@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include <vector>
 
+#include "pyreader.h"
 #include <stempy/electron.h>
 #include <stempy/electronthresholds.h>
 #include <stempy/image.h>
@@ -99,9 +100,10 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-
   m.def("get_container", &getContainer,
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_histogram", &createSTEMHistogram,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images", &createSTEMImages<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }
