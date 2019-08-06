@@ -15,7 +15,8 @@ PyReader::PyReader(py::object pyDataSet, std::vector<uint32_t>& imageNumbers,
   : m_pydataset(pyDataSet), m_imageNumbers(imageNumbers),
     m_scanWidth(scanWidth), m_scanHeight(scanHeight),
     m_imageNumInBlock(blockSize), m_totalImageNum(totalImageNum)
-{}
+{
+}
 
 PyBlock PyReader::read()
 {

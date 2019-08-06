@@ -2,8 +2,8 @@
 #include <pybind11/stl.h>
 #include <vector>
 
-#include <stempy/reader.h>
 #include <python/pyreader.h>
+#include <stempy/reader.h>
 
 namespace py = pybind11;
 
@@ -48,15 +48,16 @@ PYBIND11_MODULE(_io, m)
     .def("reset", &StreamReader::reset)
     .def("begin",
          (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
-    .def("end", (StreamReader::iterator(StreamReader::*)()) & StreamReader::end);   
+    .def("end",
+         (StreamReader::iterator(StreamReader::*)()) & StreamReader::end);
 
   py::class_<PyReader::iterator>(m, "_pyreader_iterator")
     .def(py::init<PyReader*>());
 
   py::class_<PyReader>(m, "_pyreader")
-    .def(py::init<py::object, std::vector<uint32_t>&, uint32_t,uint32_t,uint32_t,uint32_t>())
+    .def(py::init<py::object, std::vector<uint32_t>&, uint32_t, uint32_t,
+                  uint32_t, uint32_t>())
     .def("read", (PyBlock(PyReader::*)()) & PyReader::read)
-    .def("begin",(PyReader::iterator(PyReader::*)()) & PyReader::begin)
+    .def("begin", (PyReader::iterator(PyReader::*)()) & PyReader::begin)
     .def("end", (PyReader::iterator(PyReader::*)()) & PyReader::end);
-  
 }

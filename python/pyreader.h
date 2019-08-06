@@ -32,7 +32,8 @@ class PYBIND11_EXPORT PyReader
 
 public:
   PyReader(py::object pyDataSet, std::vector<uint32_t>& imageNumbers,
-           uint32_t scanWidth, uint32_t scanHeight, uint32_t blockSize,uint32_t totalImageNum);
+           uint32_t scanWidth, uint32_t scanHeight, uint32_t blockSize,
+           uint32_t totalImageNum);
 
   PyBlock read();
 

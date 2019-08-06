@@ -27,12 +27,12 @@ Header::Header(uint32_t frameWidth_, uint32_t frameHeight_,
                uint32_t imageNumInBlock_, uint32_t scanWidth_,
                uint32_t scanHeight_, vector<uint32_t>& imageNumbers_)
 {
-    this->frameWidth = frameWidth_;
-    this->frameHeight = frameHeight_;
-    this->imagesInBlock = imageNumInBlock_;
-    this->scanHeight = scanHeight_;
-    this->scanWidth = scanWidth_;
-    this->imageNumbers = imageNumbers_;
+  this->frameWidth = frameWidth_;
+  this->frameHeight = frameHeight_;
+  this->imagesInBlock = imageNumInBlock_;
+  this->scanHeight = scanHeight_;
+  this->scanWidth = scanWidth_;
+  this->imageNumbers = imageNumbers_;
 }
 
 Block::Block(const Header& h)

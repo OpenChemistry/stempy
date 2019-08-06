@@ -2,11 +2,11 @@
 #include <pybind11/stl.h>
 #include <vector>
 
+#include "pyreader.h"
 #include <stempy/electron.h>
 #include <stempy/electronthresholds.h>
 #include <stempy/image.h>
 #include <stempy/reader.h>
-#include "pyreader.h"
 
 namespace py = pybind11;
 

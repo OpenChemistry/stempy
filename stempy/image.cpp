@@ -662,26 +662,20 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
 }
 
 // Instantiate the ones that can be used
-template vector<STEMImage> createSTEMImages<StreamReader::iterator>(StreamReader::iterator first,
-                                            StreamReader::iterator last,
-                                            const vector<int>& innerRadii,
-                                            const vector<int>& outerRadii,
-                                            int width, int height, int centerX,
-                                            int centerY);
+template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
+  StreamReader::iterator first, StreamReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
+  int height, int centerX, int centerY);
 
-template vector<STEMImage> createSTEMImages<PyReader::iterator>(PyReader::iterator first,
-                                            PyReader::iterator last,
-                                            const vector<int>& innerRadii,
-                                            const vector<int>& outerRadii,
-                                            int width, int height, int centerX,
-                                            int centerY);
+template vector<STEMImage> createSTEMImages<PyReader::iterator>(
+  PyReader::iterator first, PyReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
+  int height, int centerX, int centerY);
 
-template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(vector<Block>::iterator first,
-                                            vector<Block>::iterator last,
-                                            const vector<int>& innerRadii,
-                                            const vector<int>& outerRadii,
-                                            int width, int height, int centerX,
-                                            int centerY);
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(
+  vector<Block>::iterator first, vector<Block>::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
+  int height, int centerX, int centerY);
 
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
