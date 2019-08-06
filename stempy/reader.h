@@ -25,8 +25,8 @@ struct Header {
   Header(Header&& header) noexcept = default;
   Header& operator=(Header&& header) noexcept = default;
   Header(uint32_t frameWidth, uint32_t frameHeight,
-         uint32_t imageNumInBlock, uint32_t scanWidth, 
-         uint32_t scanHeight, uint32_t startPosition, std::vector<uint32_t>& imageNumbers);
+         uint32_t imageNumInBlock, uint32_t scanWidth,
+         uint32_t scanHeight, std::vector<uint32_t>& imageNumbers);
 };
 
 struct Block {

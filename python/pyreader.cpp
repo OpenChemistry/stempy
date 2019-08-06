@@ -44,12 +44,12 @@ PyBlock PyReader::read()
 
   // get the image numbers for current header
   std::vector<uint32_t> imageNumberForBlock;
-  for (int i = m_currIndex; i < upperBound; i++) {
+  for (auto i = m_currIndex; i < upperBound; i++) {
     imageNumberForBlock.push_back(m_imageNumbers[i]);
   }
 
   b.header = Header(imageWidth, imageHeight, m_imageNumInBlock, m_scanWidth,
-                    m_scanHeight, m_currIndex, imageNumberForBlock);
+                    m_scanHeight, imageNumberForBlock);
 
   m_currIndex = upperBound;
 
