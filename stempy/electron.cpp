@@ -6,7 +6,7 @@
 #ifdef VTKm
 #include <vtkm/cont/ArrayHandle.h>
 #include <vtkm/cont/CellSetStructured.h>
-#include <vtkm/worklet/Invoker.h>
+#include <vtkm/cont/Invoker.h>
 #include <vtkm/worklet/WorkletMapTopology.h>
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
@@ -78,7 +78,7 @@ std::vector<uint32_t> maximalPointsParallel(
   double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
 {
   // Build the data set
-  vtkm::cont::CellSetStructured<2> cellSet("frame");
+  vtkm::cont::CellSetStructured<2> cellSet;
   cellSet.SetPointDimensions(vtkm::Id2(rows, columns));
 
   // Input handles
@@ -89,7 +89,7 @@ std::vector<uint32_t> maximalPointsParallel(
   // Output
   vtkm::cont::ArrayHandle<bool> maximalPixels;
 
-  vtkm::worklet::Invoker invoke;
+  vtkm::cont::Invoker invoke;
   // Background subtraction and thresholding
   invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet,
          frameHandle, darkRefHandle);
