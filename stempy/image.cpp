@@ -12,7 +12,7 @@
 #include <vtkm/cont/ArrayHandleCompositeVector.h>
 #include <vtkm/cont/ArrayHandleView.h>
 #include <vtkm/cont/AtomicArray.h>
-#include <vtkm/worklet/Invoker.h>
+#include <vtkm/cont/Invoker.h>
 
 template <typename T>
 using ArrayHandleView = vtkm::cont::ArrayHandleView<vtkm::cont::ArrayHandle<T>>;
@@ -514,7 +514,7 @@ void radialSumFrame(const vtkm::Vec<int, 2>& center,
                     uint32_t numberOfScanPositions,
                     vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
-  vtkm::worklet::Invoker invoke;
+  vtkm::cont::Invoker invoke;
   invoke(RadialSumWorklet{ center, frameWidth, imageNumber, numberOfScanPositions },
          data, radialSum);
 }
