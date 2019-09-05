@@ -43,6 +43,14 @@ else:
 # Now reduce to root
 if world_size > 1:
     if rank == 0:
+        # If comm.reduce() is used here instead, the empty numpy arrays
+        # in local_frame_events need to be replaced with np.array([0])
+        # so that they can be summed.
+        # Using comm.reduce() was found to take just a little longer on
+        # ulex than the method below.
+        # We may want to try comm.Reduce() sometime, but we will need
+        # to come up with a way to convert our array of variable length
+        # numpy arrays into a contiguous memory buffer.
         for i in range(1, world_size):
             data = comm.recv(source=i)
             for j in range(data.shape[0]):
@@ -52,7 +60,6 @@ if world_size > 1:
         comm.send(local_frame_events, dest=0)
 else:
     global_frame_events = local_frame_events
-
 
 comm.Barrier()
 end = MPI.Wtime()
