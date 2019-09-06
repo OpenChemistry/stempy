@@ -25,8 +25,8 @@ def get_files(files):
               required=True)
 @click.option('-o', '--outer-radii', help='The outer radii (comma separated)',
               required=True)
-@click.option('-g', '--generate-sparse',
-              help='Generate and save sparse STEM image', default=False)
+@click.option('-g', '--generate-sparse', is_flag=True,
+              help='Generate and save sparse STEM image')
 def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
     center = center.split(',')
     if len(center) != 2:
@@ -64,26 +64,8 @@ def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
     local_frame_events = electron_counted_data.data
 
     # Now reduce to root
-    if world_size > 1:
-        if rank == 0:
-            global_frame_events = local_frame_events
-            # If comm.reduce() is used here instead, the empty numpy arrays
-            # in local_frame_events need to be replaced with np.array([0])
-            # so that they can be summed.
-            # Using comm.reduce() was found to take just a little longer on
-            # ulex than the method below.
-            # We may want to try comm.Reduce() sometime, but we will need
-            # to come up with a way to convert our array of variable length
-            # numpy arrays into a contiguous memory buffer.
-            for i in range(1, world_size):
-                data = comm.recv(source=i)
-                for j in range(data.shape[0]):
-                    if len(data[j]) != 0:
-                        global_frame_events[j] = data[j]
-        else:
-            comm.send(local_frame_events, dest=0)
-    else:
-        global_frame_events = local_frame_events
+    global_frame_events = reduce_to_root_method1(local_frame_events)
+    # global_frame_events = reduce_to_root_method2(local_frame_events)
 
     comm.Barrier()
     end = MPI.Wtime()
@@ -113,15 +95,65 @@ def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
             frame_width = electron_counted_data.frame_width
             frame_height = electron_counted_data.frame_height
 
-            stem_img = image.create_stem_images_sparse(
+            stem_imgs = image.create_stem_images_sparse(
                 global_frame_events, inner_radii, outer_radii, width=width,
                 height=height, frame_width=frame_width,
                 frame_height=frame_height, center_x=center_x,
                 center_y=center_y)
 
-            fig, ax = plt.subplots(figsize=(12, 12))
-            ax.matshow(stem_img)
-            plt.savefig('sparse_stem_image.png', dpi=300)
+            for i, img in enumerate(stem_imgs):
+                fig, ax = plt.subplots(figsize=(12, 12))
+                ax.matshow(img)
+                name = 'sparse_stem_image_' + str(i) + '.png'
+                plt.savefig(name, dpi=300)
+
+
+def reduce_to_root_method1(local_frame_events):
+    # This method uses send() and recv() with the data
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    world_size = comm.Get_size()
+
+    if world_size == 1:
+        return local_frame_events
+
+    global_frame_events = None
+    if rank == 0:
+        global_frame_events = local_frame_events
+        for i in range(1, world_size):
+            data = comm.recv(source=i)
+            for j in range(data.shape[0]):
+                if len(data[j]) != 0:
+                    global_frame_events[j] = data[j]
+    else:
+        comm.send(local_frame_events, dest=0)
+
+    return global_frame_events
+
+
+def reduce_to_root_method2(local_frame_events):
+    # This method uses comm.reduce() with the data
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    world_size = comm.Get_size()
+
+    if world_size == 1:
+        return local_frame_events
+
+    # Must replace empty arrays with np.array([0]) for sum to work
+    for i in range(local_frame_events.shape[0]):
+        if len(local_frame_events[i]) == 0:
+            local_frame_events[i] = np.array([0])
+
+    return comm.reduce(local_frame_events, op=MPI.SUM)
+
+
+def reduce_to_root_method3(local_frame_events):
+    # This method uses comm.Reduce() with the data
+    # We may want to try comm.Reduce() sometime, but we will need
+    # to come up with a way to convert our array of variable length
+    # numpy arrays into a contiguous memory buffer.
+    pass
 
 
 if __name__ == "__main__":
