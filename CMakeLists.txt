@@ -79,11 +79,6 @@ set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(stem
   PRIVATE ${_libs})
 
-add_executable(stemcli stempy/main.cpp)
-
-target_link_libraries(stemcli
-  PRIVATE stem pybind11::embed)
-
 set_target_properties(stem
   PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
