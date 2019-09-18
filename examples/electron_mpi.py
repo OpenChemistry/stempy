@@ -74,6 +74,16 @@ def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
         print('time: %s' % (end - start))
 
     if rank == 0:
+        # Write out the HDF5 file
+        scan_width = electron_counted_data.scan_width
+        scan_height = electron_counted_data.scan_height
+        frame_width = electron_counted_data.frame_width
+        frame_height = electron_counted_data.frame_height
+
+        output_file = 'electron_counted_data.h5'
+        io.save_electron_counts(output_file, global_frame_events, scan_width,
+                                scan_height, frame_width, frame_height)
+
         # Save out the electron counted image
         img = np.zeros((576, 576))
 
