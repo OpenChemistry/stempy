@@ -25,9 +25,12 @@ def get_files(files):
               required=True)
 @click.option('-o', '--outer-radii', help='The outer radii (comma separated)',
               required=True)
+@click.option('-f', '--output-file', help='The output HDF5 file to write',
+              default='electron_counted_data.h5')
 @click.option('-g', '--generate-sparse', is_flag=True,
               help='Generate and save sparse STEM image')
-def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
+def main(files, dark_file, center, inner_radii, outer_radii, output_file,
+         generate_sparse):
     center = center.split(',')
     if len(center) != 2:
         msg = 'Center must be of the form: center_x,center_y.'
@@ -80,7 +83,6 @@ def main(files, dark_file, center, inner_radii, outer_radii, generate_sparse):
         frame_width = electron_counted_data.frame_width
         frame_height = electron_counted_data.frame_height
 
-        output_file = 'electron_counted_data.h5'
         io.save_electron_counts(output_file, global_frame_events, scan_width,
                                 scan_height, frame_width, frame_height)
 
