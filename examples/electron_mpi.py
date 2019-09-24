@@ -51,6 +51,13 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     world_size = comm.Get_size()
+
+    if (world_size > len(files)):
+        if rank == 0:
+            print('Error: number of MPI processes,', world_size, ', exceeds',
+                  'the number of files:', len(files))
+        return
+
     comm.Barrier()
     start = MPI.Wtime()
 
