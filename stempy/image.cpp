@@ -343,8 +343,9 @@ void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
 {
   for (unsigned i = 0; i < data.size(); ++i) {
     uint64_t values = 0;
-    for (auto pos : data[i])
+    for (auto pos : data[i]) {
       values += mask[pos];
+    }
     image.data[i] = values;
   }
 }
