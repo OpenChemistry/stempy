@@ -338,17 +338,15 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
   return frequencies;
 }
 
-vector<uint16_t> expandSparsifiedData(const vector<vector<uint32_t>>& data,
-                                      size_t numPixels)
+void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
+                               uint16_t* mask, STEMImage& image)
 {
-  vector<uint16_t> ret(data.size() * numPixels, 0);
-  for (size_t i = 0; i < data.size(); ++i) {
-    for (auto pos : data[i]) {
-      ret[i * numPixels + pos] = 1;
-    }
+  for (unsigned i = 0; i < data.size(); ++i) {
+    uint64_t values = 0;
+    for (auto pos : data[i])
+      values += mask[pos];
+    image.data[i] = values;
   }
-
-  return ret;
 }
 
 vector<STEMImage> createSTEMImagesSparse(
@@ -368,45 +366,16 @@ vector<STEMImage> createSTEMImagesSparse(
     throw invalid_argument(msg.str());
   }
 
-  auto numberOfPixels = frameWidth * frameHeight;
-
   vector<STEMImage> images;
-  for (const auto& r : innerRadii) {
-    (void)r;
-    images.push_back(STEMImage(width, height));
-  }
-
   vector<uint16_t*> masks;
-
-#ifdef VTKm
-  // Only transfer the masks once
-  vector<vtkm::cont::ArrayHandle<uint16_t>> maskHandles;
-#endif
-
   for (size_t i = 0; i < innerRadii.size(); ++i) {
+    images.push_back(STEMImage(width, height));
     masks.push_back(createAnnularMask(frameWidth, frameHeight, innerRadii[i],
                                       outerRadii[i], centerX, centerY));
-#ifdef VTKm
-    maskHandles.push_back(
-      vtkm::cont::make_ArrayHandle(masks.back(), numberOfPixels));
-#endif
   }
 
-  vector<uint16_t> data = expandSparsifiedData(sparseData, numberOfPixels);
-
-  size_t numImages = data.size() / numberOfPixels;
-  vector<uint32_t> imageNumbers(numImages);
-  std::iota(imageNumbers.begin(), imageNumbers.end(), 0);
-
-  for (size_t i = 0; i < masks.size(); ++i) {
-#ifdef VTKm
-    _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels,
-                            maskHandles[i], images[i]);
-#else
-    _runCalculateSTEMValues(data.data(), imageNumbers, numberOfPixels, masks[i],
-                            images[i]);
-#endif
-  }
+  for (size_t i = 0; i < masks.size(); ++i)
+    calculateSTEMValuesSparse(sparseData, masks[i], images[i]);
 
   for (auto* p : masks)
     delete[] p;
