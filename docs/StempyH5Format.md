@@ -14,17 +14,24 @@ stem
 frames
 ```
 
-`electron_events/frames` - Array of arrays, the first index is the scan position
+- `electron_events/frames` - Array of arrays, the first index is the scan position
 ( corresponding to `scan_positions` ) and the second array holds an array of
 of indices into the diffractogram where an electron strike was detected.
+  - Attributes:
+    - `Nx`: the width of the frame
+    - `Ny`: the height of the frame
 
-`electron_events/scan_positions` - Array of shorts holding the scan positions.
+- `electron_events/scan_positions` - Array of shorts holding the scan positions.
+  - Attributes:
+    - `Nx`: the width of the scan
+    - `Ny`: the height of the scan
 
-`stem/images` - A list of 2D arrays of unsigned integers containing stem images
-(possibly bright and dark fields). The images may have a list of names as an
-attribute.
+- `stem/images` - A list of 2D arrays of unsigned integers containing stem images
+(possibly bright and dark fields).
+  - Attributes:
+    - `names`: a list of names assigned to the images
 
-`frames` - If present, the raw diffractogram data, where the first index is the scan
+- `frames` - If present, the raw diffractogram data, where the first index is the scan
 position index for the 2D diffractogram.
 
 This file can be produced with the script at `examples/create_hdf5.py`
