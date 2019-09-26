@@ -1,0 +1,4 @@
+click
+jupyterlab
+matplotlib
+Pillow
