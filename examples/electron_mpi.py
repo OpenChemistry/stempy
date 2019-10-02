@@ -93,20 +93,6 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         io.save_electron_counts(output_file, global_frame_events, scan_width,
                                 scan_height, frame_width, frame_height)
 
-        # Save out the electron counted image
-        img = np.zeros((576, 576))
-
-        # Just sum the events for now
-        for frame in global_frame_events:
-            for pos in frame:
-                row = pos // 576
-                column = pos % 576
-                img[row][column] += 1
-
-        fig, ax = plt.subplots(figsize=(12, 12))
-        ax.matshow(img)
-        plt.savefig('electron.png', dpi=300)
-
         if generate_sparse:
             # Save out the sparse image
             width = electron_counted_data.scan_width
