@@ -51,7 +51,7 @@ namespace stempy {
     const std::vector<std::vector<uint32_t>>& sparseData,
     const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
     int rows, int columns, int frameWidth, int frameHeight, int centerX = -1,
-    int centerY = -1);
+    int centerY = -1, int frameOffset = 0);
 
   struct ElectronCountedData;
   std::vector<STEMImage> createSTEMImagesSparse(
