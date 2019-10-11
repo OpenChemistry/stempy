@@ -339,21 +339,22 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
 }
 
 void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
-                               uint16_t* mask, STEMImage& image)
+                               uint16_t* mask, STEMImage& image,
+                               int frameOffset)
 {
   for (unsigned i = 0; i < data.size(); ++i) {
     uint64_t values = 0;
     for (auto pos : data[i]) {
       values += mask[pos];
     }
-    image.data[i] = values;
+    image.data[i + frameOffset] = values;
   }
 }
 
 vector<STEMImage> createSTEMImagesSparse(
   const vector<vector<uint32_t>>& sparseData, const vector<int>& innerRadii,
   const vector<int>& outerRadii, int width, int height, int frameWidth,
-  int frameHeight, int centerX, int centerY)
+  int frameHeight, int centerX, int centerY, int frameOffset)
 {
   if (innerRadii.empty() || outerRadii.empty()) {
     ostringstream msg;
@@ -376,7 +377,7 @@ vector<STEMImage> createSTEMImagesSparse(
   }
 
   for (size_t i = 0; i < masks.size(); ++i)
-    calculateSTEMValuesSparse(sparseData, masks[i], images[i]);
+    calculateSTEMValuesSparse(sparseData, masks[i], images[i], frameOffset);
 
   for (auto* p : masks)
     delete[] p;

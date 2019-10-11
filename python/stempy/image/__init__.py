@@ -68,7 +68,8 @@ def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
 
 def create_stem_images_sparse(data, inner_radii, outer_radii,
                               width=None, height=None, frame_width=None,
-                              frame_height=None, center_x=-1, center_y=-1):
+                              frame_height=None, center_x=-1, center_y=-1,
+                             frame_offset=0):
     """
     width, height, frame_width, and frame_height are required if
     "data" is of type np.ndarray.
@@ -82,17 +83,18 @@ def create_stem_images_sparse(data, inner_radii, outer_radii,
         imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
                                                 width, height, frame_width,
                                                 frame_height, center_x,
-                                                center_y)
+                                                center_y, frame_offset)
 
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
                              width=None, height=None, frame_width=None,
-                             frame_height=None, center_x=-1, center_y=-1):
+                             frame_height=None, center_x=-1, center_y=-1,
+                             frame_offset=0):
     return create_stem_images_sparse(data, [inner_radius], [outer_radius],
                                      width, height, frame_width, frame_height,
-                                     center_x, center_y)[0]
+                                     center_x, center_y, frame_offset)[0]
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):

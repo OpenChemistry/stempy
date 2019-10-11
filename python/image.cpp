@@ -84,7 +84,8 @@ PYBIND11_MODULE(_image, m)
   m.def(
     "create_stem_images_sparse",
     (vector<STEMImage>(*)(const vector<vector<uint32_t>>&, const vector<int>&,
-                          const vector<int>&, int, int, int, int, int, int)) &
+                          const vector<int>&, int, int, int, int, int, int,
+                          int)) &
       createSTEMImagesSparse,
     py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images_sparse",
