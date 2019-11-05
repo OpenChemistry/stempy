@@ -52,6 +52,19 @@ PYBIND11_MODULE(_image, m)
             sizeof(uint64_t) });
     });
 
+  py::class_<Image<uint16_t>>(m, "_image_uint16", py::buffer_protocol())
+    .def_buffer([](Image<uint16_t>& i) {
+      return py::buffer_info(
+        i.data.get(),     /* Pointer to buffer */
+        sizeof(uint16_t), /* Size of one scalar */
+        py::format_descriptor<
+          uint16_t>::format(), /* Python struct-style format descriptor */
+        2,                     /* Number of dimensions */
+        { i.height, i.width }, /* Buffer dimensions */
+        { sizeof(uint16_t) * i.width, /* Strides (in bytes) for each index */
+          sizeof(uint16_t) });
+    });
+
   py::class_<CalculateThresholdsResults>(m, "_calculate_thresholds_results",
                                          py::buffer_protocol())
     .def_readonly("background_threshold",
@@ -106,5 +119,8 @@ PYBIND11_MODULE(_image, m)
   m.def("create_stem_histogram", &createSTEMHistogram,
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images", &createSTEMImages<PyReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        &maximumDiffractionPattern<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }

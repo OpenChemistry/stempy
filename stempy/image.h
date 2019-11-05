@@ -76,6 +76,12 @@ namespace stempy {
   std::vector<int> createSTEMHistogram(const STEMImage& inImage,
                                        const int numBins,
                                        const std::vector<double> bins);
+
+  template <typename InputIt>
+  Image<double> maximumDiffractionPattern(
+    InputIt first, InputIt last,
+    const Image<double>& darkreference = Image<double>());
+
   } // namespace stempy
 
 #endif

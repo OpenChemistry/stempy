@@ -632,6 +632,42 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
   return radialSum;
 }
 
+template <typename InputIt>
+Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
+                                        const Image<double>& darkreference)
+{
+  auto frameWidth = first->header.frameWidth;
+  auto frameHeight = first->header.frameHeight;
+  auto numDetectorPixels = frameWidth * frameHeight;
+  Image<double> maxDiffPattern(frameWidth, frameHeight);
+
+  std::fill(maxDiffPattern.data.get(),
+            maxDiffPattern.data.get() + numDetectorPixels, 0);
+  uint64_t numberOfImages = 0;
+  for (; first != last; ++first) {
+    auto block = std::move(*first);
+    auto blockData = block.data.get();
+    numberOfImages += block.header.imagesInBlock;
+    for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
+      auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
+      for (unsigned j = 0; j < numberOfPixels; j++) {
+        if (blockData[i * numberOfPixels + j] > maxDiffPattern.data[j]) {
+          maxDiffPattern.data[j] = blockData[i * numberOfPixels + j];
+        }
+      }
+    }
+  }
+
+  // If we have been given a darkreference substract it
+  if (darkreference.width > 0) {
+    for (unsigned i = 0; i < numDetectorPixels; i++) {
+      maxDiffPattern.data[i] -= darkreference.data[i];
+    }
+  }
+
+  return maxDiffPattern;
+}
+
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
   StreamReader::iterator first, StreamReader::iterator last,
@@ -658,4 +694,10 @@ template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReade
 template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
 
+template Image<double> maximumDiffractionPattern(
+  StreamReader::iterator first, StreamReader::iterator last,
+  const Image<double>& darkreference);
+template Image<double> maximumDiffractionPattern(
+  vector<Block>::iterator first, vector<Block>::iterator last,
+  const Image<double>& darkreference);
 }
