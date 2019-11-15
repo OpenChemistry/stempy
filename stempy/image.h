@@ -78,9 +78,11 @@ namespace stempy {
                                        const std::vector<double> bins);
 
   template <typename InputIt>
-  Image<double> maximumDiffractionPattern(
-    InputIt first, InputIt last,
-    const Image<double>& darkreference = Image<double>());
+  Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
+                                          const Image<double>& darkreference);
+
+  template <typename InputIt>
+  Image<double> maximumDiffractionPattern(InputIt first, InputIt last);
 
   } // namespace stempy
 

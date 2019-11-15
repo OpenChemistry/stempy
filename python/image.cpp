@@ -121,6 +121,12 @@ PYBIND11_MODULE(_image, m)
   m.def("create_stem_images", &createSTEMImages<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
-        &maximumDiffractionPattern<StreamReader::iterator>,
+        (Image<double>(*)(StreamReader::iterator, StreamReader::iterator,
+                          const Image<double>&)) &
+          maximumDiffractionPattern<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(StreamReader::iterator, StreamReader::iterator)) &
+          maximumDiffractionPattern<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }

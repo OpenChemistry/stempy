@@ -668,6 +668,15 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
   return maxDiffPattern;
 }
 
+template <typename InputIt>
+Image<double> maximumDiffractionPattern(InputIt first, InputIt last)
+{
+  // Create empty dark reference
+  Image<double> dark;
+
+  return maximumDiffractionPattern(first, last, dark);
+}
+
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
   StreamReader::iterator first, StreamReader::iterator last,
@@ -700,4 +709,8 @@ template Image<double> maximumDiffractionPattern(
 template Image<double> maximumDiffractionPattern(
   vector<Block>::iterator first, vector<Block>::iterator last,
   const Image<double>& darkreference);
+template Image<double> maximumDiffractionPattern(StreamReader::iterator first,
+                                                 StreamReader::iterator last);
+template Image<double> maximumDiffractionPattern(vector<Block>::iterator first,
+                                                 vector<Block>::iterator last);
 }
