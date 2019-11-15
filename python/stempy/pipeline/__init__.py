@@ -3,15 +3,15 @@ from functools import wraps
 from collections import OrderedDict
 
 class PipelineIO:
-    Image = 'image'
-    Frame = 'frame'
+    IMAGE = 'image'
+    FRAME = 'frame'
 
 class PipelineAggregation:
-    Sum = 'sum'
-    Max = 'max'
-    Min = 'min'
-    Mean = 'mean'
-    Median = 'median'
+    SUM = 'sum'
+    MAX = 'max'
+    MIN = 'min'
+    MEAN = 'mean'
+    MEDIAN = 'median'
 
 class Pipeline(abc.ABC):
 
@@ -25,8 +25,8 @@ def _ensure_parameters(f):
         setattr(f, 'PARAMETERS', OrderedDict())
 
 def pipeline(name=None, description=None,
-             input=PipelineIO.Frame, output=PipelineIO.Image,
-             aggregation=PipelineAggregation.Sum):
+             input=PipelineIO.FRAME, output=PipelineIO.IMAGE,
+             aggregation=PipelineAggregation.SUM):
 
     def _decorator(func):
         func.NAME = name
