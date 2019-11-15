@@ -2,6 +2,17 @@ import abc
 from functools import wraps
 from collections import OrderedDict
 
+class PipelineIO:
+    Image = 'image'
+    Frame = 'frame'
+
+class PipelineAggregation:
+    Sum = 'sum'
+    Max = 'max'
+    Min = 'min'
+    Mean = 'mean'
+    Median = 'median'
+
 class Pipeline(abc.ABC):
 
     def execute(self, files, **kwargs):
@@ -13,11 +24,16 @@ def _ensure_parameters(f):
     if not hasattr(f, 'PARAMETERS'):
         setattr(f, 'PARAMETERS', OrderedDict())
 
-def pipeline(name=None, description=None):
+def pipeline(name=None, description=None,
+             input=PipelineIO.Frame, output=PipelineIO.Image,
+             aggregation=PipelineAggregation.Sum):
 
     def _decorator(func):
         func.NAME = name
         func.DESCRIPTION = description
+        func.INPUT = input
+        func.OUTPUT = output
+        func.AGGREGATION = aggregation
         _ensure_parameters(func)
         return func
 
