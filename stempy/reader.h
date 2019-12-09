@@ -55,6 +55,8 @@ public:
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
 
+  float dataCaptured();
+
   class iterator
   {
   public:
@@ -119,8 +121,9 @@ private:
   std::vector<std::string> m_files;
   size_t m_curFileIndex = 0;
   int m_version;
+  int m_sector = -1;
 
-  void openNextFile();
+  bool openNextFile();
 
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_curFileIndex >= m_files.size(); }
@@ -128,11 +131,15 @@ private:
   Header readHeaderVersion1();
   Header readHeaderVersion2();
   Header readHeaderVersion3();
+  Header readHeaderVersion4();
 
   template<typename T>
   std::istream & read(T& value);
   template<typename T>
   std::istream & read(T* value, std::streamsize size);
+  std::istream & skip(std::streamoff pos);
+  int sector() { return m_sector; };
+
 };
 
 inline StreamReader::StreamReader(const std::string& path, uint8_t version)

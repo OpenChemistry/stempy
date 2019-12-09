@@ -49,7 +49,8 @@ PYBIND11_MODULE(_io, m)
     .def("begin",
          (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
     .def("end",
-         (StreamReader::iterator(StreamReader::*)()) & StreamReader::end);
+         (StreamReader::iterator(StreamReader::*)()) & StreamReader::end)
+    .def("data_captured", &StreamReader::dataCaptured);
 
   py::class_<PyReader::iterator>(m, "_pyreader_iterator")
     .def(py::init<PyReader*>());

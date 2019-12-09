@@ -9,6 +9,8 @@
 #include <sstream>
 #include <iomanip>
 #include <ThreadPool.h>
+#include <map>
+#include <regex>
 
 using std::copy;
 using std::invalid_argument;
@@ -55,7 +57,17 @@ StreamReader::StreamReader(const vector<string>& files, uint8_t version)
   openNextFile();
 }
 
-void StreamReader::openNextFile()
+int extractSector(std::string fileName) {
+   std::regex sectorRegex("(.*module\\d+.*\\.data)");
+   std::smatch matches;
+   if(std::regex_search(fileName, matches, sectorRegex)) {
+     return std::stoi(matches[1]);
+   }
+
+  return -1;
+}
+
+bool StreamReader::openNextFile()
 {
   // If we already have a file open, move on to the next index
   // Otherwise, assume we haven't opened any files yet
@@ -66,7 +78,7 @@ void StreamReader::openNextFile()
 
   // Don't do anything if we are at the end of the files
   if (atEnd())
-    return;
+    return false;
 
   const auto& file = m_files[m_curFileIndex];
   m_stream.open(file, ios::in | ios::binary);
@@ -76,6 +88,12 @@ void StreamReader::openNextFile()
     msg << "Unable to open file: " << file;
     throw invalid_argument(msg.str());
   }
+
+  if (m_version == 4) {
+    m_sector = extractSector(file);
+  }
+
+  return true;
 }
 
 template<typename T>
@@ -100,6 +118,13 @@ istream & StreamReader::read(T* value, streamsize size){
 
   return m_stream;
 }
+
+istream & StreamReader::skip(std::streamoff offset) {
+  m_stream.seekg(offset, m_stream.cur);
+
+  return m_stream;
+}
+
 
 Header StreamReader::readHeaderVersion1() {
 
@@ -201,6 +226,49 @@ Header StreamReader::readHeaderVersion3()
   return header;
 }
 
+// This was the documented format, but the current firmware implementation
+// has the x y order reversed.
+// unsigned int32 scan_number;
+// unsigned int32 frame_number;
+// unsigned int16 total_number_of_stem_x_positions_in_scan;
+// unsigned int16 total_number_of_stem_y_positions_in_scan;
+// unsigned int16 stem_x_position_of_frame;
+// unsigned int16 stem_y_position_of_frame;
+Header StreamReader::readHeaderVersion4()
+{
+
+  Header header;
+
+  header.imagesInBlock = 1;
+  header.frameWidth = 144;
+  header.frameHeight = 576;
+  header.version = 3;
+
+  // Read scan and frame number
+  uint32_t headerNumbers[2];
+  read(headerNumbers, 2 * sizeof(uint32_t));
+
+  int index = 0;
+  header.scanNumber = headerNumbers[index++];
+  header.frameNumber = headerNumbers[index];
+
+  // Now read the size and positions
+  uint16_t headerPositions[4];
+  index = 0;
+  read(headerPositions, 4 * sizeof(uint16_t));
+
+  header.scanWidth = headerPositions[index++];
+  header.scanHeight = headerPositions[index++];
+
+  // Now get the image numbers
+  auto scanXPosition = headerPositions[index++];
+  auto scanYPosition = headerPositions[index++];
+
+  header.imageNumbers.push_back(scanYPosition * header.scanWidth  + scanXPosition);
+
+  return header;
+}
+
 Block StreamReader::read()
 {
   if (atEnd())
@@ -255,6 +323,44 @@ void StreamReader::reset()
     m_stream.close();
 
   m_curFileIndex = 0;
+}
+
+float StreamReader::dataCaptured() {
+  int numberOfSectors = 0;
+
+  Header header;
+  try {
+    while(!atEnd()) {
+      // Check that we have a block to read
+      auto c = m_stream.peek();
+
+      // If we are at the end of the file, open up the next file and try
+      // again
+      if (c == EOF) {
+        if (!openNextFile()) {
+          break;
+        }
+      }
+
+      header = readHeaderVersion4();
+
+      for(unsigned i = 0; i < header.imagesInBlock; i++) {
+        numberOfSectors++;
+      }
+
+      auto dataSize =
+        header.frameWidth * header.frameHeight * header.imagesInBlock;
+      skip(dataSize*sizeof(uint16_t));
+    }
+
+    auto expectedNumberOfSectors = header.scanWidth*header.scanHeight*4;
+
+    return static_cast<float>(numberOfSectors)/expectedNumberOfSectors;
+
+} catch (EofException& e) {
+  throw invalid_argument("Unexpected EOF while processing stream.");
+}
+
 }
 
 }
