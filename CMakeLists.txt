@@ -39,15 +39,21 @@ include_directories(SYSTEM
   ${PYBIND11_INCLUDE_DIR}
 )
 
+find_package(HDF5 REQUIRED)
+include_directories(${HDF5_INCLUDE_DIRS})
+
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(_vtkm_src
   stempy/image.cpp
   stempy/electron.cpp
 )
-set(_src stempy/reader.cpp python/pyreader.cpp
+set(_src
+  stempy/reader.cpp
+  python/pyreader.cpp
   stempy/mask.cpp
-  stempy/electronthresholds.cpp)
+  stempy/electronthresholds.cpp
+  h5cpp/h5readwrite.cpp)
 
 set(_libs Threads::Threads)
 
