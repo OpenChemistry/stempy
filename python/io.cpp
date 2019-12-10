@@ -49,8 +49,7 @@ PYBIND11_MODULE(_io, m)
     .def("begin",
          (StreamReader::iterator(StreamReader::*)()) & StreamReader::begin)
     .def("end",
-         (StreamReader::iterator(StreamReader::*)()) & StreamReader::end)
-    .def("data_captured", &StreamReader::dataCaptured);
+         (StreamReader::iterator(StreamReader::*)()) & StreamReader::end);
 
   py::class_<PyReader::iterator>(m, "_pyreader_iterator")
     .def(py::init<PyReader*>());
@@ -61,4 +60,18 @@ PYBIND11_MODULE(_io, m)
     .def("read", (PyBlock(PyReader::*)()) & PyReader::read)
     .def("begin", (PyReader::iterator(PyReader::*)()) & PyReader::begin)
     .def("end", (PyReader::iterator(PyReader::*)()) & PyReader::end);
+
+  py::class_<SectorStreamReader::iterator>(m, "_sector_reader_iterator")
+    .def(py::init<SectorStreamReader*>());
+
+  py::class_<SectorStreamReader>(m, "_sector_reader")
+    .def(py::init<const std::string&>())
+    .def(py::init<const std::vector<std::string>&>())
+    .def("read", (Block(SectorStreamReader::*)()) & SectorStreamReader::read)
+    .def("reset", &SectorStreamReader::reset)
+    .def("begin",
+         (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::begin)
+    .def("end",
+         (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::end)
+    .def("data_captured", &SectorStreamReader::dataCaptured);
 }

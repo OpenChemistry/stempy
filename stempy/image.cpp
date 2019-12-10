@@ -693,14 +693,24 @@ template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(
   const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
   int height, int centerX, int centerY);
 
+template vector<STEMImage> createSTEMImages<SectorStreamReader::iterator>(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
+  int height, int centerX, int centerY);
+
+
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
 template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
+template Image<double> calculateAverage(SectorStreamReader::iterator first,
+                                        SectorStreamReader::iterator last);
 
 template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
 template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
+      int scanWidth, int scanHeight, int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(SectorStreamReader::iterator first, SectorStreamReader::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
 
 template Image<double> maximumDiffractionPattern(
@@ -709,8 +719,13 @@ template Image<double> maximumDiffractionPattern(
 template Image<double> maximumDiffractionPattern(
   vector<Block>::iterator first, vector<Block>::iterator last,
   const Image<double>& darkreference);
+template Image<double> maximumDiffractionPattern(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last,
+  const Image<double>& darkreference);
 template Image<double> maximumDiffractionPattern(StreamReader::iterator first,
                                                  StreamReader::iterator last);
 template Image<double> maximumDiffractionPattern(vector<Block>::iterator first,
                                                  vector<Block>::iterator last);
+template Image<double> maximumDiffractionPattern(SectorStreamReader::iterator first,
+                                                 SectorStreamReader::iterator last);
 }

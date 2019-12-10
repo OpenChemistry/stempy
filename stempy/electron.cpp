@@ -245,4 +245,10 @@ template ElectronCountedData electronCount(StreamReader::iterator first,
                                            double backgroundThreshold,
                                            double xRayThreshold, int scanRows,
                                            int scanColumns);
+template ElectronCountedData electronCount(SectorStreamReader::iterator first,
+                                           SectorStreamReader::iterator last,
+                                           Image<double>& darkReference,
+                                           double backgroundThreshold,
+                                           double xRayThreshold, int scanRows,
+                                           int scanColumns);
 }

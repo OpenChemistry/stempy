@@ -2,14 +2,15 @@ from collections import namedtuple
 import numpy as np
 import h5py
 
-from stempy._io import _reader
+from stempy._io import _reader, _sector_reader
 
 class FileVersion(object):
     VERSION1 = 1
     VERSION2 = 2
     VERSION3 = 3
+    VERSION4 = 4
 
-class Reader(_reader):
+class ReaderMixin(object):
     def __iter__(self):
         return self
 
@@ -21,7 +22,7 @@ class Reader(_reader):
             return b
 
     def read(self):
-        b = super(Reader, self).read()
+        b = super(ReaderMixin, self).read()
 
         # We are at the end of the stream
         if b.header.version == 0:
@@ -34,7 +35,16 @@ class Reader(_reader):
 
         return block
 
+class Reader(ReaderMixin, _reader):
+    pass
+
+class SectorReader(ReaderMixin, _sector_reader):
+    pass
+
 def reader(path, version=FileVersion.VERSION1):
+    if version == FileVersion.VERSION4:
+        return SectorReader(path)
+
     return Reader(path, version)
 
 def save_raw_data(path, data, zip_data=False):

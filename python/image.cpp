@@ -94,6 +94,8 @@ PYBIND11_MODULE(_image, m)
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images", &createSTEMImages<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
   m.def(
     "create_stem_images_sparse",
     (vector<STEMImage>(*)(const vector<vector<uint32_t>>&, const vector<int>&,
@@ -108,11 +110,17 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_average", &calculateAverage<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
   m.def("electron_count", &electronCount<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count", &electronCount<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds", &calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("radial_sum", &radialSum<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("get_container", &getContainer,
         py::call_guard<py::gil_scoped_release>());
@@ -128,5 +136,14 @@ PYBIND11_MODULE(_image, m)
   m.def("maximum_diffraction_pattern",
         (Image<double>(*)(StreamReader::iterator, StreamReader::iterator)) &
           maximumDiffractionPattern<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(SectorStreamReader::iterator, SectorStreamReader::iterator,
+                          const Image<double>&)) &
+          maximumDiffractionPattern<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(SectorStreamReader::iterator, SectorStreamReader::iterator)) &
+          maximumDiffractionPattern<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }

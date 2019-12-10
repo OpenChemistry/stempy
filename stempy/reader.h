@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <fstream>
+#include <map>
 
 namespace stempy {
 
@@ -40,27 +41,10 @@ struct Block {
   Block& operator=(Block&& i) noexcept = default;
 };
 
-class StreamReader {
-
-public:
-  StreamReader(const std::string &path, uint8_t version=1);
-  StreamReader(const std::vector<std::string>& files, uint8_t version = 1);
-
-  Block read();
-
-  // Reset to the start of the first file
-  void reset();
-
-  class iterator;
-  iterator begin() { return iterator(this); }
-  iterator end() { return iterator(nullptr); }
-
-  float dataCaptured();
-
-  class iterator
-  {
+template <typename T>
+class BlockIterator  {
   public:
-    using self_type = iterator;
+    using self_type = BlockIterator;
     using value_type = Block;
     using reference = Block&;
     using pointer = Block*;
@@ -79,7 +63,7 @@ public:
       value_type value;
     };
 
-    iterator(StreamReader* reader) : m_streamReader(reader)
+    BlockIterator(T* reader) : m_streamReader(reader)
     {
       if (reader)
         ++(*this);
@@ -112,9 +96,26 @@ public:
     bool operator!=(const self_type& rhs) { return !(*this == rhs); }
 
   private:
-    StreamReader* m_streamReader;
+    T* m_streamReader;
     value_type m_block;
   };
+
+class StreamReader {
+
+public:
+  StreamReader(const std::string &path, uint8_t version=1);
+  StreamReader(const std::vector<std::string>& files, uint8_t version = 1);
+
+  Block read();
+
+  // Reset to the start of the first file
+  void reset();
+
+  typedef BlockIterator<StreamReader> iterator;
+  iterator begin() { return iterator(this); }
+  iterator end() { return iterator(nullptr); }
+
+  float dataCaptured();
 
 private:
   std::ifstream m_stream;
@@ -144,6 +145,61 @@ private:
 
 inline StreamReader::StreamReader(const std::string& path, uint8_t version)
   : StreamReader(std::vector<std::string>{ path }, version)
+{}
+
+
+class SectorStreamReader {
+
+public:
+  SectorStreamReader(const std::string &path);
+  SectorStreamReader(const std::vector<std::string>& files);
+  ~SectorStreamReader();
+
+  Block read();
+
+  // Reset to the start of the first file
+  void reset();
+
+  float dataCaptured();
+
+  typedef BlockIterator<SectorStreamReader> iterator;
+  iterator begin() { return iterator(this); }
+  iterator end() { return iterator(nullptr); }
+
+private:
+  struct Frame {
+    Block block;
+    int sectorCount = 0;
+  };
+
+  struct SectorStream {
+    std::unique_ptr<std::ifstream> stream;
+    int sector = -1;
+    SectorStream(std::ifstream *str, int sec) : stream(str), sector(sec) {}
+  };
+
+  std::map<int, Frame> m_frameCache;
+  std::vector<std::string> m_files;
+  std::vector<SectorStream> m_streams;
+  std::vector<SectorStream>::iterator m_streamsIterator;
+  int m_sector = -1;
+
+  // Whether or not we are at the end of all of the files
+  bool atEnd() const { return m_streams.empty(); }
+
+  Header readHeader();
+  template<typename T>
+  std::istream & read(T& value);
+  template<typename T>
+  std::istream & read(T* value, std::streamsize size);
+  std::istream & skip(std::streamoff pos);
+  int sector() { return m_sector; };
+  void openFiles();
+
+};
+
+inline SectorStreamReader::SectorStreamReader(const std::string& path)
+  : SectorStreamReader(std::vector<std::string>{ path })
 {}
 }
 
