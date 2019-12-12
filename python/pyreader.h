@@ -5,6 +5,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <stempy/reader.h>
+#include <memory>
 
 namespace py = pybind11;
 
@@ -21,8 +22,9 @@ struct DataHolder
 struct PYBIND11_EXPORT PyBlock
 {
   Header header;
-  py::array_t<uint16_t> m_array;
-  DataHolder data;
+  //py::array_t<uint16_t> m_array;
+  //DataHolder data;
+  std::shared_ptr<uint16_t> data;
   PyBlock() = default;
   PyBlock(py::array_t<uint16_t> pyarray);
 };
