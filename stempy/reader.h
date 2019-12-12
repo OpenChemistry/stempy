@@ -183,7 +183,6 @@ private:
   std::vector<std::string> m_files;
   std::vector<SectorStream> m_streams;
   std::vector<SectorStream>::iterator m_streamsIterator;
-  int m_sector = -1;
 
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_streams.empty(); }
@@ -200,7 +199,6 @@ private:
   template <typename T>
   std::istream& read(std::ifstream& stream, T* value, std::streamsize size);
 
-  int sector() { return m_sector; };
   void openFiles();
   template <typename Functor>
   void readAll(Functor f);
