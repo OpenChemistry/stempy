@@ -723,10 +723,15 @@ template Image<double> maximumDiffractionPattern(
 template Image<double> maximumDiffractionPattern(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last,
   const Image<double>& darkreference);
+template Image<double> maximumDiffractionPattern(
+  PyReader::iterator first, PyReader::iterator last,
+  const Image<double>& darkreference);
 template Image<double> maximumDiffractionPattern(StreamReader::iterator first,
                                                  StreamReader::iterator last);
 template Image<double> maximumDiffractionPattern(vector<Block>::iterator first,
                                                  vector<Block>::iterator last);
 template Image<double> maximumDiffractionPattern(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last);
+template Image<double> maximumDiffractionPattern(
+  PyReader::iterator first, PyReader::iterator last);
 }

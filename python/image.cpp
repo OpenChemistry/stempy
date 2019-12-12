@@ -147,4 +147,9 @@ PYBIND11_MODULE(_image, m)
                           SectorStreamReader::iterator)) &
           maximumDiffractionPattern<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(PyReader::iterator,
+                          PyReader::iterator)) &
+          maximumDiffractionPattern<PyReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
 }
