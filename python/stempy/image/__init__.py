@@ -11,8 +11,8 @@ def get_hdf5_reader(h5file):
     totalImgNum=dset_frame_shape[0]
 
     dset_stem_shape=h5file['stem/images'].shape
-    scanwidth=dset_stem_shape[1]
-    scanheight=dset_stem_shape[2]
+    scanwidth=dset_stem_shape[2]
+    scanheight=dset_stem_shape[1]
 
     blocksize=32
     # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
