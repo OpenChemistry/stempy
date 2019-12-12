@@ -249,6 +249,22 @@ public:
                  const void* data);
 
   /**
+   * Create dataset at specified path.
+   * @param path The path where the dataset will be created.
+   * @param name The name of the dataset.
+   * @param dimensions The dimensions of the data.
+   * @param type The type of data to created.
+   * @param chunkDims The chunk dimensions, empty vector of no chunking.
+   * @return True on success, false on failure.
+   */
+  bool createDataSet(const std::string& path, const std::string& name,
+                     const std::vector<int>& dimensions,
+                     const DataType& type, const std::vector<int>& chunkDims = std::vector<int>());
+
+  bool updateData(const std::string& path, const DataType& type, void* data,
+                size_t* start = nullptr, size_t* counts = nullptr);
+
+  /**
    * Set an attribute on a specified path.
    * @param path The path where the attribute will be written.
    * @param name The name of the attribute.

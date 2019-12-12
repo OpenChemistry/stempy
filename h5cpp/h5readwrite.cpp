@@ -194,6 +194,112 @@ public:
     return status >= 0;
   }
 
+  bool createDataSet(const std::string& path, const std::string& name,
+                     const std::vector<int>& dims, hid_t dataTypeId,
+                     const std::vector<int>& chunkDims)
+  {
+    if (!fileIsValid()) {
+      cerr << "File is invalid\n";
+      return false;
+    }
+
+    std::vector<hsize_t> h5dim;
+    for (size_t i = 0; i < dims.size(); ++i) {
+      h5dim.push_back(static_cast<hsize_t>(dims[i]));
+    }
+    hid_t groupId = H5Gopen(m_fileId, path.c_str(), H5P_DEFAULT);
+
+    hid_t dcplId = H5P_DEFAULT;
+    if (!chunkDims.empty()) {
+      std::vector<hsize_t> h5ChunkDims;
+      for (size_t i = 0; i < chunkDims.size(); ++i) {
+        h5ChunkDims.push_back(static_cast<hsize_t>(chunkDims[i]));
+      }
+      dcplId = H5Pcreate(H5P_DATASET_CREATE);
+      H5Pset_chunk(dcplId, h5ChunkDims.size(), &h5ChunkDims[0]);
+    }
+    HIDCloser dcplCloser(dcplId, H5Pclose);
+
+    hid_t dataSpaceId =
+      H5Screate_simple(static_cast<int>(dims.size()), &h5dim[0], nullptr);
+    hid_t dataId = H5Dcreate(groupId, name.c_str(), dataTypeId, dataSpaceId,
+                             H5P_DEFAULT, dcplId, H5P_DEFAULT);
+
+    HIDCloser groupCloser(groupId, H5Gclose);
+    HIDCloser spaceCloser(dataSpaceId, H5Sclose);
+    HIDCloser dataCloser(dataId, H5Dclose);
+
+    return dataId >=0;
+  }
+
+  bool updateData(const string& path, hid_t memTypeId,
+                 const void* data,  size_t* start = nullptr,
+                size_t* counts = nullptr)
+  {
+    if (!fileIsValid()) {
+      cerr << "File is invalid\n";
+      return false;
+    }
+
+    hid_t dataSetId = H5Dopen(m_fileId, path.c_str(), H5P_DEFAULT);
+    if (dataSetId < 0) {
+      cerr << "Failed to get dataSetId\n";
+      return false;
+    }
+
+    HIDCloser dataSetCloser(dataSetId, H5Dclose);
+
+    hid_t dataSpaceId = H5Dget_space(dataSetId);
+    if (dataSpaceId < 0) {
+      cerr << "Failed to get dataSpaceId\n";
+      return false;
+    }
+
+    HIDCloser dataSpaceCloser(dataSpaceId, H5Sclose);
+
+    auto dims = getDimensions(path);
+    size_t ndims = dims.size();
+
+    auto stridesVector = vector<hsize_t>(ndims, 1);
+    //stridesVector[2] = 10;
+
+    vector<hsize_t> startVector;
+    if (start)
+      startVector = vector<hsize_t>(start, start + ndims);
+    else
+      startVector = vector<hsize_t>(ndims, 0);
+
+    vector<hsize_t> countsVector;
+    if (counts) {
+      countsVector = vector<hsize_t>(counts, counts + ndims);
+    } else {
+      countsVector.resize(ndims);
+      for (size_t i = 0; i < countsVector.size(); ++i) {
+        countsVector[i] = dims[i] - startVector[i];
+      }
+    }
+
+    auto status = H5Sselect_hyperslab(dataSpaceId, H5S_SELECT_SET, startVector.data(),
+                         stridesVector.data(), countsVector.data(), nullptr);
+    if (status < 0) {
+      cerr << "Failed to select hyperslab\n";
+      return false;
+    }
+
+    auto memSpaceId = H5Screate_simple(ndims, countsVector.data(), nullptr);
+    if (memSpaceId < 0) {
+      cerr << "Failed to get memSpaceId\n";
+      return false;
+    }
+    HIDCloser memSpaceCloser(memSpaceId, H5Sclose);
+
+    status = H5Dwrite (dataSetId, memTypeId, memSpaceId,
+                       dataSpaceId, H5P_DEFAULT, data);
+
+    return status >= 0;
+  }
+
+
   vector<int> getDimensions(const string& path)
   {
     vector<int> result;
@@ -770,6 +876,35 @@ bool H5ReadWrite::writeData(const string& path, const string& name,
   hid_t memTypeId = memIt->second;
 
   return m_impl->writeData(path, name, dims, data, dataTypeId, memTypeId);
+}
+
+bool H5ReadWrite::createDataSet(const std::string& path, const std::string& name,
+                                const std::vector<int>& dims, const DataType& type,
+                                const std::vector<int>& chunkDims)
+{
+  auto it = DataTypeToH5DataType.find(type);
+  if (it == DataTypeToH5DataType.end()) {
+    cerr << "Failed to get H5 data type for " << dataTypeToString(type) << "\n";
+    return false;
+  }
+
+  hid_t dataTypeId = it->second;
+
+  return m_impl->createDataSet(path, name, dims, dataTypeId, chunkDims);
+
+}
+
+bool H5ReadWrite::updateData(const std::string& path, const DataType& type, void* data, size_t* start,
+                size_t* counts)
+{
+  auto memIt = DataTypeToH5MemType.find(type);
+  if (memIt == DataTypeToH5MemType.end()) {
+    cerr << "Failed to get H5 mem type for " << dataTypeToString(type) << "\n";
+    return false;
+  }
+
+  hid_t memTypeId = memIt->second;
+  return m_impl->updateData(path, memTypeId, data, start, counts);
 }
 
 template <typename T>
