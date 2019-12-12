@@ -434,14 +434,14 @@ Block SectorStreamReader::read()
                                  std::default_delete<uint16_t[]>());
           std::fill(
             frame.block.data.get(),
-            frame.block.data.get() + header.scanWidth * header.scanHeight, 0);
+            frame.block.data.get() + frame.block.header.frameWidth * frame.block.header.frameHeight, 0);
         }
 
         auto frameX = sector * SECTOR_WIDTH;
         for (unsigned frameY = 0; frameY < FRAME_HEIGHT; frameY++) {
           auto offset = FRAME_WIDTH * frameY + frameX;
           read(frame.block.data.get() + offset,
-               header.frameWidth * sizeof(uint16_t));
+               SECTOR_WIDTH * sizeof(uint16_t));
         }
         frame.sectorCount++;
 
@@ -602,7 +602,7 @@ void SectorStreamReader::toHdf5(const std::string& path)
       auto pos = b.header.imageNumbers[0];
       auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
       start[0] = pos;
-      start[2] = sector * SECTOR_WIDTH;
+      start[2] = sector * b.header.frameWidth;
 
       auto data = b.data.get() + offset;
       if (!writer.updateData("/frames", h5::H5ReadWrite::DataType::UInt16, data,
