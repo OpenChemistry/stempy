@@ -102,3 +102,6 @@ def save_stem_images(outputFile, images, names):
         stem_group = f.require_group('stem')
         dataset = stem_group.create_dataset('images', data=images)
         dataset.attrs['names'] = names
+
+def write_hdf5(path, reader):
+    reader.to_hdf5(path)
