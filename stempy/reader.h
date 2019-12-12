@@ -165,6 +165,7 @@ public:
   typedef BlockIterator<SectorStreamReader> iterator;
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
+  void toHdf5(const std::string& path);
 
 private:
   struct Frame {
@@ -188,14 +189,21 @@ private:
   bool atEnd() const { return m_streams.empty(); }
 
   Header readHeader();
+  Header readHeader(std::ifstream& stream);
   template<typename T>
   std::istream & read(T& value);
   template<typename T>
   std::istream & read(T* value, std::streamsize size);
   std::istream & skip(std::streamoff pos);
+  template<typename T>
+  std::istream & read(std::ifstream& stream, T& value);
+  template<typename T>
+  std::istream & read(std::ifstream& stream, T* value, std::streamsize size);
+
   int sector() { return m_sector; };
   void openFiles();
-
+  template <typename Functor>
+  void readAll(Functor f);
 };
 
 inline SectorStreamReader::SectorStreamReader(const std::string& path)

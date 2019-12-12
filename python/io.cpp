@@ -73,5 +73,6 @@ PYBIND11_MODULE(_io, m)
          (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::begin)
     .def("end",
          (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::end)
-    .def("data_captured", &SectorStreamReader::dataCaptured);
+    .def("data_captured", &SectorStreamReader::dataCaptured)
+    .def("to_hdf5", &SectorStreamReader::toHdf5);
 }
