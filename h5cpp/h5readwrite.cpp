@@ -229,12 +229,11 @@ public:
     HIDCloser spaceCloser(dataSpaceId, H5Sclose);
     HIDCloser dataCloser(dataId, H5Dclose);
 
-    return dataId >=0;
+    return dataId >= 0;
   }
 
-  bool updateData(const string& path, hid_t memTypeId,
-                 const void* data,  size_t* start = nullptr,
-                size_t* counts = nullptr)
+  bool updateData(const string& path, hid_t memTypeId, const void* data,
+                  size_t* start = nullptr, size_t* counts = nullptr)
   {
     if (!fileIsValid()) {
       cerr << "File is invalid\n";
@@ -261,7 +260,7 @@ public:
     size_t ndims = dims.size();
 
     auto stridesVector = vector<hsize_t>(ndims, 1);
-    //stridesVector[2] = 10;
+    // stridesVector[2] = 10;
 
     vector<hsize_t> startVector;
     if (start)
@@ -279,8 +278,9 @@ public:
       }
     }
 
-    auto status = H5Sselect_hyperslab(dataSpaceId, H5S_SELECT_SET, startVector.data(),
-                         stridesVector.data(), countsVector.data(), nullptr);
+    auto status =
+      H5Sselect_hyperslab(dataSpaceId, H5S_SELECT_SET, startVector.data(),
+                          stridesVector.data(), countsVector.data(), nullptr);
     if (status < 0) {
       cerr << "Failed to select hyperslab\n";
       return false;
@@ -293,12 +293,11 @@ public:
     }
     HIDCloser memSpaceCloser(memSpaceId, H5Sclose);
 
-    status = H5Dwrite (dataSetId, memTypeId, memSpaceId,
-                       dataSpaceId, H5P_DEFAULT, data);
+    status = H5Dwrite(dataSetId, memTypeId, memSpaceId, dataSpaceId,
+                      H5P_DEFAULT, data);
 
     return status >= 0;
   }
-
 
   vector<int> getDimensions(const string& path)
   {
@@ -878,8 +877,10 @@ bool H5ReadWrite::writeData(const string& path, const string& name,
   return m_impl->writeData(path, name, dims, data, dataTypeId, memTypeId);
 }
 
-bool H5ReadWrite::createDataSet(const std::string& path, const std::string& name,
-                                const std::vector<int>& dims, const DataType& type,
+bool H5ReadWrite::createDataSet(const std::string& path,
+                                const std::string& name,
+                                const std::vector<int>& dims,
+                                const DataType& type,
                                 const std::vector<int>& chunkDims)
 {
   auto it = DataTypeToH5DataType.find(type);
@@ -891,11 +892,10 @@ bool H5ReadWrite::createDataSet(const std::string& path, const std::string& name
   hid_t dataTypeId = it->second;
 
   return m_impl->createDataSet(path, name, dims, dataTypeId, chunkDims);
-
 }
 
-bool H5ReadWrite::updateData(const std::string& path, const DataType& type, void* data, size_t* start,
-                size_t* counts)
+bool H5ReadWrite::updateData(const std::string& path, const DataType& type,
+                             void* data, size_t* start, size_t* counts)
 {
   auto memIt = DataTypeToH5MemType.find(type);
   if (memIt == DataTypeToH5MemType.end()) {

@@ -69,10 +69,10 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<const std::vector<std::string>&>())
     .def("read", (Block(SectorStreamReader::*)()) & SectorStreamReader::read)
     .def("reset", &SectorStreamReader::reset)
-    .def("begin",
-         (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::begin)
-    .def("end",
-         (SectorStreamReader::iterator(SectorStreamReader::*)()) & SectorStreamReader::end)
+    .def("begin", (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                    SectorStreamReader::begin)
+    .def("end", (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                  SectorStreamReader::end)
     .def("data_captured", &SectorStreamReader::dataCaptured)
     .def("to_hdf5", &SectorStreamReader::toHdf5);
 }

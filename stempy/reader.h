@@ -1,11 +1,11 @@
 #ifndef stempyreader_h
 #define stempyreader_h
 
-#include <iostream>
-#include <vector>
-#include <memory>
 #include <fstream>
+#include <iostream>
 #include <map>
+#include <memory>
+#include <vector>
 
 namespace stempy {
 
@@ -42,68 +42,70 @@ struct Block {
 };
 
 template <typename T>
-class BlockIterator  {
+class BlockIterator
+{
+public:
+  using self_type = BlockIterator;
+  using value_type = Block;
+  using reference = Block&;
+  using pointer = Block*;
+  using iterator_category = std::input_iterator_tag;
+  using difference_type = void; // Differences not allowed here
+
+  // This class is required for "*it++" to work properly
+  // But we really shouldn't use "*it++", because it is expensive
+  class postinc_return
+  {
   public:
-    using self_type = BlockIterator;
-    using value_type = Block;
-    using reference = Block&;
-    using pointer = Block*;
-    using iterator_category = std::input_iterator_tag;
-    using difference_type = void; // Differences not allowed here
-
-    // This class is required for "*it++" to work properly
-    // But we really shouldn't use "*it++", because it is expensive
-    class postinc_return
-    {
-    public:
-      postinc_return(reference value_) : value(value_) {}
-      value_type operator*() { return value; }
-
-    private:
-      value_type value;
-    };
-
-    BlockIterator(T* reader) : m_streamReader(reader)
-    {
-      if (reader)
-        ++(*this);
-    }
-
-    self_type operator++()
-    {
-      m_block = m_streamReader->read();
-      if (!m_block.data)
-        m_streamReader = nullptr;
-      return *this;
-    }
-
-    postinc_return operator++(int)
-    {
-      postinc_return temp(m_block);
-      ++(*this);
-      return temp;
-    }
-
-    reference operator*() { return m_block; }
-
-    pointer operator->() { return &m_block; }
-
-    bool operator==(const self_type& rhs)
-    {
-      return m_streamReader == rhs.m_streamReader;
-    }
-
-    bool operator!=(const self_type& rhs) { return !(*this == rhs); }
+    postinc_return(reference value_) : value(value_) {}
+    value_type operator*() { return value; }
 
   private:
-    T* m_streamReader;
-    value_type m_block;
+    value_type value;
   };
 
-class StreamReader {
+  BlockIterator(T* reader) : m_streamReader(reader)
+  {
+    if (reader)
+      ++(*this);
+  }
+
+  self_type operator++()
+  {
+    m_block = m_streamReader->read();
+    if (!m_block.data)
+      m_streamReader = nullptr;
+    return *this;
+  }
+
+  postinc_return operator++(int)
+  {
+    postinc_return temp(m_block);
+    ++(*this);
+    return temp;
+  }
+
+  reference operator*() { return m_block; }
+
+  pointer operator->() { return &m_block; }
+
+  bool operator==(const self_type& rhs)
+  {
+    return m_streamReader == rhs.m_streamReader;
+  }
+
+  bool operator!=(const self_type& rhs) { return !(*this == rhs); }
+
+private:
+  T* m_streamReader;
+  value_type m_block;
+};
+
+class StreamReader
+{
 
 public:
-  StreamReader(const std::string &path, uint8_t version=1);
+  StreamReader(const std::string& path, uint8_t version = 1);
   StreamReader(const std::vector<std::string>& files, uint8_t version = 1);
 
   Block read();
@@ -138,20 +140,19 @@ private:
   std::istream & read(T& value);
   template<typename T>
   std::istream & read(T* value, std::streamsize size);
-  std::istream & skip(std::streamoff pos);
+  std::istream& skip(std::streamoff pos);
   int sector() { return m_sector; };
-
 };
 
 inline StreamReader::StreamReader(const std::string& path, uint8_t version)
   : StreamReader(std::vector<std::string>{ path }, version)
 {}
 
-
-class SectorStreamReader {
+class SectorStreamReader
+{
 
 public:
-  SectorStreamReader(const std::string &path);
+  SectorStreamReader(const std::string& path);
   SectorStreamReader(const std::vector<std::string>& files);
   ~SectorStreamReader();
 
@@ -168,15 +169,17 @@ public:
   void toHdf5(const std::string& path);
 
 private:
-  struct Frame {
+  struct Frame
+  {
     Block block;
     int sectorCount = 0;
   };
 
-  struct SectorStream {
+  struct SectorStream
+  {
     std::unique_ptr<std::ifstream> stream;
     int sector = -1;
-    SectorStream(std::ifstream *str, int sec) : stream(str), sector(sec) {}
+    SectorStream(std::ifstream* str, int sec) : stream(str), sector(sec) {}
   };
 
   std::map<int, Frame> m_frameCache;
@@ -190,15 +193,15 @@ private:
 
   Header readHeader();
   Header readHeader(std::ifstream& stream);
-  template<typename T>
-  std::istream & read(T& value);
-  template<typename T>
-  std::istream & read(T* value, std::streamsize size);
-  std::istream & skip(std::streamoff pos);
-  template<typename T>
-  std::istream & read(std::ifstream& stream, T& value);
-  template<typename T>
-  std::istream & read(std::ifstream& stream, T* value, std::streamsize size);
+  template <typename T>
+  std::istream& read(T& value);
+  template <typename T>
+  std::istream& read(T* value, std::streamsize size);
+  std::istream& skip(std::streamoff pos);
+  template <typename T>
+  std::istream& read(std::ifstream& stream, T& value);
+  template <typename T>
+  std::istream& read(std::ifstream& stream, T* value, std::streamsize size);
 
   int sector() { return m_sector; };
   void openFiles();

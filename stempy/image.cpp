@@ -698,7 +698,6 @@ template vector<STEMImage> createSTEMImages<SectorStreamReader::iterator>(
   const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
   int height, int centerX, int centerY);
 
-
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
 template Image<double> calculateAverage(vector<Block>::iterator first,
@@ -710,8 +709,10 @@ template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReade
       int scanWidth, int scanHeight, int centerX, int centerY);
 template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
-template RadialSum<uint64_t> radialSum(SectorStreamReader::iterator first, SectorStreamReader::iterator last,
-      int scanWidth, int scanHeight, int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(SectorStreamReader::iterator first,
+                                       SectorStreamReader::iterator last,
+                                       int scanWidth, int scanHeight,
+                                       int centerX, int centerY);
 
 template Image<double> maximumDiffractionPattern(
   StreamReader::iterator first, StreamReader::iterator last,
@@ -726,6 +727,6 @@ template Image<double> maximumDiffractionPattern(StreamReader::iterator first,
                                                  StreamReader::iterator last);
 template Image<double> maximumDiffractionPattern(vector<Block>::iterator first,
                                                  vector<Block>::iterator last);
-template Image<double> maximumDiffractionPattern(SectorStreamReader::iterator first,
-                                                 SectorStreamReader::iterator last);
+template Image<double> maximumDiffractionPattern(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last);
 }
