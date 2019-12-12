@@ -18,7 +18,8 @@ RUN apt-get update && \
   apt-transport-https \
   ca-certificates \
   gnupg \
-  software-properties-common && \
+  software-properties-common \
+  libhdf5-dev && \
   apt-get clean all
 
 # Install CMake
@@ -71,7 +72,7 @@ RUN mkdir -p /build/stempy && \
   cd /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
-  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.4 \
+  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   /source/stempy . && \
   make -j4
 
