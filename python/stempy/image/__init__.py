@@ -172,3 +172,15 @@ def radial_sum(reader, center_x=-1, center_y=-1, scan_width=0, scan_height=0):
                               center_x, center_y)
 
     return np.array(sum, copy=False)
+
+
+def maximum_diffraction_pattern(reader, darkreference=None):
+    if darkreference is not None:
+        darkreference = darkreference._image
+        image = _image.maximum_diffraction_pattern(reader.begin(), reader.end(), darkreference)
+    else:
+        image = _image.maximum_diffraction_pattern(reader.begin(), reader.end())
+    img = ImageArray(np.array(image, copy = False))
+    img._image = image
+
+    return img
