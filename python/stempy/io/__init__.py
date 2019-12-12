@@ -3,6 +3,8 @@ import numpy as np
 import h5py
 
 from stempy._io import _reader, _sector_reader
+from stempy.image import get_hdf5_reader
+
 
 class FileVersion(object):
     VERSION1 = 1
@@ -42,10 +44,15 @@ class SectorReader(ReaderMixin, _sector_reader):
     pass
 
 def reader(path, version=FileVersion.VERSION1):
-    if version == FileVersion.VERSION4:
-        return SectorReader(path)
+    # check if the input is the hdf5 dataset
+    if(isinstance(path, h5py._hl.files.File)):
+        reader = get_hdf5_reader(path)
+    elif version == FileVersion.VERSION4:
+        reader = SectorReader(path)
+    else:
+        reader = Reader(path, version)
 
-    return Reader(path, version)
+    return reader
 
 def save_raw_data(path, data, zip_data=False):
     # Chunk cache size. Default is 1 MB
