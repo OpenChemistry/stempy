@@ -261,6 +261,15 @@ public:
                      const std::vector<int>& dimensions, const DataType& type,
                      const std::vector<int>& chunkDims = std::vector<int>());
 
+  /**
+   * Update dataset at specified path by selecting a hyperslab.
+   * @param path The path where the dataset will be created.
+   * @param type The type of data to update.
+   * @param data A pointer to the data to update.
+   * @param start The start of the block of data to be updated.
+   * @param counts The number of data elements to be updated.
+   * @return True on success, false on failure.
+   */
   bool updateData(const std::string& path, const DataType& type, void* data,
                   size_t* start = nullptr, size_t* counts = nullptr);
 
