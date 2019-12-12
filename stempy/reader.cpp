@@ -505,52 +505,6 @@ void SectorStreamReader::reset()
   m_streamsIterator = m_streams.begin();
 }
 
-// float SectorStreamReader::dataCaptured() {
-//   int numberOfSectors = 0;
-
-//   Header header;
-
-//   try {
-//     while(!m_streams.empty()) {
-//       while(m_streamsIterator != m_streams.end()) {
-//           auto &sectorStream = *m_streamsIterator;
-//           auto &stream = sectorStream.stream;
-//           auto c = stream->peek();
-//           // If we have reached the end close the stream and remove if from
-//           // the list.
-//           if (c == EOF) {
-//             stream->close();
-//             m_streamsIterator = m_streams.erase(m_streamsIterator);
-//             continue;
-//           }
-//           header = readHeader();
-//           for(unsigned i = 0; i < header.imagesInBlock; i++) {
-//             numberOfSectors++;void toHdf5(const std::string& path);
-//           }
-
-//           auto dataSize = header.frameWidth * header.frameHeight *
-//           header.imagesInBlock; skip(dataSize*sizeof(uint16_t));
-
-//           m_streamsIterator++;
-//       }
-//       // Start iterating from the beginning
-//       if (!m_streams.empty()) {
-//         m_streamsIterator = m_streams.begin();
-//       }
-//     }
-
-//     auto expectedNumberOfSectors = header.scanWidth*header.scanHeight*4;
-
-//     // Rest so we are ready to read again
-//     reset();
-
-//     return static_cast<float>(numberOfSectors)/expectedNumberOfSectors;
-
-//   } catch (EofException& e) {
-//     throw invalid_argument("Unexpected EOF while processing stream.");
-//   }
-// }
-
 template <typename Functor>
 void SectorStreamReader::readAll(Functor func)
 {

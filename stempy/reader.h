@@ -117,8 +117,6 @@ public:
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
 
-  float dataCaptured();
-
 private:
   std::ifstream m_stream;
   std::vector<std::string> m_files;
@@ -134,7 +132,6 @@ private:
   Header readHeaderVersion1();
   Header readHeaderVersion2();
   Header readHeaderVersion3();
-  Header readHeaderVersion4();
 
   template<typename T>
   std::istream & read(T& value);
