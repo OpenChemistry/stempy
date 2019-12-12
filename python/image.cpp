@@ -112,15 +112,21 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_average", &calculateAverage<PyReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
   m.def("electron_count", &electronCount<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count", &electronCount<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count", &electronCount<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds", &calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("radial_sum", &radialSum<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("get_container", &getContainer,
         py::call_guard<py::gil_scoped_release>());

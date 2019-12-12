@@ -597,7 +597,7 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
   for (; first != last; ++first) {
     // Move the block into the thread by copying... CUDA 10.1 won't allow
     // us to do something like "pool.enqueue([ b{ std::move(*first) }, ...])"
-    Block b = std::move(*first);
+    auto b = std::move(*first);
     // Instead of calling _runCalculateSTEMValues directly, we use a
     // lambda so that we can explicity delete the block. Otherwise,
     // the block will not be deleted until the threads are destroyed.
@@ -704,6 +704,9 @@ template Image<double> calculateAverage(vector<Block>::iterator first,
                                         vector<Block>::iterator last);
 template Image<double> calculateAverage(SectorStreamReader::iterator first,
                                         SectorStreamReader::iterator last);
+template Image<double> calculateAverage(PyReader::iterator first,
+                                        PyReader::iterator last);
+
 
 template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
       int scanWidth, int scanHeight, int centerX, int centerY);
@@ -711,6 +714,10 @@ template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::i
       int scanWidth, int scanHeight, int centerX, int centerY);
 template RadialSum<uint64_t> radialSum(SectorStreamReader::iterator first,
                                        SectorStreamReader::iterator last,
+                                       int scanWidth, int scanHeight,
+                                       int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(PyReader::iterator first,
+                                       PyReader::iterator last,
                                        int scanWidth, int scanHeight,
                                        int centerX, int centerY);
 

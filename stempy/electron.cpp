@@ -1,5 +1,6 @@
 #include "electron.h"
 #include "electronthresholds.h"
+#include "python/pyreader.h"
 
 #include "config.h"
 
@@ -247,6 +248,12 @@ template ElectronCountedData electronCount(StreamReader::iterator first,
                                            int scanColumns);
 template ElectronCountedData electronCount(SectorStreamReader::iterator first,
                                            SectorStreamReader::iterator last,
+                                           Image<double>& darkReference,
+                                           double backgroundThreshold,
+                                           double xRayThreshold, int scanRows,
+                                           int scanColumns);
+template ElectronCountedData electronCount(PyReader::iterator first,
+                                           PyReader::iterator last,
                                            Image<double>& darkReference,
                                            double backgroundThreshold,
                                            double xRayThreshold, int scanRows,
