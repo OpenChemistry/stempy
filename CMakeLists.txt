@@ -56,6 +56,7 @@ set(_src
   h5cpp/h5readwrite.cpp)
 
 set(_libs Threads::Threads)
+list(APPEND _libs "${HDF5_LIBRARIES}")
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
@@ -83,7 +84,7 @@ endif()
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(stem
-  PRIVATE ${_libs})
+  PRIVATE "${_libs}")
 
 set_target_properties(stem
   PROPERTIES
