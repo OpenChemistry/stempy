@@ -2,8 +2,7 @@ from collections import namedtuple
 import numpy as np
 import h5py
 
-from stempy._io import _reader, _sector_reader
-from stempy.image import get_hdf5_reader
+from stempy._io import _reader, _sector_reader, _pyreader
 
 
 class FileVersion(object):
@@ -37,11 +36,36 @@ class ReaderMixin(object):
 
         return block
 
+
 class Reader(ReaderMixin, _reader):
     pass
 
 class SectorReader(ReaderMixin, _sector_reader):
     pass
+
+class PyReader(ReaderMixin, _pyreader):
+    pass
+
+def get_hdf5_reader(h5file):
+    # the initialization is at the io.cpp
+    dset_frame=h5file['frames']
+    dset_frame_shape=dset_frame.shape
+    totalImgNum=dset_frame_shape[0]
+
+    dset_stem_shape=h5file['stem/images'].shape
+    scanwidth=dset_stem_shape[2]
+    scanheight=dset_stem_shape[1]
+
+    blocksize=32
+    # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
+    if("scan_positions" in h5file):
+        image_numbers = h5file['scan_positions']
+    else:
+        image_numbers = np.arange(totalImgNum)
+
+    h5reader = PyReader(dset_frame, image_numbers, scanwidth, scanheight, blocksize, totalImgNum)
+    return h5reader
+
 
 def reader(path, version=FileVersion.VERSION1):
     # check if the input is the hdf5 dataset

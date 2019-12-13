@@ -38,6 +38,7 @@ public:
            uint32_t totalImageNum);
 
   PyBlock read();
+  void reset();
 
   class iterator;
   iterator begin();

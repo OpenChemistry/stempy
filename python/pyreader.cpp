@@ -55,6 +55,7 @@ PyBlock PyReader::read()
 
   b.header = Header(imageWidth, imageHeight, m_imageNumInBlock, m_scanWidth,
                     m_scanHeight, imageNumberForBlock);
+  b.header.version = 3;
 
   m_currIndex = upperBound;
 
@@ -70,6 +71,11 @@ PyReader::iterator PyReader::begin()
 PyReader::iterator PyReader::end()
 {
   return iterator(nullptr);
+}
+
+void PyReader::reset()
+{
+  m_currIndex = 0;
 }
 
 } // namespace stempy

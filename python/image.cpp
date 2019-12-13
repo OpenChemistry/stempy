@@ -120,7 +120,9 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count", &electronCount<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def("calculate_thresholds", &calculateThresholds,
+  m.def("calculate_thresholds", &calculateThresholds<Block>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds", &calculateThresholds<PyBlock>,
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());

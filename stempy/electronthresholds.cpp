@@ -1,4 +1,5 @@
 #include "electronthresholds.h"
+#include "python/pyreader.h"
 
 #include <algorithm>
 #include <cmath>
@@ -49,7 +50,8 @@ private:
   const std::vector<uint64_t>& histogram;
 };
 
-CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
                                                Image<double>& darkReference,
                                                int numberOfSamples,
                                                double backgroundThresholdNSigma,
@@ -158,5 +160,18 @@ CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
 
   return ret;
 }
+
+template
+CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
+template
+CalculateThresholdsResults calculateThresholds(std::vector<PyBlock>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
 
 }

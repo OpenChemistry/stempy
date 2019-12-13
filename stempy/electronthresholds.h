@@ -20,8 +20,9 @@ struct CalculateThresholdsResults
   double backgroundThresholdNSigma = 0.0;
 };
 
+template <typename BlockType>
 CalculateThresholdsResults calculateThresholds(
-  std::vector<Block>& blocks, Image<double>& darkreference,
+  std::vector<BlockType>& blocks, Image<double>& darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 }

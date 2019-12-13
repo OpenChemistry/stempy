@@ -3,26 +3,7 @@ from stempy import _io
 import numpy as np
 import h5py
 from collections import namedtuple
-
-def get_hdf5_reader(h5file):
-    # the initialization is at the io.cpp
-    dset_frame=h5file['frames']
-    dset_frame_shape=dset_frame.shape
-    totalImgNum=dset_frame_shape[0]
-
-    dset_stem_shape=h5file['stem/images'].shape
-    scanwidth=dset_stem_shape[2]
-    scanheight=dset_stem_shape[1]
-
-    blocksize=32
-    # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
-    if("scan_positions" in h5file):
-        image_numbers = h5file['scan_positions']
-    else:
-        image_numbers = np.arange(totalImgNum)
-
-    h5reader = _io._pyreader(dset_frame, image_numbers, scanwidth, scanheight, blocksize, totalImgNum)
-    return h5reader
+from stempy.io import get_hdf5_reader
 
 def create_stem_images(input, inner_radii,
                        outer_radii, width=0, height=0,
