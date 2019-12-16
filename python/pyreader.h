@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <memory>
-#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <stempy/reader.h>
 
 namespace py = pybind11;
