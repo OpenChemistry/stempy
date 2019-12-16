@@ -124,6 +124,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   lsq::LevenbergMarquardt<double> optAlgo;
   optAlgo.setLineSearchAlgorithm(nullptr);
   optAlgo.setMaxIterationsLM(20);
+  optAlgo.setMaxIterations(20);
   optAlgo.setEpsilon(1e-6);
   GaussianErrorFunction* errorFunction =
     new GaussianErrorFunction(bins, histogram);
