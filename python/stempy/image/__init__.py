@@ -103,8 +103,11 @@ def electron_count(reader, darkreference, number_of_samples=40,
     for i in range(threshold_num_blocks):
         blocks.append(next(reader))
 
+    if hasattr(darkreference, '_image'):
+        darkreference = darkreference._image
+
     res = _image.calculate_thresholds(
-        [b._block for b in blocks], darkreference._image, number_of_samples,
+        [b._block for b in blocks], darkreference, number_of_samples,
         background_threshold_n_sigma, xray_threshold_n_sigma)
 
     background_threshold = res.background_threshold
@@ -129,7 +132,7 @@ def electron_count(reader, darkreference, number_of_samples=40,
     reader.reset()
 
     data = _image.electron_count(reader.begin(), reader.end(),
-                                 darkreference._image, background_threshold,
+                                 darkreference, background_threshold,
                                  xray_threshold, scan_width, scan_height)
 
     electron_counted_data = namedtuple('ElectronCountedData',

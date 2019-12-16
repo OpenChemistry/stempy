@@ -52,7 +52,7 @@ private:
 
 template <typename BlockType>
 CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
-                                               Image<double>& darkReference,
+                                               const double darkReference[],
                                                int numberOfSamples,
                                                double backgroundThresholdNSigma,
                                                double xRayThresholdNSigma)
@@ -82,7 +82,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
       // current data set. In the future we should be using the image number.
       samples[i * numberOfPixels + j] =
         blockData[randomFrameIndex * numberOfPixels + j] -
-        static_cast<int16_t>(darkReference.data[j]);
+        static_cast<int16_t>(darkReference[j]);
     }
   }
 
@@ -161,17 +161,39 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   return ret;
 }
 
-template
-CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
                                                Image<double>& darkReference,
                                                int numberOfSamples,
                                                double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
-template
-CalculateThresholdsResults calculateThresholds(std::vector<PyBlock>& blocks,
-                                               Image<double>& darkReference,
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
+                                               double xRayThresholdNSigma)
+{
+  return calculateThresholds(blocks, darkReference.data.get(), numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma);
+}
 
+template
+CalculateThresholdsResults calculateThresholds<Block>(std::vector<Block>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
+template
+CalculateThresholdsResults calculateThresholds<PyBlock>(std::vector<PyBlock>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
+template
+CalculateThresholdsResults calculateThresholds<Block>(std::vector<Block>& blocks,
+                                               const double darkReference[],
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
+template
+CalculateThresholdsResults calculateThresholds<PyBlock>(std::vector<PyBlock>& blocks,
+                                               const double darkReference[],
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma);
 }

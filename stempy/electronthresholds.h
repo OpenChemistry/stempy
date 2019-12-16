@@ -2,6 +2,12 @@
 #define STEMPY_ELECTRONTHRESHOLDS_H_
 
 #include "image.h"
+#include "python/pyreader.h"
+
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+
+namespace py = pybind11;
 
 namespace stempy {
 
@@ -23,6 +29,18 @@ struct CalculateThresholdsResults
 template <typename BlockType>
 CalculateThresholdsResults calculateThresholds(
   std::vector<BlockType>& blocks, Image<double>& darkreference,
+  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
+  double xRayThresholdNSigma = 10);
+
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
+  double xRayThresholdNSigma = 10);
+
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(
+  std::vector<BlockType>& blocks, py::array_t<double> darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 }

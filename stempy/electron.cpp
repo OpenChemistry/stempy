@@ -76,7 +76,7 @@ private:
 
 std::vector<uint32_t> maximalPointsParallel(
   std::vector<uint16_t>& frame, int rows, int columns,
-  double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
+  const double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet;
@@ -170,7 +170,7 @@ std::vector<uint32_t> maximalPoints(
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkReference,
+                                  const double darkReference[],
                                   double backgroundThreshold,
                                   double xRayThreshold, int scanWidth,
                                   int scanHeight)
@@ -211,12 +211,12 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, frameWidth, frameHeight, darkReference.data.get(),
+        frame, frameWidth, frameHeight, darkReference,
         backgroundThreshold, xRayThreshold);
 #else
       for (int j = 0; j < frameHeight * frameWidth; j++) {
         // Subtract darkfield reference
-        frame[j] -= darkReference.data[j];
+        frame[j] -= darkReference[j];
         // Threshold the electron events
         if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
           frame[j] = 0;
@@ -238,6 +238,18 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
   return ret;
 }
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  Image<double>& darkReference,
+                                  double backgroundThreshold,
+                                  double xRayThreshold, int scanWidth,
+                                  int scanHeight)
+{
+  return electronCount(first, last, darkReference.data.get(), backgroundThreshold,
+                       xRayThreshold, scanWidth, scanHeight);
+}
+
 
 // Instantiate the ones that can be used
 template ElectronCountedData electronCount(StreamReader::iterator first,

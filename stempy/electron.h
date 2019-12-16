@@ -22,6 +22,13 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   double backgroundThreshold,
                                   double xRayThreshold, int scanWidth = 0,
                                   int scanHeight = 0);
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  const double darkreference[],
+                                  double backgroundThreshold,
+                                  double xRayThreshold, int scanWidth = 0,
+                                  int scanHeight = 0);
 }
 
 #endif /* STEMPY_ELECTRON_H_ */
