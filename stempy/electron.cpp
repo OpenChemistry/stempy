@@ -74,9 +74,11 @@ private:
   double m_upper;
 };
 
-std::vector<uint32_t> maximalPointsParallel(
-  std::vector<uint16_t>& frame, int rows, int columns,
-  const double* darkReferenceData, double backgroundThreshold, double xRayThreshold)
+std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
+                                            int rows, int columns,
+                                            const double* darkReferenceData,
+                                            double backgroundThreshold,
+                                            double xRayThreshold)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet;
@@ -210,9 +212,9 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   frameStart + frameHeight * frameWidth);
 
 #ifdef VTKm
-      events[block.header.imageNumbers[i]] = maximalPointsParallel(
-        frame, frameWidth, frameHeight, darkReference,
-        backgroundThreshold, xRayThreshold);
+      events[block.header.imageNumbers[i]] =
+        maximalPointsParallel(frame, frameWidth, frameHeight, darkReference,
+                              backgroundThreshold, xRayThreshold);
 #else
       for (int j = 0; j < frameHeight * frameWidth; j++) {
         // Subtract darkfield reference
@@ -246,10 +248,10 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   double xRayThreshold, int scanWidth,
                                   int scanHeight)
 {
-  return electronCount(first, last, darkReference.data.get(), backgroundThreshold,
-                       xRayThreshold, scanWidth, scanHeight);
+  return electronCount(first, last, darkReference.data.get(),
+                       backgroundThreshold, xRayThreshold, scanWidth,
+                       scanHeight);
 }
-
 
 // Instantiate the ones that can be used
 template ElectronCountedData electronCount(StreamReader::iterator first,

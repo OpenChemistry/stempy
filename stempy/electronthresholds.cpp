@@ -170,31 +170,21 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
                                                double xRayThresholdNSigma)
 {
   return calculateThresholds(blocks, darkReference.data.get(), numberOfSamples,
-    backgroundThresholdNSigma, xRayThresholdNSigma);
+                             backgroundThresholdNSigma, xRayThresholdNSigma);
 }
 
-template
-CalculateThresholdsResults calculateThresholds<Block>(std::vector<Block>& blocks,
-                                               Image<double>& darkReference,
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
-template
-CalculateThresholdsResults calculateThresholds<PyBlock>(std::vector<PyBlock>& blocks,
-                                               Image<double>& darkReference,
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
-template
-CalculateThresholdsResults calculateThresholds<Block>(std::vector<Block>& blocks,
-                                               const double darkReference[],
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
-template
-CalculateThresholdsResults calculateThresholds<PyBlock>(std::vector<PyBlock>& blocks,
-                                               const double darkReference[],
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<Block>(
+  std::vector<Block>& blocks, Image<double>& darkReference, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, Image<double>& darkReference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<Block>(
+  std::vector<Block>& blocks, const double darkReference[], int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, const double darkReference[],
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
 }
