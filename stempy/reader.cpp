@@ -453,6 +453,8 @@ Block SectorStreamReader::read()
           return b;
         }
       }
+
+      m_streamsIterator++;
     }
     // Start iterating from the beginning
     if (!m_streams.empty()) {
@@ -577,32 +579,30 @@ void SectorStreamReader::toHdf5(const std::string& path)
   h5::H5ReadWrite writer(path.c_str(), mode);
 
   bool created = false;
-  auto func = [&writer, &created](int sector, Header& header, auto& skip,
-                                  auto& block) {
-    (void)skip;
+  for (auto iter = this->begin(); iter != this->end(); ++iter) {
+    auto b = std::move(*iter);
 
     // When we receive the first header we can create the file
     if (!created) {
-      std::vector<int> dims = { header.scanWidth * header.scanHeight,
+      std::vector<int> dims = { b.header.scanWidth * b.header.scanHeight,
                                 FRAME_WIDTH, FRAME_WIDTH };
       std::vector<int> chunkDims = { 1, FRAME_WIDTH, FRAME_HEIGHT };
       writer.createDataSet("/", "frames", dims,
                            h5::H5ReadWrite::DataType::UInt16, chunkDims);
-      std::vector<int> scanSize = { 0, header.scanHeight, header.scanWidth };
+      std::vector<int> scanSize = { 0, b.header.scanHeight, b.header.scanWidth };
       writer.createGroup("/stem");
       writer.createDataSet("/stem", "images", scanSize,
                            h5::H5ReadWrite::DataType::UInt64);
       created = true;
     }
 
-    auto b = block();
     size_t start[3] = { 0, 0, 0 };
-    size_t counts[3] = { 1, header.frameHeight, header.frameWidth };
+    size_t counts[3] = { 1, b.header.frameHeight, b.header.frameWidth };
     for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
       auto pos = b.header.imageNumbers[0];
       auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
       start[0] = pos;
-      start[2] = sector * b.header.frameWidth;
+      start[2] = 0;
 
       auto data = b.data.get() + offset;
       if (!writer.updateData("/frames", h5::H5ReadWrite::DataType::UInt16, data,
@@ -610,8 +610,7 @@ void SectorStreamReader::toHdf5(const std::string& path)
         throw std::runtime_error("Unable to update HDF5.");
       }
     }
-  };
-
-  readAll(func);
+  }
 }
+
 }
