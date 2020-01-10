@@ -127,5 +127,5 @@ def save_stem_images(outputFile, images, names):
         dataset = stem_group.create_dataset('images', data=images)
         dataset.attrs['names'] = names
 
-def write_hdf5(path, reader):
-    reader.to_hdf5(path)
+def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
+    reader.to_hdf5(path, format)

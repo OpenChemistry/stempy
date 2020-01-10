@@ -7,6 +7,10 @@
 #include <memory>
 #include <vector>
 
+namespace h5 {
+class H5ReadWrite;
+}
+
 namespace stempy {
 
 struct EofException : public std::exception
@@ -147,8 +151,13 @@ inline StreamReader::StreamReader(const std::string& path, uint8_t version)
 
 class SectorStreamReader
 {
-
 public:
+  enum class H5Format : int8_t
+  {
+    Frame,
+    DataCube
+  };
+
   SectorStreamReader(const std::string& path);
   SectorStreamReader(const std::vector<std::string>& files);
   ~SectorStreamReader();
@@ -163,7 +172,7 @@ public:
   typedef BlockIterator<SectorStreamReader> iterator;
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
-  void toHdf5(const std::string& path);
+  void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
 
 private:
   struct Frame
@@ -202,6 +211,8 @@ private:
   void openFiles();
   template <typename Functor>
   void readAll(Functor f);
+  void toHdf5FrameFormat(h5::H5ReadWrite& writer);
+  void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
 };
 
 inline SectorStreamReader::SectorStreamReader(const std::string& path)

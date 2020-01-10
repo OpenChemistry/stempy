@@ -573,11 +573,8 @@ float SectorStreamReader::dataCaptured()
   return static_cast<float>(numberOfSectors) / expectedNumberOfSectors;
 }
 
-void SectorStreamReader::toHdf5(const std::string& path)
+void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 {
-  h5::H5ReadWrite::OpenMode mode = h5::H5ReadWrite::OpenMode::WriteOnly;
-  h5::H5ReadWrite writer(path.c_str(), mode);
-
   bool created = false;
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
@@ -602,7 +599,6 @@ void SectorStreamReader::toHdf5(const std::string& path)
       auto pos = b.header.imageNumbers[0];
       auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
       start[0] = pos;
-      start[2] = 0;
 
       auto data = b.data.get() + offset;
       if (!writer.updateData("/frames", h5::H5ReadWrite::DataType::UInt16, data,
@@ -613,4 +609,51 @@ void SectorStreamReader::toHdf5(const std::string& path)
   }
 }
 
+void SectorStreamReader::toHdf5DataCubeFormat(h5::H5ReadWrite& writer)
+{
+  bool created = false;
+  for (auto iter = this->begin(); iter != this->end(); ++iter) {
+    auto b = std::move(*iter);
+
+    // When we receive the first header we can create the file
+    if (!created) {
+      std::vector<int> dims = { b.header.scanWidth, b.header.scanHeight,
+                                FRAME_WIDTH, FRAME_WIDTH };
+      std::vector<int> chunkDims = { 1, 1, FRAME_WIDTH, FRAME_HEIGHT };
+      writer.createDataSet("/", "datacube", dims,
+                           h5::H5ReadWrite::DataType::UInt16, chunkDims);
+      created = true;
+    }
+
+    size_t start[4] = { 0, 0, 0, 0 };
+    size_t counts[4] = { 1, 1, b.header.frameHeight, b.header.frameWidth };
+    for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+      auto pos = b.header.imageNumbers[0];
+      auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
+      auto x = pos % b.header.scanWidth;
+      auto y = pos / b.header.scanWidth;
+      start[0] = x;
+      start[1] = y;
+
+      auto data = b.data.get() + offset;
+      if (!writer.updateData("/datacube", h5::H5ReadWrite::DataType::UInt16,
+                             data, start, counts)) {
+        throw std::runtime_error("Unable to update HDF5.");
+      }
+    }
+  }
+}
+
+void SectorStreamReader::toHdf5(const std::string& path,
+                                SectorStreamReader::H5Format format)
+{
+  h5::H5ReadWrite::OpenMode mode = h5::H5ReadWrite::OpenMode::WriteOnly;
+  h5::H5ReadWrite writer(path.c_str(), mode);
+
+  if (format == H5Format::Frame) {
+    toHdf5FrameFormat(writer);
+  } else {
+    toHdf5DataCubeFormat(writer);
+  }
+}
 }

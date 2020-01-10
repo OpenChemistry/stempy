@@ -82,15 +82,26 @@ PYBIND11_MODULE(_io, m)
   py::class_<SectorStreamReader::iterator>(m, "_sector_reader_iterator")
     .def(py::init<SectorStreamReader*>());
 
-  py::class_<SectorStreamReader>(m, "_sector_reader")
-    .def(py::init<const std::string&>())
-    .def(py::init<const std::vector<std::string>&>())
-    .def("read", (Block(SectorStreamReader::*)()) & SectorStreamReader::read)
-    .def("reset", &SectorStreamReader::reset)
-    .def("begin", (SectorStreamReader::iterator(SectorStreamReader::*)()) &
-                    SectorStreamReader::begin)
-    .def("end", (SectorStreamReader::iterator(SectorStreamReader::*)()) &
-                  SectorStreamReader::end)
-    .def("data_captured", &SectorStreamReader::dataCaptured)
-    .def("to_hdf5", &SectorStreamReader::toHdf5);
+  py::class_<SectorStreamReader> sectorReader(m, "_sector_reader");
+
+  py::enum_<SectorStreamReader::H5Format>(sectorReader, "H5Format")
+    .value("Frame", SectorStreamReader::H5Format::Frame)
+    .value("DataCube", SectorStreamReader::H5Format::DataCube)
+    .export_values();
+
+  sectorReader.def(py::init<const std::string&>());
+  sectorReader.def(py::init<const std::vector<std::string>&>());
+  sectorReader.def("read",
+                   (Block(SectorStreamReader::*)()) & SectorStreamReader::read);
+  sectorReader.def("reset", &SectorStreamReader::reset);
+  sectorReader.def("begin",
+                   (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                     SectorStreamReader::begin);
+  sectorReader.def("end",
+                   (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                     SectorStreamReader::end);
+  sectorReader.def("data_captured", &SectorStreamReader::dataCaptured);
+  sectorReader.def("to_hdf5", &SectorStreamReader::toHdf5, "Write data to HDF5",
+                   py::arg("path"),
+                   py::arg("format") = SectorStreamReader::H5Format::Frame);
 }
