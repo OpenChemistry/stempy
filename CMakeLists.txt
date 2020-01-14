@@ -26,7 +26,7 @@ include_directories(
 )
 
 find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 find_package(PythonInterp 3 REQUIRED)
