@@ -28,43 +28,45 @@ double calculateVariance(std::vector<int16_t>& values, double mean)
   return sigma2;
 }
 
+struct GaussianErrorFunctor : Eigen::DenseFunctor<double>
+{
 
-struct GaussianErrorFunctor : Eigen::DenseFunctor<double> {
+  GaussianErrorFunctor(const Eigen::VectorXd& bins,
+                       const Eigen::VectorXd& histogram)
+    : Eigen::DenseFunctor<double>(3, bins.rows()), m_bins(bins),
+      m_histogram(histogram)
+  {}
 
-  GaussianErrorFunctor(const Eigen::VectorXd &bins, const Eigen::VectorXd &histogram) :
-    Eigen::DenseFunctor<double>(3,bins.rows()),
-        m_bins(bins),
-        m_histogram(histogram)
-    {}
+  int operator()(const InputType& x, ValueType& fvec)
+  {
+    auto num = -(m_bins - ValueType::Constant(values(), x[1])).array().square();
+    auto variance = pow(x[2], 2);
 
-    int operator()(const InputType &x, ValueType &fvec)  {
-      auto num = -(m_bins - ValueType::Constant(values(),x[1])).array().square();
-      auto variance = pow(x[2], 2);
+    fvec = x[0] * (num / (2 * variance)).exp() - m_histogram.array();
 
-      fvec = x[0] * (num / (2 * variance)).exp() - m_histogram.array();
+    return 0;
+  }
 
-      return 0;
-    }
+  int df(const InputType& x, JacobianType& jacobian)
+  {
+    auto means = ValueType::Constant(values(), x[1]);
+    auto tmp = (m_bins - means).array();
+    auto num = -tmp.square();
+    auto variance = pow(x[2], 2);
+    auto den = 2 * variance;
 
-    int df(const InputType &x, JacobianType &jacobian)  {
-      auto means = ValueType::Constant(values(), x[1]);
-      auto tmp = (m_bins - means).array();
-      auto num = -tmp.square();
-      auto variance = pow(x[2], 2);
-      auto den = 2 * variance;
+    auto j0 = (num / den).exp();
+    auto j1 = x[0] * tmp * j0 / variance;
 
-      auto j0 = (num / den).exp();
-      auto j1 = x[0] * tmp * j0 / variance;
+    jacobian.col(0) = j0;
+    jacobian.col(1) = j1;
+    jacobian.col(2) = tmp * j1 / x[2];
 
-      jacobian.col(0) = j0;
-      jacobian.col(1) = j1;
-      jacobian.col(2) = tmp * j1 / x[2];
+    return 0;
+  }
 
-      return 0;
-    }
-
-    Eigen::VectorXd m_bins;
-    Eigen::VectorXd m_histogram;
+  Eigen::VectorXd m_bins;
+  Eigen::VectorXd m_histogram;
 };
 
 template <typename BlockType>
@@ -145,7 +147,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   auto indexOfMaxElement =
     std::max_element(histogram.begin(), histogram.end()) - histogram.begin();
   state << static_cast<double>(histogram[indexOfMaxElement]),
-  (bins[indexOfMaxElement + 1] - bins[indexOfMaxElement]) / 2.0, stdDev;
+    (bins[indexOfMaxElement + 1] - bins[indexOfMaxElement]) / 2.0, stdDev;
 
   Eigen::LevenbergMarquardt<GaussianErrorFunctor> solver(gef);
   solver.minimize(state);

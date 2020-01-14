@@ -119,7 +119,8 @@ PYBIND11_MODULE(_image, m)
     .def_readonly("background_threshold_n_sigma",
                   &CalculateThresholdsResults::backgroundThresholdNSigma)
     .def_readonly("optimized_mean", &CalculateThresholdsResults::optimizedMean)
-    .def_readonly("optimized_std_dev", &CalculateThresholdsResults::optimizedStdDev);
+    .def_readonly("optimized_std_dev",
+                  &CalculateThresholdsResults::optimizedStdDev);
 
   py::class_<ElectronCountedData>(m, "_electron_counted_data",
                                   py::buffer_protocol())
