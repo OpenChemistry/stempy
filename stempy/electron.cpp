@@ -102,7 +102,6 @@ std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
   // Convert to std::vector<uint32_t>
   auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
   std::vector<uint32_t> outputVec;
-  outputVec.reserve(maximalPixelsPortal.GetNumberOfValues());
   for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
     if (maximalPixelsPortal.Get(i))
       outputVec.push_back(i);
