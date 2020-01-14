@@ -172,6 +172,8 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   ret.backgroundThresholdNSigma = backgroundThresholdNSigma;
   ret.xRayThreshold = xrayThreshold;
   ret.backgroundThreshold = backgroundThreshold;
+  ret.optimizedMean = optimizedMean;
+  ret.optimizedStdDev = optimizedStdDev;
 
   return ret;
 }

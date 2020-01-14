@@ -24,6 +24,8 @@ struct CalculateThresholdsResults
   int numberOfBins = 0;
   double xRayThresholdNSigma = 0.0;
   double backgroundThresholdNSigma = 0.0;
+  double optimizedMean = 0.0;
+  double optimizedStdDev = 0.0;
 };
 
 template <typename BlockType>

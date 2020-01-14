@@ -125,6 +125,8 @@ def electron_count(reader, darkreference, number_of_samples=40,
         print('x-ray threshold n sigma:', res.xray_threshold_n_sigma)
         print('background threshold n sigma:',
               res.background_threshold_n_sigma)
+        print('optimized mean:', res.optimized_mean)
+        print('optimized std dev:', res.optimized_std_dev)
         print('background threshold:', background_threshold)
         print('xray threshold:', xray_threshold)
 
