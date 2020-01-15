@@ -146,8 +146,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   Eigen::VectorXd state(3);
   auto indexOfMaxElement =
     std::max_element(histogram.begin(), histogram.end()) - histogram.begin();
-  state << static_cast<double>(histogram[indexOfMaxElement]),
-    (bins[indexOfMaxElement + 1] - bins[indexOfMaxElement]) / 2.0, stdDev;
+  state << static_cast<double>(histogram[indexOfMaxElement]), mean, stdDev;
 
   Eigen::LevenbergMarquardt<GaussianErrorFunctor> solver(gef);
   solver.minimize(state);
