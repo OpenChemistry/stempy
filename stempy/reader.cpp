@@ -26,8 +26,11 @@ using std::vector;
 
 namespace stempy {
 
+/// Currently the detector data is written in four sectors
 const int SECTOR_WIDTH = 144;
 const int SECTOR_HEIGHT = 576;
+
+/// This is the detector size at  NCEM
 const int FRAME_WIDTH = 576;
 const int FRAME_HEIGHT = 576;
 
