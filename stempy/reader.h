@@ -188,7 +188,7 @@ private:
     SectorStream(std::ifstream* str, int sec) : stream(str), sector(sec) {}
   };
 
-  std::map<int, Frame> m_frameCache;
+  std::map<uint32_t, Frame> m_frameCache;
   std::vector<std::string> m_files;
   std::vector<SectorStream> m_streams;
   std::vector<SectorStream>::iterator m_streamsIterator;
