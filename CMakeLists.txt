@@ -84,7 +84,7 @@ endif()
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(stem
-  PRIVATE "${_libs}")
+  PRIVATE ${_libs})
 
 set_target_properties(stem
   PROPERTIES
