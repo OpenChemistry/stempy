@@ -1,10 +1,12 @@
 #include "electronthresholds.h"
+#include "python/pyreader.h"
 
 #include <algorithm>
 #include <cmath>
 #include <random>
 
-#include <lsq/lsqcpp.h>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/LevenbergMarquardt>
 
 namespace stempy {
 
@@ -15,42 +17,61 @@ double calculateMean(std::vector<int16_t>& values)
 
 double calculateVariance(std::vector<int16_t>& values, double mean)
 {
-  double variance = 0;
+  double v1 = 0;
+  double sigma2;
 
   for (size_t i = 0; i < values.size(); i++) {
-    variance += pow(values[i], 2.0);
+    v1 += pow(values[i] - mean, 2.0);
   }
+  sigma2 = v1 / (values.size() - 1.0);
 
-  return (variance / (values.size() - 1)) - pow(mean, 2.0);
+  return sigma2;
 }
 
-class GaussianErrorFunction : public lsq::ErrorFunction<double>
+struct GaussianErrorFunctor : Eigen::DenseFunctor<double>
 {
 
-public:
-  GaussianErrorFunction(const std::vector<int32_t>& b,
-                        const std::vector<uint64_t>& h)
-    : bins(b), histogram(h)
+  GaussianErrorFunctor(const Eigen::VectorXd& bins,
+                       const Eigen::VectorXd& histogram)
+    : Eigen::DenseFunctor<double>(3, bins.rows()), m_bins(bins),
+      m_histogram(histogram)
+  {}
+
+  int operator()(const InputType& x, ValueType& fvec)
   {
-  }
-  void _evaluate(const lsq::Vectord& state, lsq::Vectord& outVal,
-                 lsq::Matrixd&) override
-  {
-    outVal.resize(bins.size());
-    for (size_t i = 0; i < bins.size(); ++i) {
-      outVal[i] =
-        (state[0] * exp(-0.5 * pow((this->bins[i] - state[1]) / state[2], 2)) -
-         histogram[i]);
-    }
+    auto num = -(m_bins - ValueType::Constant(values(), x[1])).array().square();
+    auto variance = pow(x[2], 2);
+
+    fvec = x[0] * (num / (2 * variance)).exp() - m_histogram.array();
+
+    return 0;
   }
 
-private:
-  const std::vector<int32_t>& bins;
-  const std::vector<uint64_t>& histogram;
+  int df(const InputType& x, JacobianType& jacobian)
+  {
+    auto means = ValueType::Constant(values(), x[1]);
+    auto tmp = (m_bins - means).array();
+    auto num = -tmp.square();
+    auto variance = pow(x[2], 2);
+    auto den = 2 * variance;
+
+    auto j0 = (num / den).exp();
+    auto j1 = x[0] * tmp * j0 / variance;
+
+    jacobian.col(0) = j0;
+    jacobian.col(1) = j1;
+    jacobian.col(2) = tmp * j1 / x[2];
+
+    return 0;
+  }
+
+  Eigen::VectorXd m_bins;
+  Eigen::VectorXd m_histogram;
 };
 
-CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
-                                               Image<double>& darkReference,
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
+                                               const double darkReference[],
                                                int numberOfSamples,
                                                double backgroundThresholdNSigma,
                                                double xRayThresholdNSigma)
@@ -80,7 +101,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
       // current data set. In the future we should be using the image number.
       samples[i * numberOfPixels + j] =
         blockData[randomFrameIndex * numberOfPixels + j] -
-        static_cast<int16_t>(darkReference.data[j]);
+        static_cast<int16_t>(darkReference[j]);
     }
   }
 
@@ -100,8 +121,8 @@ CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
                          static_cast<int>(mean - xrayThreshold * stdDev));
 
   auto numberOfBins = maxBin - minBin;
-  std::vector<uint64_t> histogram(numberOfBins, 0);
-  std::vector<int32_t> bins(numberOfBins);
+  std::vector<double> histogram(numberOfBins, 0.0);
+  std::vector<double> bins(numberOfBins);
 
   auto binEdge = minBin;
   for (int i = 0; i < numberOfBins; i++) {
@@ -118,30 +139,27 @@ CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
     histogram[binIndex] += 1;
   }
 
-  // Now optimize to file Gaussian
-  lsq::LevenbergMarquardt<double> optAlgo;
-  optAlgo.setLineSearchAlgorithm(nullptr);
-  optAlgo.setMaxIterationsLM(20);
-  optAlgo.setEpsilon(1e-6);
-  GaussianErrorFunction* errorFunction =
-    new GaussianErrorFunction(bins, histogram);
-  optAlgo.setErrorFunction(errorFunction);
-  lsq::Vectord initialState(3);
+  auto b = Eigen::Map<Eigen::VectorXd>(bins.data(), bins.size());
+  auto h = Eigen::Map<Eigen::VectorXd>(histogram.data(), histogram.size());
+
+  GaussianErrorFunctor gef(b, h);
+  Eigen::VectorXd state(3);
   auto indexOfMaxElement =
     std::max_element(histogram.begin(), histogram.end()) - histogram.begin();
-  initialState[0] = static_cast<double>(histogram[indexOfMaxElement]);
-  initialState[1] =
-    (bins[indexOfMaxElement + 1] - bins[indexOfMaxElement]) / 2.0;
-  initialState[2] = stdDev;
+  state << static_cast<double>(histogram[indexOfMaxElement]), mean, stdDev;
 
-  // optimize
-  auto result = optAlgo.optimize(initialState);
+  Eigen::LevenbergMarquardt<GaussianErrorFunctor> solver(gef);
+  solver.minimize(state);
 
-  if (!result.converged) {
+  if (solver.info() != Eigen::ComputationInfo::Success) {
     throw std::runtime_error("Optimization did not converge");
   }
+
+  auto optimizedMean = state[1];
+  auto optimizedStdDev = fabs(state[2]);
+
   auto backgroundThreshold =
-    result.state[1] + result.state[2] * backgroundThresholdNSigma;
+    optimizedMean + optimizedStdDev * backgroundThresholdNSigma;
 
   CalculateThresholdsResults ret;
   ret.numberOfSamples = numberOfSamples;
@@ -155,8 +173,35 @@ CalculateThresholdsResults calculateThresholds(std::vector<Block>& blocks,
   ret.backgroundThresholdNSigma = backgroundThresholdNSigma;
   ret.xRayThreshold = xrayThreshold;
   ret.backgroundThreshold = backgroundThreshold;
+  ret.optimizedMean = optimizedMean;
+  ret.optimizedStdDev = optimizedStdDev;
 
   return ret;
 }
 
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
+                                               Image<double>& darkReference,
+                                               int numberOfSamples,
+                                               double backgroundThresholdNSigma,
+                                               double xRayThresholdNSigma)
+{
+  return calculateThresholds(blocks, darkReference.data.get(), numberOfSamples,
+                             backgroundThresholdNSigma, xRayThresholdNSigma);
+}
+
+template CalculateThresholdsResults calculateThresholds<Block>(
+  std::vector<Block>& blocks, Image<double>& darkReference, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, Image<double>& darkReference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<Block>(
+  std::vector<Block>& blocks, const double darkReference[], int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, const double darkReference[],
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
 }

@@ -38,6 +38,23 @@ PYBIND11_MODULE(_io, m)
           sizeof(uint16_t) });
     });
 
+  py::class_<PyBlock>(m, "_pyblock", py::buffer_protocol())
+    .def_readonly("header", &PyBlock::header)
+    .def_buffer([](PyBlock& b) {
+      return py::buffer_info(
+        b.data.get(),     /* Pointer to buffer */
+        sizeof(uint16_t), /* Size of one scalar */
+        py::format_descriptor<
+          uint16_t>::format(), /* Python struct-style format descriptor */
+        3,                     /* Number of dimensions */
+        { b.header.imagesInBlock, b.header.frameHeight,
+          b.header.frameWidth }, /* Buffer dimensions */
+        { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
+          sizeof(uint16_t) *
+            b.header.frameHeight, /* Strides (in bytes) for each index */
+          sizeof(uint16_t) });
+    });
+
   py::class_<StreamReader::iterator>(m, "_reader_iterator")
     .def(py::init<StreamReader*>());
 
@@ -58,6 +75,33 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<py::object, std::vector<uint32_t>&, uint32_t, uint32_t,
                   uint32_t, uint32_t>())
     .def("read", (PyBlock(PyReader::*)()) & PyReader::read)
+    .def("reset", &PyReader::reset)
     .def("begin", (PyReader::iterator(PyReader::*)()) & PyReader::begin)
     .def("end", (PyReader::iterator(PyReader::*)()) & PyReader::end);
+
+  py::class_<SectorStreamReader::iterator>(m, "_sector_reader_iterator")
+    .def(py::init<SectorStreamReader*>());
+
+  py::class_<SectorStreamReader> sectorReader(m, "_sector_reader");
+
+  py::enum_<SectorStreamReader::H5Format>(sectorReader, "H5Format")
+    .value("Frame", SectorStreamReader::H5Format::Frame)
+    .value("DataCube", SectorStreamReader::H5Format::DataCube)
+    .export_values();
+
+  sectorReader.def(py::init<const std::string&>());
+  sectorReader.def(py::init<const std::vector<std::string>&>());
+  sectorReader.def("read",
+                   (Block(SectorStreamReader::*)()) & SectorStreamReader::read);
+  sectorReader.def("reset", &SectorStreamReader::reset);
+  sectorReader.def("begin",
+                   (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                     SectorStreamReader::begin);
+  sectorReader.def("end",
+                   (SectorStreamReader::iterator(SectorStreamReader::*)()) &
+                     SectorStreamReader::end);
+  sectorReader.def("data_captured", &SectorStreamReader::dataCaptured);
+  sectorReader.def("to_hdf5", &SectorStreamReader::toHdf5, "Write data to HDF5",
+                   py::arg("path"),
+                   py::arg("format") = SectorStreamReader::H5Format::Frame);
 }

@@ -3,26 +3,7 @@ from stempy import _io
 import numpy as np
 import h5py
 from collections import namedtuple
-
-def get_hdf5_reader(h5file):
-    # the initialization is at the io.cpp
-    dset_frame=h5file['frames']
-    dset_frame_shape=dset_frame.shape
-    totalImgNum=dset_frame_shape[0]
-
-    dset_stem_shape=h5file['stem/images'].shape
-    scanwidth=dset_stem_shape[1]
-    scanheight=dset_stem_shape[2]
-
-    blocksize=32
-    # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
-    if("scan_positions" in h5file):
-        image_numbers = h5file['scan_positions']
-    else:
-        image_numbers = np.arange(totalImgNum)
-
-    h5reader = _io._pyreader(dset_frame, image_numbers, scanwidth, scanheight, blocksize, totalImgNum)
-    return h5reader
+from stempy.io import get_hdf5_reader
 
 def create_stem_images(input, inner_radii,
                        outer_radii, width=0, height=0,
@@ -122,8 +103,11 @@ def electron_count(reader, darkreference, number_of_samples=40,
     for i in range(threshold_num_blocks):
         blocks.append(next(reader))
 
+    if hasattr(darkreference, '_image'):
+        darkreference = darkreference._image
+
     res = _image.calculate_thresholds(
-        [b._block for b in blocks], darkreference._image, number_of_samples,
+        [b._block for b in blocks], darkreference, number_of_samples,
         background_threshold_n_sigma, xray_threshold_n_sigma)
 
     background_threshold = res.background_threshold
@@ -141,6 +125,8 @@ def electron_count(reader, darkreference, number_of_samples=40,
         print('x-ray threshold n sigma:', res.xray_threshold_n_sigma)
         print('background threshold n sigma:',
               res.background_threshold_n_sigma)
+        print('optimized mean:', res.optimized_mean)
+        print('optimized std dev:', res.optimized_std_dev)
         print('background threshold:', background_threshold)
         print('xray threshold:', xray_threshold)
 
@@ -148,7 +134,7 @@ def electron_count(reader, darkreference, number_of_samples=40,
     reader.reset()
 
     data = _image.electron_count(reader.begin(), reader.end(),
-                                 darkreference._image, background_threshold,
+                                 darkreference, background_threshold,
                                  xray_threshold, scan_width, scan_height)
 
     electron_counted_data = namedtuple('ElectronCountedData',

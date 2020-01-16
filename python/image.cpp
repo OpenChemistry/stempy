@@ -13,6 +13,42 @@ namespace py = pybind11;
 using std::vector;
 using namespace stempy;
 
+// These are defined here so we don't leak the pybind11 types into the stemp lib
+// we may want to rethink in this is in the future.
+namespace stempy {
+
+template <typename BlockType>
+CalculateThresholdsResults calculateThresholds(
+  std::vector<BlockType>& blocks, py::array_t<double> darkReference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
+{
+  return calculateThresholds(blocks, darkReference.data(), numberOfSamples,
+                             backgroundThresholdNSigma, xRayThresholdNSigma);
+}
+
+template CalculateThresholdsResults calculateThresholds(
+  std::vector<Block>& blocks, py::array_t<double> darkReference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults calculateThresholds(
+  std::vector<PyBlock>& blocks, py::array_t<double> darkReference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  py::array_t<double> darkReference,
+                                  double backgroundThreshold,
+                                  double xRayThreshold, int scanWidth = 0,
+                                  int scanHeight = 0)
+{
+  return electronCount(first, last, darkReference.data(), backgroundThreshold,
+                       xRayThreshold, scanWidth, scanHeight);
+}
+
+} // namespace stempy
+
 PYBIND11_MODULE(_image, m)
 {
   py::class_<Image<uint64_t>>(m , "_image_uint64", py::buffer_protocol())
@@ -81,7 +117,10 @@ PYBIND11_MODULE(_image, m)
     .def_readonly("xray_threshold_n_sigma",
                   &CalculateThresholdsResults::xRayThresholdNSigma)
     .def_readonly("background_threshold_n_sigma",
-                  &CalculateThresholdsResults::backgroundThresholdNSigma);
+                  &CalculateThresholdsResults::backgroundThresholdNSigma)
+    .def_readonly("optimized_mean", &CalculateThresholdsResults::optimizedMean)
+    .def_readonly("optimized_std_dev",
+                  &CalculateThresholdsResults::optimizedStdDev);
 
   py::class_<ElectronCountedData>(m, "_electron_counted_data",
                                   py::buffer_protocol())
@@ -93,6 +132,8 @@ PYBIND11_MODULE(_image, m)
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images", &createSTEMImages<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def(
     "create_stem_images_sparse",
@@ -108,11 +149,69 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count", &electronCount<StreamReader::iterator>,
+  m.def("calculate_average", &calculateAverage<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def("calculate_thresholds", &calculateThresholds,
+  m.def("calculate_average", &calculateAverage<PyReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
+                                Image<double>&, double, double, int, int)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(SectorStreamReader::iterator,
+                                SectorStreamReader::iterator, Image<double>&,
+                                double, double, int, int)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
+                                Image<double>&, double, double, int, int)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "electron_count",
+    (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
+                            py::array_t<double>, double, double, int, int)) &
+      electronCount,
+    py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(
+          SectorStreamReader::iterator, SectorStreamReader::iterator,
+          py::array_t<double>, double, double, int, int)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "electron_count",
+    (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
+                            py::array_t<double>, double, double, int, int)) &
+      electronCount,
+    py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds",
+        (CalculateThresholdsResults(*)(vector<Block>&, Image<double>&, int,
+                                       double, double)) &
+          calculateThresholds,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds",
+        (CalculateThresholdsResults(*)(vector<PyBlock>&, Image<double>&, int,
+                                       double, double)) &
+          calculateThresholds,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds",
+        (CalculateThresholdsResults(*)(vector<Block>&, py::array_t<double>, int,
+                                       double, double)) &
+          calculateThresholds,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("calculate_thresholds",
+        (CalculateThresholdsResults(*)(vector<PyBlock>&, py::array_t<double>,
+                                       int, double, double)) &
+          calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("radial_sum", &radialSum<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("radial_sum", &radialSum<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("radial_sum", &radialSum<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("get_container", &getContainer,
         py::call_guard<py::gil_scoped_release>());
@@ -128,5 +227,20 @@ PYBIND11_MODULE(_image, m)
   m.def("maximum_diffraction_pattern",
         (Image<double>(*)(StreamReader::iterator, StreamReader::iterator)) &
           maximumDiffractionPattern<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(SectorStreamReader::iterator,
+                          SectorStreamReader::iterator, const Image<double>&)) &
+          maximumDiffractionPattern<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(SectorStreamReader::iterator,
+                          SectorStreamReader::iterator)) &
+          maximumDiffractionPattern<SectorStreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("maximum_diffraction_pattern",
+        (Image<double>(*)(PyReader::iterator,
+                          PyReader::iterator)) &
+          maximumDiffractionPattern<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }

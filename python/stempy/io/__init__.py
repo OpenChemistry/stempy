@@ -2,14 +2,16 @@ from collections import namedtuple
 import numpy as np
 import h5py
 
-from stempy._io import _reader
+from stempy._io import _reader, _sector_reader, _pyreader
+
 
 class FileVersion(object):
     VERSION1 = 1
     VERSION2 = 2
     VERSION3 = 3
+    VERSION4 = 4
 
-class Reader(_reader):
+class ReaderMixin(object):
     def __iter__(self):
         return self
 
@@ -21,7 +23,7 @@ class Reader(_reader):
             return b
 
     def read(self):
-        b = super(Reader, self).read()
+        b = super(ReaderMixin, self).read()
 
         # We are at the end of the stream
         if b.header.version == 0:
@@ -34,8 +36,47 @@ class Reader(_reader):
 
         return block
 
+
+class Reader(ReaderMixin, _reader):
+    pass
+
+class SectorReader(ReaderMixin, _sector_reader):
+    pass
+
+class PyReader(ReaderMixin, _pyreader):
+    pass
+
+def get_hdf5_reader(h5file):
+    # the initialization is at the io.cpp
+    dset_frame=h5file['frames']
+    dset_frame_shape=dset_frame.shape
+    totalImgNum=dset_frame_shape[0]
+
+    dset_stem_shape=h5file['stem/images'].shape
+    scanwidth=dset_stem_shape[2]
+    scanheight=dset_stem_shape[1]
+
+    blocksize=32
+    # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
+    if("scan_positions" in h5file):
+        image_numbers = h5file['scan_positions']
+    else:
+        image_numbers = np.arange(totalImgNum)
+
+    h5reader = PyReader(dset_frame, image_numbers, scanwidth, scanheight, blocksize, totalImgNum)
+    return h5reader
+
+
 def reader(path, version=FileVersion.VERSION1):
-    return Reader(path, version)
+    # check if the input is the hdf5 dataset
+    if(isinstance(path, h5py._hl.files.File)):
+        reader = get_hdf5_reader(path)
+    elif version == FileVersion.VERSION4:
+        reader = SectorReader(path)
+    else:
+        reader = Reader(path, version)
+
+    return reader
 
 def save_raw_data(path, data, zip_data=False):
     # Chunk cache size. Default is 1 MB
@@ -85,3 +126,6 @@ def save_stem_images(outputFile, images, names):
         stem_group = f.require_group('stem')
         dataset = stem_group.create_dataset('images', data=images)
         dataset.attrs['names'] = names
+
+def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
+    reader.to_hdf5(path, format)

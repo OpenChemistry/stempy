@@ -3,10 +3,14 @@
 
 namespace stempy {
 
-PyBlock::PyBlock(py::array_t<uint16_t> pyarray) : m_array(pyarray)
+PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
 {
-  this->data = DataHolder();
-  this->data.innerdata = m_array.data();
+  // For now just copy the memory, we should be able to use inplace, but we are
+  // seeing a double delete.
+  this->data.reset(new uint16_t[pyarray.size()],
+                   std::default_delete<uint16_t[]>());
+  std::memcpy(this->data.get(), pyarray.data(),
+              pyarray.size() * sizeof(u_int16_t));
 }
 
 PyReader::PyReader(py::object pyDataSet, std::vector<uint32_t>& imageNumbers,
@@ -51,6 +55,7 @@ PyBlock PyReader::read()
 
   b.header = Header(imageWidth, imageHeight, m_imageNumInBlock, m_scanWidth,
                     m_scanHeight, imageNumberForBlock);
+  b.header.version = 3;
 
   m_currIndex = upperBound;
 
@@ -66,6 +71,11 @@ PyReader::iterator PyReader::begin()
 PyReader::iterator PyReader::end()
 {
   return iterator(nullptr);
+}
+
+void PyReader::reset()
+{
+  m_currIndex = 0;
 }
 
 } // namespace stempy

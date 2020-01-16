@@ -26,7 +26,7 @@ include_directories(
 )
 
 find_package(Eigen3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 find_package(PythonInterp 3 REQUIRED)
@@ -39,17 +39,24 @@ include_directories(SYSTEM
   ${PYBIND11_INCLUDE_DIR}
 )
 
+find_package(HDF5 REQUIRED)
+include_directories(${HDF5_INCLUDE_DIRS})
+
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(_vtkm_src
   stempy/image.cpp
   stempy/electron.cpp
 )
-set(_src stempy/reader.cpp python/pyreader.cpp
+set(_src
+  stempy/reader.cpp
+  python/pyreader.cpp
   stempy/mask.cpp
-  stempy/electronthresholds.cpp)
+  stempy/electronthresholds.cpp
+  h5cpp/h5readwrite.cpp)
 
 set(_libs Threads::Threads)
+list(APPEND _libs "${HDF5_LIBRARIES}")
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
