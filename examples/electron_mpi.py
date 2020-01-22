@@ -36,7 +36,7 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         msg = 'Center must be of the form: center_x,center_y.'
         raise click.ClickException(msg)
 
-    center_x, center_y = [int(x) for x in center]
+    center = tuple(int(x) for x in center)
 
     inner_radii = inner_radii.split(',')
     outer_radii = outer_radii.split(',')
@@ -85,26 +85,19 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
 
     if rank == 0:
         # Write out the HDF5 file
-        scan_width = electron_counted_data.scan_width
-        scan_height = electron_counted_data.scan_height
-        frame_width = electron_counted_data.frame_width
-        frame_height = electron_counted_data.frame_height
+        scan_dimensions = electron_counted_data.scan_dimensions
+        frame_dimensions = electron_counted_data.frame_dimensions
 
-        io.save_electron_counts(output_file, global_frame_events, scan_width,
-                                scan_height, frame_width, frame_height)
+        io.save_electron_counts(output_file, global_frame_events,
+                                scan_dimensions, frame_dimensions)
 
         if generate_sparse:
             # Save out the sparse image
-            width = electron_counted_data.scan_width
-            height = electron_counted_data.scan_height
-            frame_width = electron_counted_data.frame_width
-            frame_height = electron_counted_data.frame_height
 
             stem_imgs = image.create_stem_images_sparse(
-                global_frame_events, inner_radii, outer_radii, width=width,
-                height=height, frame_width=frame_width,
-                frame_height=frame_height, center_x=center_x,
-                center_y=center_y)
+                global_frame_events, inner_radii, outer_radii,
+                scan_dimensions=scan_dimensions,
+                frame_dimensions=frame_dimensions, center=center)
 
             for i, img in enumerate(stem_imgs):
                 fig, ax = plt.subplots(figsize=(12, 12))

@@ -5,9 +5,8 @@ import h5py
 from collections import namedtuple
 from stempy.io import get_hdf5_reader
 
-def create_stem_images(input, inner_radii,
-                       outer_radii, width=0, height=0,
-                       center_x=-1, center_y=-1):
+def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
+                       center=(-1, -1)):
     # check if the input is the hdf5 dataset
     if(isinstance(input, h5py._hl.files.File)):
         reader = get_hdf5_reader(input)
@@ -15,19 +14,19 @@ def create_stem_images(input, inner_radii,
         reader = input
 
     imgs = _image.create_stem_images(reader.begin(), reader.end(),
-                                     inner_radii, outer_radii, width, height,
-                                     center_x, center_y)
+                                     inner_radii, outer_radii,
+                                     scan_dimensions, center)
 
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
 def create_stem_histogram(numBins, reader, inner_radii,
-                          outer_radii, width=0, height=0,
-                          center_x=-1, center_y=-1):
+                          outer_radii, scan_dimensions=(0, 0),
+                          center=(-1, -1)):
     # create stem images
     imgs = _image.create_stem_images(reader.begin(), reader.end(),
-                                     inner_radii, outer_radii, width, height,
-                                     center_x, center_y)
+                                     inner_radii, outer_radii,
+                                     scan_dimensions, center)
 
     allBins = []
     allFreqs = []
@@ -42,40 +41,38 @@ def create_stem_histogram(numBins, reader, inner_radii,
     return allBins, allFreqs
 
 # This one exists for backward compatibility
-def create_stem_image(reader, inner_radius, outer_radius, width=0, height=0,
-                      center_x=-1, center_y=-1):
+def create_stem_image(reader, inner_radius, outer_radius,
+                      scan_dimensions=(0, 0), center=(-1, -1)):
     return create_stem_images(reader, (inner_radius,), (outer_radius,),
-                              width, height, center_x, center_y)[0]
+                              scan_dimensions, center)[0]
 
 def create_stem_images_sparse(data, inner_radii, outer_radii,
-                              width=None, height=None, frame_width=None,
-                              frame_height=None, center_x=-1, center_y=-1,
-                              frame_offset=0):
+                              scan_dimensions=(0, 0), frame_dimensions=(0, 0),
+                              center=(-1, -1), frame_offset=0):
     """
-    width, height, frame_width, and frame_height are required if
+    scan_dimensions and frame_dimensions are required if
     "data" is of type np.ndarray.
     """
     if not isinstance(data, np.ndarray):
         # Assume it is an ElectronCountedData named tuple
         imgs = _image.create_stem_images_sparse(data._electron_counted_data,
                                                 inner_radii, outer_radii,
-                                                center_x, center_y)
+                                                center)
     else:
         imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
-                                                width, height, frame_width,
-                                                frame_height, center_x,
-                                                center_y, frame_offset)
+                                                scan_dimensions,
+                                                frame_dimensions, center,
+                                                frame_offset)
 
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
 
 def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             width=None, height=None, frame_width=None,
-                             frame_height=None, center_x=-1, center_y=-1,
-                             frame_offset=0):
+                             scan_dimensions=(0, 0), frame_dimensions=(0, 0),
+                             center=(-1, -1), frame_offset=0):
     return create_stem_images_sparse(data, [inner_radius], [outer_radius],
-                                     width, height, frame_width, frame_height,
-                                     center_x, center_y, frame_offset)[0]
+                                     scan_dimensions, frame_dimensions, center,
+                                     frame_offset)[0]
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):
@@ -96,7 +93,7 @@ def calculate_average(reader):
 
 def electron_count(reader, darkreference, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
-                   threshold_num_blocks=1, scan_width=0, scan_height=0,
+                   threshold_num_blocks=1, scan_dimensions=(0, 0),
                    verbose=False):
 
     blocks = []
@@ -135,27 +132,25 @@ def electron_count(reader, darkreference, number_of_samples=40,
 
     data = _image.electron_count(reader.begin(), reader.end(),
                                  darkreference, background_threshold,
-                                 xray_threshold, scan_width, scan_height)
+                                 xray_threshold, scan_dimensions)
 
     electron_counted_data = namedtuple('ElectronCountedData',
-                                       ['data', 'scan_width', 'scan_height',
-                                        'frame_width', 'frame_height'])
+                                       ['data', 'scan_dimensions',
+                                        'frame_dimensions'])
 
     # Convert to numpy array
     electron_counted_data.data = np.array([np.array(x) for x in data.data])
-    electron_counted_data.scan_width = data.scan_width
-    electron_counted_data.scan_height = data.scan_height
-    electron_counted_data.frame_width = data.frame_width
-    electron_counted_data.frame_height = data.frame_height
+    electron_counted_data.scan_dimensions = data.scan_dimensions
+    electron_counted_data.frame_dimensions = data.frame_dimensions
 
     # Store a copy of the underlying C++ object in case we need it later
     electron_counted_data._electron_counted_data = data
 
     return electron_counted_data
 
-def radial_sum(reader, center_x=-1, center_y=-1, scan_width=0, scan_height=0):
-    sum =  _image.radial_sum(reader.begin(), reader.end(), scan_width, scan_height,
-                              center_x, center_y)
+def radial_sum(reader, center=(-1, -1), scan_dimensions=(0, 0)):
+    sum =  _image.radial_sum(reader.begin(), reader.end(), scan_dimensions,
+                             center)
 
     return np.array(sum, copy=False)
 

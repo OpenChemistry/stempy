@@ -4,11 +4,11 @@ from stempy import io, image
 import numpy as np
 from PIL import Image
 
-def save_img(stem_image_data, name, width, height):
+def save_img(stem_image_data, name, scan_dimensions):
     min = np.min(stem_image_data)
     max = np.max(stem_image_data)
 
-    stem_image_data = stem_image_data.reshape((width, height))
+    stem_image_data = stem_image_data.reshape(scan_dimensions)
     stem_image_data = np.interp(stem_image_data, [min, max], [0, 256])
     stem_image_data = stem_image_data.astype(np.uint8)
     img = Image.fromarray(stem_image_data)
@@ -17,20 +17,17 @@ def save_img(stem_image_data, name, width, height):
 with h5py.File('stem_image.h5', 'r') as rf:
     frames = rf['/electron_events/frames'][()]
     attrs = rf['/electron_events/frames'].attrs
-    frame_width = attrs['Nx']
-    frame_height = attrs['Ny']
+    frame_dimensions = (attrs['Nx'], attrs['Ny'])
 
     attrs = rf['/electron_events/scan_positions'].attrs
-    scan_width = attrs['Nx']
-    scan_height = attrs['Ny']
+    scan_dimensions = (attrs['Nx'], attrs['Ny'])
 
-num_pixels = frame_width * frame_height
+num_pixels = frame_dimensions[0] * frame_dimensions[1]
 
 inner_radius = 40
 outer_radius = 288
 
 img = image.create_stem_image_sparse(frames, inner_radius, outer_radius,
-                                     scan_width, scan_height, frame_width,
-                                     frame_height)
+                                     scan_dimensions, frame_dimensions)
 
-save_img(img, 'img.png', scan_width, scan_height)
+save_img(img, 'img.png', scan_dimensions)

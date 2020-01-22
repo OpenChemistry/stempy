@@ -53,7 +53,7 @@ def main(argv):
     numBins = 100
     print('Generating histograms for input data')
     all_bins, all_freqs = image.create_stem_histogram(numBins, reader, inner_radii, outer_radii,
-                                                    width=160, height=160)
+                                                    scan_dimensions=(160, 160))
 
     # plot histogram
     for i in range(len(all_bins)):

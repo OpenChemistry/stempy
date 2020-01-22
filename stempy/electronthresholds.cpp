@@ -76,16 +76,15 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
                                                double backgroundThresholdNSigma,
                                                double xRayThresholdNSigma)
 {
-  auto frameWidth = blocks[0].header.frameWidth;
-  auto frameHeight = blocks[0].header.frameHeight;
-  auto numberOfPixels = frameWidth * frameHeight;
+  auto frameDimensions = blocks[0].header.frameDimensions;
+  auto numberOfPixels = frameDimensions.first * frameDimensions.second;
 
   // Setup random number engine
   std::random_device randomDevice;
   std::default_random_engine randomEngine(randomDevice());
 
   int numberSamplePixels =
-    frameWidth * frameHeight * numberOfSamples;
+    frameDimensions.first * frameDimensions.second * numberOfSamples;
   std::vector<int16_t> samples(numberSamplePixels, 0);
   for (int i = 0; i < numberOfSamples; i++) {
     std::uniform_int_distribution<int> randomBlockDist(0, blocks.size() - 1);

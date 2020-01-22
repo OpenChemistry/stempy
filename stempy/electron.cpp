@@ -15,6 +15,8 @@
 #include <sstream>
 #include <stdexcept>
 
+using stempy::Dimensions2D;
+
 #ifdef VTKm
 namespace {
 
@@ -75,19 +77,22 @@ private:
 };
 
 std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
-                                            int rows, int columns,
+                                            Dimensions2D frameDimensions,
                                             const double* darkReferenceData,
                                             double backgroundThreshold,
                                             double xRayThreshold)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet;
-  cellSet.SetPointDimensions(vtkm::Id2(rows, columns));
+  // frameDimensions.second corresponds to rows, and frameDimensions.first
+  // corresponds to columns
+  cellSet.SetPointDimensions(
+    vtkm::Id2(frameDimensions.second, frameDimensions.first));
 
   // Input handles
   auto frameHandle = vtkm::cont::make_ArrayHandle(frame);
-  auto darkRefHandle =
-    vtkm::cont::make_ArrayHandle(darkReferenceData, rows * columns);
+  auto darkRefHandle = vtkm::cont::make_ArrayHandle(
+    darkReferenceData, frameDimensions.first * frameDimensions.second);
 
   // Output
   vtkm::cont::ArrayHandle<bool> maximalPixels;
@@ -123,14 +128,17 @@ inline uint16_t mod(uint16_t x, uint16_t y)
 
 // Return the points in the frame with values larger than all 8 of their nearest
 // neighbors
-std::vector<uint32_t> maximalPoints(
-  const std::vector<uint16_t>& frame, int width, int height)
+std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
+                                    Dimensions2D frameDimensions)
 {
+  auto width = frameDimensions.first;
+  auto height = frameDimensions.second;
+
   std::vector<uint32_t> events;
   auto numberOfPixels = height * width;
   for (int i = 0; i < numberOfPixels; i++) {
-    auto row = i / width;
-    auto column = i % width;
+    int row = i / width;
+    int column = i % width;
     auto rightNeighbourColumn = mod((i + 1), width);
     auto leftNeighbourColumn = mod((i - 1), width);
     auto topNeighbourRow = mod((row - 1), height);
@@ -173,8 +181,8 @@ template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
                                   const double darkReference[],
                                   double backgroundThreshold,
-                                  double xRayThreshold, int scanWidth,
-                                  int scanHeight)
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions)
 {
   if (first == last) {
     std::ostringstream msg;
@@ -183,39 +191,40 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
   }
 
   // If we haven't been provided with width and height, try the header.
-  if (scanWidth == 0 || scanHeight == 0) {
-    scanWidth = first->header.scanWidth;
-    scanHeight = first->header.scanHeight;
+  if (scanDimensions.first == 0 || scanDimensions.second == 0) {
+    scanDimensions = first->header.scanDimensions;
   }
 
   // Raise an exception if we still don't have valid rows and columns
-  if (scanWidth <= 0 || scanHeight <= 0) {
+  if (scanDimensions.first <= 0 || scanDimensions.second <= 0) {
     std::ostringstream msg;
     msg << "No scan image size provided.";
     throw std::invalid_argument(msg.str());
   }
 
-  // Store the frameWidth and frameHeight from the first block
+  // Store the frameDimensions from the first block
   // It should be the same for all blocks
-  uint32_t frameWidth = first->header.frameWidth;
-  uint32_t frameHeight = first->header.frameHeight;
+  auto frameDimensions = first->header.frameDimensions;
 
   // Matrix to hold electron events.
-  std::vector<std::vector<uint32_t>> events(scanWidth * scanHeight);
+  std::vector<std::vector<uint32_t>> events(scanDimensions.first *
+                                            scanDimensions.second);
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
-      auto frameStart = data + i * frameWidth * frameHeight;
+      auto frameStart =
+        data + i * frameDimensions.first * frameDimensions.second;
       std::vector<uint16_t> frame(frameStart,
-                                  frameStart + frameHeight * frameWidth);
+                                  frameStart + frameDimensions.first *
+                                                 frameDimensions.second);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] =
-        maximalPointsParallel(frame, frameWidth, frameHeight, darkReference,
+        maximalPointsParallel(frame, frameDimensions, darkReference,
                               backgroundThreshold, xRayThreshold);
 #else
-      for (int j = 0; j < frameHeight * frameWidth; j++) {
+      for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
         // Subtract darkfield reference
         frame[j] -= darkReference[j];
         // Threshold the electron events
@@ -225,17 +234,15 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, frameWidth, frameHeight);
+        maximalPoints(frame, frameDimensions);
 #endif
     }
   }
 
   ElectronCountedData ret;
   ret.data = events;
-  ret.scanWidth = scanWidth;
-  ret.scanHeight = scanHeight;
-  ret.frameWidth = frameWidth;
-  ret.frameHeight = frameHeight;
+  ret.scanDimensions = scanDimensions;
+  ret.frameDimensions = frameDimensions;
 
   return ret;
 }
@@ -244,12 +251,11 @@ template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
                                   Image<double>& darkReference,
                                   double backgroundThreshold,
-                                  double xRayThreshold, int scanWidth,
-                                  int scanHeight)
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions)
 {
   return electronCount(first, last, darkReference.data.get(),
-                       backgroundThreshold, xRayThreshold, scanWidth,
-                       scanHeight);
+                       backgroundThreshold, xRayThreshold, scanDimensions);
 }
 
 // Instantiate the ones that can be used
@@ -257,18 +263,18 @@ template ElectronCountedData electronCount(StreamReader::iterator first,
                                            StreamReader::iterator last,
                                            Image<double>& darkReference,
                                            double backgroundThreshold,
-                                           double xRayThreshold, int scanRows,
-                                           int scanColumns);
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(SectorStreamReader::iterator first,
                                            SectorStreamReader::iterator last,
                                            Image<double>& darkReference,
                                            double backgroundThreshold,
-                                           double xRayThreshold, int scanRows,
-                                           int scanColumns);
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(PyReader::iterator first,
                                            PyReader::iterator last,
                                            Image<double>& darkReference,
                                            double backgroundThreshold,
-                                           double xRayThreshold, int scanRows,
-                                           int scanColumns);
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
 }

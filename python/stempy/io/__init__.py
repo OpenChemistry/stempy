@@ -53,8 +53,7 @@ def get_hdf5_reader(h5file):
     totalImgNum=dset_frame_shape[0]
 
     dset_stem_shape=h5file['stem/images'].shape
-    scanwidth=dset_stem_shape[2]
-    scanheight=dset_stem_shape[1]
+    scan_dimensions = (dset_stem_shape[2], dset_stem_shape[1])
 
     blocksize=32
     # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
@@ -63,7 +62,7 @@ def get_hdf5_reader(h5file):
     else:
         image_numbers = np.arange(totalImgNum)
 
-    h5reader = PyReader(dset_frame, image_numbers, scanwidth, scanheight, blocksize, totalImgNum)
+    h5reader = PyReader(dset_frame, image_numbers, scan_dimensions, blocksize, totalImgNum)
     return h5reader
 
 
@@ -97,7 +96,7 @@ def save_raw_data(path, data, zip_data=False):
         else:
             f.create_dataset('frames', data=data)
 
-def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detector_ny=None):
+def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
     with h5py.File(path, 'a') as f:
         group = f.require_group('electron_events')
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
@@ -105,16 +104,15 @@ def save_electron_counts(path, events, scan_nx, scan_ny, detector_nx=None, detec
         # be used to derive the scan_postions.
         # TODO: This should be passed to use
         scan_positions[...] = [i for i in range(0, events.shape[0])]
-        scan_positions.attrs['Nx'] = scan_nx
-        scan_positions.attrs['Ny'] = scan_ny
+        scan_positions.attrs['Nx'] = scan_dimensions[0]
+        scan_positions.attrs['Ny'] = scan_dimensions[1]
 
         coordinates_type = h5py.special_dtype(vlen=np.uint32)
         frames = group.create_dataset('frames', (events.shape[0],), dtype=coordinates_type)
         # Add the frame dimensions as attributes
-        if detector_nx is not None:
-            frames.attrs['Nx'] = detector_nx
-        if detector_ny is not None:
-            frames.attrs['Ny'] = detector_ny
+        if frame_dimensions is not None:
+            frames.attrs['Nx'] = frame_dimensions[0]
+            frames.attrs['Ny'] = frame_dimensions[1]
 
         frames[...] = events
 
