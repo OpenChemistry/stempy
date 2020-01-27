@@ -14,6 +14,8 @@ Welcome to stempy's documentation!
 
    conventions.rst
 
+   StempyH5Format.rst
+
 Indices and tables
 ==================
 
