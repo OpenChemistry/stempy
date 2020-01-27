@@ -12,6 +12,8 @@ Welcome to stempy's documentation!
 
    modules
 
+   conventions.rst
+
 Indices and tables
 ==================
 
