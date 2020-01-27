@@ -23,6 +23,11 @@ class ReaderMixin(object):
             return b
 
     def read(self):
+        """Read the next block of data from the file.
+
+        :return: The block of data that was read. Includes the header also.
+        :rtype: Block
+        """
         b = super(ReaderMixin, self).read()
 
         # We are at the end of the stream
@@ -67,6 +72,17 @@ def get_hdf5_reader(h5file):
 
 
 def reader(path, version=FileVersion.VERSION1):
+    """Create a file reader to read the data.
+
+    :param path: either the path to the file or an open h5py file.
+    :type path: str or h5py file
+    :param version: the version of the file reader to use (unused for
+                    h5py files).
+    :type version: version from stempy.io.FileVersion
+
+    :return: The reader for the data.
+    :rtype: stempy.io.Reader, stempy.io.SectorReader, or stempy.io.PyReader
+    """
     # check if the input is the hdf5 dataset
     if(isinstance(path, h5py._hl.files.File)):
         reader = get_hdf5_reader(path)
@@ -78,6 +94,15 @@ def reader(path, version=FileVersion.VERSION1):
     return reader
 
 def save_raw_data(path, data, zip_data=False):
+    """Save the raw data to an HDF5 file.
+
+    :param path: path to the HDF5 file.
+    :type path: str
+    :param data: the raw data to save.
+    :type data: numpy.ndarray
+    :param zip_data: whether or not to compress the data with gzip.
+    :type zip_data: bool
+    """
     # Chunk cache size. Default is 1 MB
     rdcc_nbytes = 1000000
 
@@ -97,6 +122,19 @@ def save_raw_data(path, data, zip_data=False):
             f.create_dataset('frames', data=data)
 
 def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
+    """Save the electron counted data to an HDF5 file.
+
+    :param path: path to the HDF5 file.
+    :type path: str
+    :param events: the electron counted data.
+    :type events: numpy.ndarray
+    :param scan_dimensions: the dimensions of the scan, where the order is
+                            (width, height).
+    :type scan_dimensions: tuple of ints of length 2
+    :param frame_dimensions: the dimensions of each frame, where the order is
+                             (width, height).
+    :type frame_dimensions: tuple of ints of length 2
+    """
     with h5py.File(path, 'a') as f:
         group = f.require_group('electron_events')
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
@@ -117,6 +155,16 @@ def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
         frames[...] = events
 
 def save_stem_images(outputFile, images, names):
+    """Save STEM images to an HDF5 file.
+
+    :param outputFile: path to the HDF5 file.
+    :type outputFile: str
+    :param images: an array of STEM images.
+    :type images: numpy.ndarray
+    :param names: a list of names for the STEM images, to be saved as
+                  attributes. Must be the same length as `images`.
+    :type names: a list of strings
+    """
     if len(images) != len(names):
         raise Exception('`images` and `names` must be the same length!')
 
@@ -126,4 +174,13 @@ def save_stem_images(outputFile, images, names):
         dataset.attrs['names'] = names
 
 def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
+    """Write the data from a SectorReader to an HDF5 file.
+
+    :param path: path to the output HDF5 file.
+    :type path: str
+    :param reader: a SectorReader that has opened the data.
+    :type reader: stempy.io.SectorReader
+    :param format: whether to write in frame format or data cube format.
+    :type format: SectorReader.H5Format
+    """
     reader.to_hdf5(path, format)

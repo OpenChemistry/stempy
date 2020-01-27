@@ -52,3 +52,29 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+# Modify this function to customize which classes/functions are skipped
+def autodoc_skip_member_handler(app, what, name, obj, skip, options):
+    # Exclude any names that start with a string in this list
+    exclude_startswith_list = ['_']
+
+    if any([name.startswith(x) for x in exclude_startswith_list]):
+        return True
+
+    # Exclude any names that match a string in this list
+    exclude_names = [
+        'ReaderMixin',
+        'PyReader',
+        'SectorReader',
+        'get_hdf5_reader'
+    ]
+
+    return name in exclude_names
+
+
+# Automatically called by sphinx at startup
+def setup(app):
+    # Connect the autodoc-skip-member event from apidoc to the callback
+    # This allows us to customize which classes/functions are skipped
+    app.connect('autodoc-skip-member', autodoc_skip_member_handler)
