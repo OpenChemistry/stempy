@@ -25,7 +25,10 @@ PYBIND11_MODULE(_io, m)
     .def_readonly("header", &Block::header)
     .def_buffer([](Block& b) {
       return py::buffer_info(
-        b.data.get(),     /* Pointer to buffer */
+        // const_cast is needed because the buffer_info constructor
+        // requires a non-const pointer. pybind11 also internally uses
+        // const_cast to achieve the same purpose.
+        const_cast<uint16_t*>(b.data.get()),       /* Pointer to buffer */
         sizeof(uint16_t), /* Size of one scalar */
         py::format_descriptor<
           uint16_t>::format(), /* Python struct-style format descriptor */
@@ -33,16 +36,19 @@ PYBIND11_MODULE(_io, m)
         { b.header.imagesInBlock, b.header.frameHeight,
           b.header.frameWidth }, /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
-          sizeof(uint16_t) *
-            b.header.frameHeight, /* Strides (in bytes) for each index */
-          sizeof(uint16_t) });
+          sizeof(uint16_t) * b.header.frameHeight,
+          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+      );
     });
 
   py::class_<PyBlock>(m, "_pyblock", py::buffer_protocol())
     .def_readonly("header", &PyBlock::header)
     .def_buffer([](PyBlock& b) {
       return py::buffer_info(
-        b.data.get(),     /* Pointer to buffer */
+        // const_cast is needed because the buffer_info constructor
+        // requires a non-const pointer. pybind11 also internally uses
+        // const_cast to achieve the same purpose.
+        const_cast<uint16_t*>(b.data.get()),       /* Pointer to buffer */
         sizeof(uint16_t), /* Size of one scalar */
         py::format_descriptor<
           uint16_t>::format(), /* Python struct-style format descriptor */
@@ -50,9 +56,9 @@ PYBIND11_MODULE(_io, m)
         { b.header.imagesInBlock, b.header.frameHeight,
           b.header.frameWidth }, /* Buffer dimensions */
         { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
-          sizeof(uint16_t) *
-            b.header.frameHeight, /* Strides (in bytes) for each index */
-          sizeof(uint16_t) });
+          sizeof(uint16_t) * b.header.frameHeight,
+          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+      );
     });
 
   py::class_<StreamReader::iterator>(m, "_reader_iterator")
