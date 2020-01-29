@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace h5 {
@@ -13,25 +14,30 @@ class H5ReadWrite;
 
 namespace stempy {
 
+// Convention is (x, y)
+using Coordinates2D = std::pair<int, int>;
+
+// Convention is (width, height)
+using Dimensions2D = std::pair<uint32_t, uint32_t>;
+
 struct EofException : public std::exception
 {
   const char* what () const throw () { return "EOF Exception"; }
 };
 
 struct Header {
-  uint32_t imagesInBlock = 0, frameHeight = 0, frameWidth = 0, version = 0,
-           timestamp = 0;
+  Dimensions2D scanDimensions = { 0, 0 };
+  Dimensions2D frameDimensions = { 0, 0 };
+  uint32_t imagesInBlock = 0, version = 0, timestamp = 0;
   uint32_t frameNumber = 0, scanNumber = 0;
-  uint16_t scanHeight = 0, scanWidth = 0;
   std::vector<uint32_t> imageNumbers;
 
   Header() = default;
   Header(const Header& header) = default;
   Header(Header&& header) noexcept = default;
   Header& operator=(Header&& header) noexcept = default;
-  Header(uint32_t frameWidth, uint32_t frameHeight, uint32_t imageNumInBlock,
-         uint32_t scanWidth, uint32_t scanHeight,
-         std::vector<uint32_t>& imageNumbers);
+  Header(Dimensions2D frameDimensions, uint32_t imageNumInBlock,
+         Dimensions2D scanDimensions, std::vector<uint32_t>& imageNumbers);
 };
 
 struct Block {

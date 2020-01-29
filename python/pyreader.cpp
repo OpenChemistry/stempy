@@ -11,11 +11,11 @@ PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
 }
 
 PyReader::PyReader(py::object pyDataSet, std::vector<uint32_t>& imageNumbers,
-                   uint32_t scanWidth, uint32_t scanHeight, uint32_t blockSize,
+                   Dimensions2D scanDimensions, uint32_t blockSize,
                    uint32_t totalImageNum)
   : m_pydataset(pyDataSet), m_imageNumbers(imageNumbers),
-    m_scanWidth(scanWidth), m_scanHeight(scanHeight),
-    m_imageNumInBlock(blockSize), m_totalImageNum(totalImageNum)
+    m_scanDimensions(scanDimensions), m_imageNumInBlock(blockSize),
+    m_totalImageNum(totalImageNum)
 {
 }
 
@@ -41,8 +41,7 @@ PyBlock PyReader::read()
   py::array_t<uint16_t> pyarray = getItems(sliceIndex);
 
   PyBlock b(pyarray);
-  uint32_t imageWidth = pyarray.shape()[2];
-  uint32_t imageHeight = pyarray.shape()[1];
+  Dimensions2D frameDimensions = { pyarray.shape()[2], pyarray.shape()[1] };
 
   // get the image numbers for current header
   std::vector<uint32_t> imageNumberForBlock;
@@ -50,8 +49,8 @@ PyBlock PyReader::read()
     imageNumberForBlock.push_back(m_imageNumbers[i]);
   }
 
-  b.header = Header(imageWidth, imageHeight, m_imageNumInBlock, m_scanWidth,
-                    m_scanHeight, imageNumberForBlock);
+  b.header = Header(frameDimensions, m_imageNumInBlock, m_scanDimensions,
+                    imageNumberForBlock);
   b.header.version = 3;
 
   m_currIndex = upperBound;

@@ -3,19 +3,19 @@
 
 #include "reader.h"
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace stempy {
 
   template <typename T>
-  struct Image {
-    uint32_t width = 0;
-    uint32_t height = 0;
+  struct Image
+  {
+    Dimensions2D dimensions = { 0, 0 };
     std::shared_ptr<T[]> data;
 
     Image() = default;
-    Image(uint32_t width, uint32_t height);
+    Image(Dimensions2D dimensions);
     Image(Image&& i) noexcept = default;
     Image& operator=(Image&& i) noexcept = default;
   };
@@ -27,13 +27,12 @@ namespace stempy {
 
   template <typename T>
   struct RadialSum {
-    uint32_t width = 0;
-    uint32_t height = 0;
+    Dimensions2D dimensions = { 0, 0 };
     uint32_t radii = 0;
     std::shared_ptr<T[]> data;
 
     RadialSum() = default;
-    RadialSum(uint32_t width, uint32_t height, uint32_t radii);
+    RadialSum(Dimensions2D dimensions, uint32_t radii);
     RadialSum(RadialSum&& i) noexcept = default;
     RadialSum& operator=(RadialSum&& i) noexcept = default;
   };
@@ -41,22 +40,22 @@ namespace stempy {
   using STEMImage = Image<uint64_t>;
 
   template <typename InputIt>
-  std::vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
-                                          const std::vector<int>& innerRadii,
-                                          const std::vector<int>& outerRadii,
-                                          int scanWidth = 0, int scanHeight = 0,
-                                          int centerX = -1, int centerY = -1);
+  std::vector<STEMImage> createSTEMImages(
+    InputIt first, InputIt last, const std::vector<int>& innerRadii,
+    const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
+    Coordinates2D center = { -1, -1 });
 
   std::vector<STEMImage> createSTEMImagesSparse(
     const std::vector<std::vector<uint32_t>>& sparseData,
     const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
-    int rows, int columns, int frameWidth, int frameHeight, int centerX = -1,
-    int centerY = -1, int frameOffset = 0);
+    Dimensions2D scanDimensions = { 0, 0 },
+    Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
+    int frameOffset = 0);
 
   struct ElectronCountedData;
   std::vector<STEMImage> createSTEMImagesSparse(
     const ElectronCountedData& sparseData, const std::vector<int>& innerRadii,
-    const std::vector<int>& outerRadii, int centerX = -1, int centerY = -1);
+    const std::vector<int>& outerRadii, Coordinates2D center = { -1, -1 });
 
   STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
                                  uint32_t numberOfPixels, uint16_t mask[],
@@ -65,10 +64,10 @@ namespace stempy {
   template <typename InputIt>
   Image<double> calculateAverage(InputIt first, InputIt last);
 
-
   template <typename InputIt>
-  RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth = 0, int scanHeight = 0,
-        int centerX = -1, int centerY = -1);
+  RadialSum<uint64_t> radialSum(InputIt first, InputIt last,
+                                Dimensions2D scanDimensions = { 0, 0 },
+                                Coordinates2D center = { -1, -1 });
 
   // bins for histogram
   std::vector<double> getContainer(const STEMImage& inImage, const int numBins);
@@ -84,6 +83,6 @@ namespace stempy {
   template <typename InputIt>
   Image<double> maximumDiffractionPattern(InputIt first, InputIt last);
 
-  } // namespace stempy
+} // namespace stempy
 
 #endif

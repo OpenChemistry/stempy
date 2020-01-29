@@ -40,64 +40,72 @@ template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
                                   py::array_t<double> darkReference,
                                   double backgroundThreshold,
-                                  double xRayThreshold, int scanWidth = 0,
-                                  int scanHeight = 0)
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions = {0, 0})
 {
   return electronCount(first, last, darkReference.data(), backgroundThreshold,
-                       xRayThreshold, scanWidth, scanHeight);
+                       xRayThreshold, scanDimensions);
 }
 
 } // namespace stempy
 
 PYBIND11_MODULE(_image, m)
 {
-  py::class_<Image<uint64_t>>(m , "_image_uint64", py::buffer_protocol())
+  py::class_<Image<uint64_t>>(m, "_image_uint64", py::buffer_protocol())
     .def_buffer([](Image<uint64_t>& i) {
-       return py::buffer_info(
-          i.data.get(),                                                 /* Pointer to buffer */
-          sizeof(uint64_t),                                             /* Size of one scalar */
-          py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
-          2,                                                            /* Number of dimensions */
-          { i.height, i.width },  /* Buffer dimensions */
-          { sizeof(uint64_t) * i.width,                           /* Strides (in bytes) for each index */
-            sizeof(uint64_t) });
+      return py::buffer_info(
+        i.data.get(),                              /* Pointer to buffer */
+        sizeof(uint64_t),                          /* Size of one scalar */
+        py::format_descriptor<uint64_t>::format(), /* Python struct-style format
+                                                      descriptor */
+        2,                                         /* Number of dimensions */
+        { i.dimensions.second, i.dimensions.first }, /* Buffer dimensions */
+        { sizeof(uint64_t) *
+            i.dimensions.first, /* Strides (in bytes) for each index */
+          sizeof(uint64_t) });
     });
 
-  py::class_<Image<double>>(m , "_image_double", py::buffer_protocol())
+  py::class_<Image<double>>(m, "_image_double", py::buffer_protocol())
     .def_buffer([](Image<double>& i) {
-       return py::buffer_info(
-          i.data.get(),                                                 /* Pointer to buffer */
-          sizeof(double),                                               /* Size of one scalar */
-          py::format_descriptor<double>::format(),                    /* Python struct-style format descriptor */
-          2,                                                            /* Number of dimensions */
-          { i.height, i.width},  /* Buffer dimensions */
-          { sizeof(double) * i.width,                           /* Strides (in bytes) for each index */
-            sizeof(double) });
+      return py::buffer_info(
+        i.data.get(),                            /* Pointer to buffer */
+        sizeof(double),                          /* Size of one scalar */
+        py::format_descriptor<double>::format(), /* Python struct-style format
+                                                    descriptor */
+        2,                                       /* Number of dimensions */
+        { i.dimensions.second, i.dimensions.first }, /* Buffer dimensions */
+        { sizeof(double) *
+            i.dimensions.first, /* Strides (in bytes) for each index */
+          sizeof(double) });
     });
 
-  py::class_<RadialSum<uint64_t>>(m , "_radial_sum_uint64", py::buffer_protocol())
+  py::class_<RadialSum<uint64_t>>(m, "_radial_sum_uint64",
+                                  py::buffer_protocol())
     .def_buffer([](RadialSum<uint64_t>& r) {
-       return py::buffer_info(
-          r.data.get(),                                                 /* Pointer to buffer */
-          sizeof(uint64_t),                                               /* Size of one scalar */
-          py::format_descriptor<uint64_t>::format(),                    /* Python struct-style format descriptor */
-          3,                                                            /* Number of dimensions */
-          { r.radii, r.height, r.width},  /* Buffer dimensions */
-          { sizeof(uint64_t) * r.width * r.height,                           /* Strides (in bytes) for each index */
-            sizeof(uint64_t) * r.width,
-            sizeof(uint64_t) });
+      return py::buffer_info(
+        r.data.get(),                              /* Pointer to buffer */
+        sizeof(uint64_t),                          /* Size of one scalar */
+        py::format_descriptor<uint64_t>::format(), /* Python struct-style format
+                                                      descriptor */
+        3,                                         /* Number of dimensions */
+        { r.radii, r.dimensions.second,
+          r.dimensions.first }, /* Buffer dimensions */
+        { sizeof(uint64_t) * r.dimensions.first *
+            r.dimensions.second, /* Strides (in bytes) for each index */
+          sizeof(uint64_t) * r.dimensions.first, sizeof(uint64_t) });
     });
 
   py::class_<Image<uint16_t>>(m, "_image_uint16", py::buffer_protocol())
     .def_buffer([](Image<uint16_t>& i) {
       return py::buffer_info(
-        i.data.get(),     /* Pointer to buffer */
-        sizeof(uint16_t), /* Size of one scalar */
-        py::format_descriptor<
-          uint16_t>::format(), /* Python struct-style format descriptor */
-        2,                     /* Number of dimensions */
-        { i.height, i.width }, /* Buffer dimensions */
-        { sizeof(uint16_t) * i.width, /* Strides (in bytes) for each index */
+        i.data.get(),                              /* Pointer to buffer */
+        sizeof(uint16_t),                          /* Size of one scalar */
+        py::format_descriptor<uint16_t>::format(), /* Python struct-style format
+                                                      descriptor */
+        2,                                         /* Number of dimensions */
+        { i.dimensions.second, i.dimensions.first }, /* Buffer dimensions */
+        { sizeof(uint16_t) *
+            i.dimensions.first, /* Strides (in bytes) for each index */
           sizeof(uint16_t) });
     });
 
@@ -125,26 +133,23 @@ PYBIND11_MODULE(_image, m)
   py::class_<ElectronCountedData>(m, "_electron_counted_data",
                                   py::buffer_protocol())
     .def_readonly("data", &ElectronCountedData::data)
-    .def_readonly("scan_width", &ElectronCountedData::scanWidth)
-    .def_readonly("scan_height", &ElectronCountedData::scanHeight)
-    .def_readonly("frame_width", &ElectronCountedData::frameWidth)
-    .def_readonly("frame_height", &ElectronCountedData::frameHeight);
+    .def_readonly("scan_dimensions", &ElectronCountedData::scanDimensions)
+    .def_readonly("frame_dimensions", &ElectronCountedData::frameDimensions);
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images", &createSTEMImages<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def(
-    "create_stem_images_sparse",
-    (vector<STEMImage>(*)(const vector<vector<uint32_t>>&, const vector<int>&,
-                          const vector<int>&, int, int, int, int, int, int,
-                          int)) &
-      createSTEMImagesSparse,
-    py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images_sparse",
+        (vector<STEMImage>(*)(const vector<vector<uint32_t>>&,
+                              const vector<int>&, const vector<int>&,
+                              Dimensions2D, Dimensions2D, Coordinates2D, int)) &
+          createSTEMImagesSparse,
+        py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images_sparse",
         (vector<STEMImage>(*)(const ElectronCountedData&, const vector<int>&,
-                              const vector<int>&, int, int)) &
+                              const vector<int>&, Coordinates2D)) &
           createSTEMImagesSparse,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
@@ -155,38 +160,38 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                Image<double>&, double, double, int, int)) &
+                                Image<double>&, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(SectorStreamReader::iterator,
                                 SectorStreamReader::iterator, Image<double>&,
-                                double, double, int, int)) &
+                                double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                Image<double>&, double, double, int, int)) &
+                                Image<double>&, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
-  m.def(
-    "electron_count",
-    (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                            py::array_t<double>, double, double, int, int)) &
-      electronCount,
-    py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
+                                py::array_t<double>, double, double,
+                                Dimensions2D)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(
           SectorStreamReader::iterator, SectorStreamReader::iterator,
-          py::array_t<double>, double, double, int, int)) &
+          py::array_t<double>, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
-  m.def(
-    "electron_count",
-    (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                            py::array_t<double>, double, double, int, int)) &
-      electronCount,
-    py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
+                                py::array_t<double>, double, double,
+                                Dimensions2D)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults(*)(vector<Block>&, Image<double>&, int,
                                        double, double)) &

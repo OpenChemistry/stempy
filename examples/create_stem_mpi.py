@@ -24,7 +24,7 @@ def main(files, center, inner_radii, outer_radii):
     if len(center) != 2:
         raise click.ClickException('Center must be of the form: center_x,center_y.')
 
-    center_x, center_y = [int(x) for x in center]
+    center = tuple(int(x) for x in center)
 
     inner_radii = inner_radii.split(',')
     outer_radii = outer_radii.split(',')
@@ -48,13 +48,12 @@ def main(files, center, inner_radii, outer_radii):
 
     # Get the scan image size
     block = reader.read()
-    width = block.header.scan_width
-    height = block.header.scan_height
+    scan_dimensions = block.header.scan_dimensions
     reader.reset()
-    local_stems = image.create_stem_images(reader, inner_radii, outer_radii, center_x=center_x, center_y=center_y)
+    local_stems = image.create_stem_images(reader, inner_radii, outer_radii, center=center)
 
     # Now reduce to root
-    global_stems = [np.zeros(width*height, dtype='uint64') for _ in range(len(inner_radii))]
+    global_stems = [np.zeros(scan_dimensions[0] * scan_dimensions[1], dtype='uint64') for _ in range(len(inner_radii))]
     for i in range(len(inner_radii)):
         comm.Reduce(local_stems[i], global_stems[i], op=MPI.SUM)
 
@@ -67,7 +66,7 @@ def main(files, center, inner_radii, outer_radii):
             cmap = plt.cm.viridis
             norm = plt.Normalize(vmin=vmin)
 
-            stem_image = cmap(norm(global_stem.reshape(height, width)))
+            stem_image = cmap(norm(global_stem.reshape(scan_dimensions[1], scan_dimensions[0])))
             filename = 'stem_%d_%d.png' % (inner, outer)
             plt.imsave(filename, stem_image)
 
