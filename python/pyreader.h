@@ -11,20 +11,32 @@ namespace py = pybind11;
 
 namespace stempy {
 
-struct DataHolder
+struct PYBIND11_EXPORT DataHolder
 {
   DataHolder() = default;
-  const uint16_t* innerdata = nullptr;
-  const uint16_t* get() { return innerdata; }
-  void reset() { return; }
+
+  const uint16_t* get()
+  {
+    if (!this->array) {
+      return nullptr;
+    }
+
+    return this->array->data();
+  }
+
+  void reset()
+  {
+    py::gil_scoped_acquire gil;
+    this->array.reset();
+  }
+
+  std::shared_ptr<py::array_t<uint16_t>> array;
 };
 
 struct PYBIND11_EXPORT PyBlock
 {
   Header header;
-  // py::array_t<uint16_t> m_array;
-  // DataHolder data;
-  std::shared_ptr<uint16_t> data;
+  DataHolder data;
   PyBlock() = default;
   PyBlock(py::array_t<uint16_t> pyarray);
 };
