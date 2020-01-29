@@ -137,8 +137,8 @@ std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
   std::vector<uint32_t> events;
   auto numberOfPixels = height * width;
   for (int i = 0; i < numberOfPixels; i++) {
-    int row = i / width;
-    int column = i % width;
+    auto row = i / width;
+    auto column = i % width;
     auto rightNeighbourColumn = mod((i + 1), width);
     auto leftNeighbourColumn = mod((i - 1), width);
     auto topNeighbourRow = mod((row - 1), height);
@@ -148,26 +148,45 @@ std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
     auto topNeighbourRowIndex = topNeighbourRow * width;
     auto rowIndex = row * width;
 
-    // top
-    auto event = pixelValue > frame[topNeighbourRowIndex + column];
-    // top right
-    event =
-      event && pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn];
-    // right
-    event = event && pixelValue > frame[rowIndex + rightNeighbourColumn];
-    // bottom right
-    event = event &&
-            pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn];
-    // bottom
-    event = event && pixelValue > frame[bottomNeighbourRowIndex + column];
-    // bottom left
-    event = event &&
-            pixelValue > frame[bottomNeighbourRowIndex + leftNeighbourColumn];
+    auto event = true;
+
+    // If we are on row 0, there are no pixels above this one
+    if (row != 0) {
+      // Check top sections
+      // top
+      event = event && pixelValue > frame[topNeighbourRowIndex + column];
+      // top left
+      event = event &&
+              (column == 0 ||
+               pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn]);
+      // top right
+      event = event &&
+              (column == width - 1 ||
+               pixelValue > frame[topNeighbourRowIndex + rightNeighbourColumn]);
+    }
+
+    // If we are on the bottom row, there are no pixels below this one
+    if (event && row != height - 1) {
+      // Check bottom sections
+      // bottom
+      event = event && pixelValue > frame[bottomNeighbourRowIndex + column];
+      // bottom left
+      event = event && (column == 0 ||
+                        pixelValue >
+                          frame[bottomNeighbourRowIndex + leftNeighbourColumn]);
+      // bottom right
+      event =
+        event &&
+        (column == width - 1 ||
+         pixelValue > frame[bottomNeighbourRowIndex + rightNeighbourColumn]);
+    }
+
     // left
-    event = event && pixelValue > frame[rowIndex + leftNeighbourColumn];
-    // top left
-    event =
-      event && pixelValue > frame[topNeighbourRowIndex + leftNeighbourColumn];
+    event = event &&
+            (column == 0 || pixelValue > frame[rowIndex + leftNeighbourColumn]);
+    // right
+    event = event && (column == width - 1 ||
+                      pixelValue > frame[rowIndex + rightNeighbourColumn]);
 
     if (event) {
       events.push_back(i);
