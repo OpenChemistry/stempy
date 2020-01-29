@@ -13,8 +13,8 @@ PyBlock::PyBlock(py::array_t<uint16_t> pyarray)
 PyReader::PyReader(py::object pyDataSet, std::vector<uint32_t>& imageNumbers,
                    Dimensions2D scanDimensions, uint32_t blockSize,
                    uint32_t totalImageNum)
-  : m_pydataset(pyDataSet), m_imageNumbers(imageNumbers),
-    m_scanDimensions(scanDimensions), m_imageNumInBlock(blockSize),
+  : m_pydataset(pyDataSet), m_scanDimensions(scanDimensions),
+    m_imageNumbers(imageNumbers), m_imageNumInBlock(blockSize),
     m_totalImageNum(totalImageNum)
 {
 }
