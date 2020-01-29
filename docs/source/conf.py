@@ -42,15 +42,14 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-# Mock out pybind11 generated modules, we do this manually as we
-# have a nested class that uses problems with sphinx's mocking.
-class MockReader(object):
-    class H5Format(object):
+# Unfortunately, if we have a class that inherits sphinx's mock
+# object, and we use that class in a default argument, we run into
+# attribute errors. Fix it by defining an explicit mock of the class.
+class MockReader:
+    class H5Format:
         Frame = 1
 
-for mod_name in ['stempy._io', 'stempy._image']:
-    sys.modules[mod_name] = mock.Mock()
-
+sys.modules['stempy._io'] = mock.Mock()
 _io_mock = sys.modules['stempy._io']
 
 # We have to override these so we get don't get conflicting metaclasses
@@ -70,6 +69,13 @@ html_theme = 'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# Get autodoc to mock these imports, because we don't actually need them
+# for generating the docs
+autodoc_mock_imports = [
+    'stempy._image',
+    'numpy',
+    'h5py'
+]
 
 # Modify this function to customize which classes/functions are skipped
 def autodoc_skip_member_handler(app, what, name, obj, skip, options):

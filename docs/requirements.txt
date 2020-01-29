@@ -1,2 +1,2 @@
-sphinx
-pygments
+sphinx==2.3.1
+pygments==2.4.2

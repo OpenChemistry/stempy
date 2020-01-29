@@ -72,7 +72,9 @@ def get_hdf5_reader(h5file):
 
 
 def reader(path, version=FileVersion.VERSION1):
-    """Create a file reader to read the data.
+    """reader(path, version=FileVersion.VERSION1)
+
+    Create a file reader to read the data.
 
     :param path: either the path to the file or an open h5py file.
     :type path: str or h5py file
@@ -174,7 +176,9 @@ def save_stem_images(outputFile, images, names):
         dataset.attrs['names'] = names
 
 def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
-    """Write the data from a SectorReader to an HDF5 file.
+    """write_hdf5(path, reader, format=SectorReader.H5Format.Frame)
+
+    Write the data from a SectorReader to an HDF5 file.
 
     :param path: path to the output HDF5 file.
     :type path: str
