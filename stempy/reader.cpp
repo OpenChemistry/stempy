@@ -202,13 +202,12 @@ Header StreamReader::readHeaderVersion3()
   index = 0;
   read(headerPositions, 4 * sizeof(uint16_t));
 
-  // Note: The order is currently reversed y then x rather than the other way around
-  header.scanDimensions.second = headerPositions[index++];
   header.scanDimensions.first = headerPositions[index++];
+  header.scanDimensions.second = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanYPosition = headerPositions[index++];
   auto scanXPosition = headerPositions[index++];
+  auto scanYPosition = headerPositions[index++];
   header.imageNumbers.push_back(scanYPosition * header.scanDimensions.first +
                                 scanXPosition);
 
@@ -333,12 +332,12 @@ Header SectorStreamReader::readHeader(std::ifstream& stream)
   index = 0;
   read(stream, headerPositions, 4 * sizeof(uint16_t));
 
-  header.scanDimensions.second = headerPositions[index++];
   header.scanDimensions.first = headerPositions[index++];
+  header.scanDimensions.second = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanYPosition = headerPositions[index++];
   auto scanXPosition = headerPositions[index++];
+  auto scanYPosition = headerPositions[index++];
 
   header.imageNumbers.push_back(scanYPosition * header.scanDimensions.first +
                                 scanXPosition);
