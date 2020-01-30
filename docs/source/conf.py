@@ -12,6 +12,8 @@
 
 import os
 import sys
+
+import sphinx_rtd_theme
 from unittest import mock
 
 sys.path.insert(0, os.path.abspath('../../python/stempy'))
@@ -32,7 +34,7 @@ release = '1.0'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc']
+extensions = ['sphinx.ext.autodoc', 'sphinx_rtd_theme']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -42,15 +44,14 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-# Mock out pybind11 generated modules, we do this manually as we
-# have a nested class that uses problems with sphinx's mocking.
-class MockReader(object):
-    class H5Format(object):
+# Unfortunately, if we have a class that inherits sphinx's mock
+# object, and we use that class in a default argument, we run into
+# attribute errors. Fix it by defining an explicit mock of the class.
+class MockReader:
+    class H5Format:
         Frame = 1
 
-for mod_name in ['stempy._io', 'stempy._image']:
-    sys.modules[mod_name] = mock.Mock()
-
+sys.modules['stempy._io'] = mock.Mock()
 _io_mock = sys.modules['stempy._io']
 
 # We have to override these so we get don't get conflicting metaclasses
@@ -63,13 +64,20 @@ _io_mock._pyreader = object
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# Get autodoc to mock these imports, because we don't actually need them
+# for generating the docs
+autodoc_mock_imports = [
+    'stempy._image',
+    'numpy',
+    'h5py'
+]
 
 # Modify this function to customize which classes/functions are skipped
 def autodoc_skip_member_handler(app, what, name, obj, skip, options):
