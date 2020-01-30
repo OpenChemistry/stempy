@@ -12,6 +12,8 @@
 
 import os
 import sys
+from unittest import mock
+
 sys.path.insert(0, os.path.abspath('../../python/stempy'))
 
 
@@ -40,6 +42,21 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# Mock out pybind11 generated modules, we do this manually as we
+# have a nested class that uses problems with sphinx's mocking.
+class MockReader(object):
+    class H5Format(object):
+        Frame = 1
+
+for mod_name in ['stempy._io', 'stempy._image']:
+    sys.modules[mod_name] = mock.Mock()
+
+_io_mock = sys.modules['stempy._io']
+
+# We have to override these so we get don't get conflicting metaclasses
+_io_mock._sector_reader = MockReader
+_io_mock._reader = object
+_io_mock._pyreader = object
 
 # -- Options for HTML output -------------------------------------------------
 
