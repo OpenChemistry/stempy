@@ -248,7 +248,8 @@ def electron_count(reader, darkreference, number_of_samples=40,
     :type verbose: bool
 
     :return: the coordinates of the electron hits for each frame.
-    :rtype: ElectronCountedData (named tuple)
+    :rtype: ElectronCountedData (named tuple with fields 'data',
+            'scan_dimensions', and 'frame_dimensions')
     """
     blocks = []
     for i in range(threshold_num_blocks):

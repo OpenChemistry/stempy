@@ -26,7 +26,7 @@ class ReaderMixin(object):
         """Read the next block of data from the file.
 
         :return: The block of data that was read. Includes the header also.
-        :rtype: Block
+        :rtype: Block (named tuple with fields 'header' and 'data')
         """
         b = super(ReaderMixin, self).read()
 
