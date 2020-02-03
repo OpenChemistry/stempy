@@ -16,6 +16,8 @@ Welcome to stempy's documentation!
 
    StempyH5Format.rst
 
+   singularity.rst
+
 Indices and tables
 ==================
 
