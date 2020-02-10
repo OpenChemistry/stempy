@@ -136,7 +136,7 @@ std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
 
   std::vector<uint32_t> events;
   auto numberOfPixels = height * width;
-  for (int i = 0; i < numberOfPixels; i++) {
+  for (uint32_t i = 0; i < numberOfPixels; ++i) {
     auto row = i / width;
     auto column = i % width;
     auto rightNeighbourColumn = mod((i + 1), width);

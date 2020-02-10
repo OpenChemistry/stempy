@@ -322,7 +322,7 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
   auto curData = inImage.data;
 
   // get a histrogram
-  for (int i = 0; i < scanDimensions.first * scanDimensions.second; i++) {
+  for (uint32_t i = 0; i < scanDimensions.first * scanDimensions.second; ++i) {
     auto value = curData[i];
     // check which bin it belongs to
     for (int j = 0; j < numBins; j++) {
@@ -435,7 +435,7 @@ void radialSumFrame(Coordinates2D center, const uint16_t data[],
                     int imageNumber, RadialSum<uint64_t>& radialSum)
 {
   auto numberOfPixels = frameDimensions.first * frameDimensions.second;
-  for (int i=0; i< numberOfPixels; i++) {
+  for (uint32_t i = 0; i < numberOfPixels; ++i) {
     auto x = i % frameDimensions.first;
     auto y = i / frameDimensions.first;
     auto radius =

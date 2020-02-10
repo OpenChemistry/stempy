@@ -113,7 +113,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   // Now generate a histograms
   auto minMax = std::minmax_element(samples.begin(), samples.end());
   auto minSample = *minMax.first;
-  auto maxSample = std::ceil(*minMax.second);
+  auto maxSample = static_cast<int16_t>(std::ceil(*minMax.second));
   auto maxBin = std::min(static_cast<int>(maxSample),
                          static_cast<int>(mean + xrayThreshold * stdDev));
   auto minBin = std::max(static_cast<int>(minSample),

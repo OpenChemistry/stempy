@@ -13,15 +13,15 @@ uint16_t* createAnnularMask(Dimensions2D dimensions, int innerRadius,
   auto mask = new uint16_t[numberOfElements]();
 
   if (center.first < 0)
-    center.first = round(dimensions.first / 2.0);
+    center.first = static_cast<int>(round(dimensions.first / 2.0));
 
   if (center.second < 0)
-    center.second = round(dimensions.second / 2.0);
+    center.second = static_cast<int>(round(dimensions.second / 2.0));
 
   innerRadius = static_cast<int>(pow(innerRadius, 2.0));
   outerRadius = static_cast<int>(pow(outerRadius, 2.0));
 
-  for (int i=0; i<numberOfElements; i++) {
+  for (uint32_t i = 0; i < numberOfElements; ++i) {
     // Ensure these are signed ints so we don't underflow below
     int x = i % dimensions.first;
     int y = i / dimensions.first;
