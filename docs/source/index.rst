@@ -10,6 +10,8 @@ Welcome to stempy's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   BUILDING.md
+
    modules
 
    conventions.rst
