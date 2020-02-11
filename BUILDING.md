@@ -12,7 +12,7 @@ The following system dependencies are required for building stempy:
 
 For Ubuntu 18.04, for instance, the dependencies (along with ninja-build) can
 be installed like so:
-```
+```bash
 sudo apt-get update
 sudo apt-get install -y \
   cmake \
@@ -27,7 +27,7 @@ sudo apt-get install -y \
 
 Note that building VTK-m requires CMake 3.12+. The latest cmake can be
 installed on Ubuntu 18.04 with the following code:
-```
+```bash
 sudo apt-get install -y wget software-properties-common
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
 sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
@@ -49,7 +49,7 @@ Building VTK-m (optional)
 [VTK-m](https://gitlab.kitware.com/vtk/vtk-m) is an optional dependency that allows many
 of the algorithms to run in parallel. It may be built with commands similar to the
 following (this example uses the [ninja build system](https://ninja-build.org/)):
-```
+```bash
 git clone --branch v1.5.0 https://gitlab.kitware.com/vtk/vtk-m
 mkdir vtkm-build
 cd vtkm-build
@@ -65,7 +65,8 @@ cmake \
   ../vtk-m -G Ninja
 ninja install
 cd ..
- ````
+```
+
 Building in release mode is particularly important for doing benchmarks.
 
 This VTK-m build will allow VTK-m to run with OpenMP. Other types of parallelism
@@ -77,7 +78,7 @@ Building Stempy
 ---------------
 Stempy may be built using instructions similar to the following
 (this example uses the [ninja build system](https://ninja-build.org/)):
-```
+```bash
 git clone --recursive https://github.com/openchemistry/stempy
 pip3 install -e stempy
 mkdir stempy-build
@@ -97,7 +98,7 @@ built without VTKm, just leave out all of the VTKm options.
 Once it has finished building, a soft link will need to be created in the python
 `site-packages` directory that refers to the `lib/stempy` directory in the stempy
 build directory. An example (ran from the build directory) can be shown below:
-```
+```bash
 ln -s $PWD/lib/stempy $HOME/.local/lib/python3.6/site-packages/stempy
 ```
 
