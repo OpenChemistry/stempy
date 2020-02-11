@@ -47,8 +47,15 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
 
     scan_dimensions = (width, height)
 
-    reader = io.reader(dark_sample, version=dark_reader_version)
-    dark = image.calculate_average(reader)
+    if dark_sample:
+        reader = io.reader(dark_sample, version=dark_reader_version)
+        dark = image.calculate_average(reader)
+    else:
+        # Get the frame dimensions from a block header, and use zeros
+        # for the dark sample.
+        reader = io.reader(files, version=reader_version)
+        frame_dimensions = reader.read().header.frame_dimensions
+        dark = np.zeros(frame_dimensions)
 
     reader = io.reader(files, version=reader_version)
     data = image.electron_count(reader, dark, scan_dimensions=scan_dimensions)
@@ -70,10 +77,19 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
 
     if save_raw:
         reader.reset()
-        blocks = [block for block in reader]
 
-        raw_data = np.concatenate([block.data for block in blocks])
-        io.save_raw_data(output, raw_data, zip_raw)
+        # In order to avoid two copies of the data, we must allocate
+        # space for the large numpy array first.
+        raw_data = np.zeros((np.prod(scan_dimensions), frame_dimensions[0],
+                            frame_dimensions[1]), dtype=np.uint16)
+
+        # Make sure the frames are sorted in order
+        for block in reader:
+            for i in range(len(block.header.image_numbers)):
+                num = block.header.image_numbers[i]
+                raw_data[num] = block.data[i]
+
+        io.save_raw_data(output, raw_data, zip_data=zip_raw)
 
 if __name__ == '__main__':
     make_stem_hdf5()
