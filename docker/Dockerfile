@@ -51,9 +51,9 @@ RUN cd /build/mpi4py-3.0.1 && python3 setup.py build && python3 setup.py install
 
 # Build VTK-m
 RUN cd /source && \
-  wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/master/vtk-m-master.tar.gz && \
-  tar zxvf vtk-m-master.tar.gz && \
-  rm vtk-m-master.tar.gz
+  wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/v1.5.0/vtk-m-v1.5.0.tar.gz && \
+  tar zxvf vtk-m-v1.5.0.tar.gz && \
+  rm vtk-m-v1.5.0.tar.gz
 
 RUN mkdir -p /build/vtk-m && \
   cd /build/vtk-m && \
@@ -62,7 +62,7 @@ RUN mkdir -p /build/vtk-m && \
   -DVTKm_ENABLE_OPENMP:BOOL=ON \
   -DVTKm_ENABLE_RENDERING:BOOL=OFF \
   -DVTKm_ENABLE_TESTING:BOOL=OFF \
-  /source/vtk-m-master . && \
+  /source/vtk-m-v1.5.0 . && \
   make -j4
 
 # Build stempy
