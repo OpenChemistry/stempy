@@ -27,7 +27,8 @@ num_pixels = frame_dimensions[0] * frame_dimensions[1]
 inner_radius = 40
 outer_radius = 288
 
-img = image.create_stem_image_sparse(frames, inner_radius, outer_radius,
-                                     scan_dimensions, frame_dimensions)
+img = image.create_stem_images(frames, inner_radius, outer_radius,
+                               scan_dimensions,
+                               frame_dimensions=frame_dimensions)[0]
 
 save_img(img, 'img.png', scan_dimensions)

@@ -20,6 +20,7 @@ setup(
     package_dir={'':'python'},
     install_requires=[
         'numpy',
-        'h5py'
+        'h5py',
+        'deprecation'
     ]
 )

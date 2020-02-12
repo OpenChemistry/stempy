@@ -17,8 +17,7 @@ def get_files(files):
 @click.command()
 @click.argument('files', nargs=-1,
                 type=click.Path(exists=True, dir_okay=False))
-@click.option('-d', '--dark-file', help='The file for dark field reference',
-              required=True)
+@click.option('-d', '--dark-file', help='The file for dark field reference')
 @click.option('-c', '--center', help='The center (comma separated)',
               required=True)
 @click.option('-i', '--inner-radii', help='The inner radii (comma separated)',
@@ -61,9 +60,12 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
     comm.Barrier()
     start = MPI.Wtime()
 
-    # Every process will do the dark field reference average for now
-    reader = io.reader(dark_file, version=io.FileVersion.VERSION3)
-    dark = image.calculate_average(reader)
+    if dark_file is not None:
+        # Every process will do the dark field reference average for now
+        reader = io.reader(dark_file, version=io.FileVersion.VERSION3)
+        dark = image.calculate_average(reader)
+    else:
+        dark = np.zeros((576, 576))
 
     # Split up the files among processes
     files = get_files(files)
@@ -94,7 +96,7 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         if generate_sparse:
             # Save out the sparse image
 
-            stem_imgs = image.create_stem_images_sparse(
+            stem_imgs = image.create_stem_images(
                 global_frame_events, inner_radii, outer_radii,
                 scan_dimensions=scan_dimensions,
                 frame_dimensions=frame_dimensions, center=center)

@@ -39,21 +39,24 @@ namespace stempy {
 
   using STEMImage = Image<uint64_t>;
 
+  // Create STEM Images from raw data
   template <typename InputIt>
   std::vector<STEMImage> createSTEMImages(
     InputIt first, InputIt last, const std::vector<int>& innerRadii,
     const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
     Coordinates2D center = { -1, -1 });
 
-  std::vector<STEMImage> createSTEMImagesSparse(
+  // Create STEM Images from sparse data
+  std::vector<STEMImage> createSTEMImages(
     const std::vector<std::vector<uint32_t>>& sparseData,
     const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
     Dimensions2D scanDimensions = { 0, 0 },
     Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
     int frameOffset = 0);
 
+  // Create STEM Images from electron counted sparse data
   struct ElectronCountedData;
-  std::vector<STEMImage> createSTEMImagesSparse(
+  std::vector<STEMImage> createSTEMImages(
     const ElectronCountedData& sparseData, const std::vector<int>& innerRadii,
     const std::vector<int>& outerRadii, Coordinates2D center = { -1, -1 });
 

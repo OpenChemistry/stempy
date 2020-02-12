@@ -141,16 +141,16 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images", &createSTEMImages<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images_sparse",
+  m.def("create_stem_images",
         (vector<STEMImage>(*)(const vector<vector<uint32_t>>&,
                               const vector<int>&, const vector<int>&,
                               Dimensions2D, Dimensions2D, Coordinates2D, int)) &
-          createSTEMImagesSparse,
+          createSTEMImages,
         py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images_sparse",
+  m.def("create_stem_images",
         (vector<STEMImage>(*)(const ElectronCountedData&, const vector<int>&,
                               const vector<int>&, Coordinates2D)) &
-          createSTEMImagesSparse,
+          createSTEMImages,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());

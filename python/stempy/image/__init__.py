@@ -1,16 +1,21 @@
 from stempy import _image
 from stempy import _io
-import numpy as np
-import h5py
+from stempy.io import get_hdf5_reader, ReaderMixin
+
 from collections import namedtuple
-from stempy.io import get_hdf5_reader
+import deprecation
+import h5py
+import numpy as np
 
 def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
-                       center=(-1, -1)):
+                       center=(-1, -1), frame_dimensions=None, frame_offset=0):
     """Create a series of stem images from the input.
 
-    :param input: the file reader that has already opened the data.
-    :type input: stempy.io.reader or an h5py file
+    :param input: the file reader that has already opened the data, or an
+                  open h5py file, or an ElectronCountedData namedtuple
+                  containing sparse data, or a numpy.ndarray of sparse data.
+    :type input: stempy.io.reader, an h5py file, ElectronCountedData, or
+                 numpy.ndarray
     :param inner_radii: a list of inner radii. Must match
                         the length of `outer_radii`.
     :type inner_radii: list of ints
@@ -26,22 +31,152 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
                    to (-1, -1), the center will be set to
                    (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
     :type center: tuple of ints of length 2
+    :param frame_dimensions: the dimensions of each frame, where the order is
+                             (width, height). Only used for input of type
+                             numpy.ndarray, in which case it is required.
+    :type frame_dimensions: tuple of ints of length 2
+    :param frame_offset: the amount by which to offset the frame. Only used
+                         for input of type numpy.ndarray.
+    :type frame_offset: int
 
     :return: A numpy array of the STEM images.
     :rtype: numpy.ndarray
     """
-    # check if the input is the hdf5 dataset
-    if(isinstance(input, h5py._hl.files.File)):
-        reader = get_hdf5_reader(input)
-    else:
-        reader = input
+    # Ensure the inner and outer radii are lists
+    if not isinstance(inner_radii, list):
+        inner_radii = [inner_radii]
+    if not isinstance(outer_radii, list):
+        outer_radii = [outer_radii]
 
-    imgs = _image.create_stem_images(reader.begin(), reader.end(),
-                                     inner_radii, outer_radii,
-                                     scan_dimensions, center)
+    if isinstance(input, h5py._hl.files.File):
+        # Handle h5py file
+        input = get_hdf5_reader(input)
+        imgs = _image.create_stem_images(input.begin(), input.end(),
+                                         inner_radii, outer_radii,
+                                         scan_dimensions, center)
+    elif issubclass(type(input), ReaderMixin):
+        # Handle standard reader
+        imgs = _image.create_stem_images(input.begin(), input.end(),
+                                         inner_radii, outer_radii,
+                                         scan_dimensions, center)
+    elif hasattr(input, '_electron_counted_data'):
+        # Handle electron counted data
+        imgs = _image.create_stem_images(input._electron_counted_data,
+                                         inner_radii, outer_radii, center)
+    elif isinstance(input, np.ndarray):
+        # Handle sparse data
+        imgs = _image.create_stem_images(input, inner_radii, outer_radii,
+                                         scan_dimensions, frame_dimensions,
+                                         center, frame_offset)
+    else:
+        raise Exception('Type of input, ' + str(type(input)) +
+                        ', is not known to stempy.image.create_stem_images()')
 
     images = [np.array(img, copy=False) for img in imgs]
     return np.array(images, copy=False)
+
+@deprecation.deprecated(
+    deprecated_in='1.0', removed_in='1.1',
+    details='Use stempy.image.create_stem_images() instead.')
+def create_stem_image(reader, inner_radius, outer_radius,
+                      scan_dimensions=(0, 0), center=(-1, -1)):
+    """Create a stem image from the input.
+
+    :param reader: the file reader that has already opened the data.
+    :type reader: stempy.io.reader or an h5py file
+    :param inner_radius: the inner radius to use.
+    :type inner_radius: int
+    :param outer_radius: the outer radius to use.
+    :type outer_radius: int
+    :param scan_dimensions: the dimensions of the scan, where the order is
+                            (width, height). If set to (0, 0), an attempt
+                            will be made to read the scan dimensions from
+                            the data file.
+    :type scan_dimensions: tuple of ints of length 2
+    :param center: the center of the image, where the order is (x, y). If set
+                   to (-1, -1), the center will be set to
+                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
+    :type center: tuple of ints of length 2
+
+    :return: The STEM image that was generated.
+    :rtype: numpy.ndarray
+    """
+    return create_stem_images(reader, inner_radius, outer_radius,
+                              scan_dimensions, center)[0]
+
+@deprecation.deprecated(
+    deprecated_in='1.0', removed_in='1.1',
+    details='Use stempy.image.create_stem_images() instead.')
+def create_stem_images_sparse(data, inner_radii, outer_radii,
+                              scan_dimensions=None, frame_dimensions=None,
+                              center=(-1, -1), frame_offset=0):
+    """Create a series of stem images from sparsified data.
+
+    :param data: the input sparsified data.
+    :type data: ElectronCountedData or numpy.ndarray
+    :param inner_radii: a list of inner radii. Must match
+                        the length of `outer_radii`.
+    :type inner_radii: list of ints
+    :param outer_radii: a list of outer radii. Must match
+                        the length of `inner_radii`.
+    :type outer_radii: list of ints
+    :param scan_dimensions: the dimensions of the scan, where the order is
+                            (width, height). Required if `data` is a
+                            numpy.ndarray.
+    :type scan_dimensions: tuple of ints of length 2
+    :param frame_dimensions: the dimensions of each frame, where the order is
+                             (width, height). Required if `data` is a
+                             numpy.ndarray.
+    :type frame_dimensions: tuple of ints of length 2
+    :param center: the center of the images, where the order is (x, y). If set
+                   to (-1, -1), the center will be set to
+                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
+    :type center: tuple of ints of length 2
+    :param frame_offset: the amount by which to offset the frame.
+    :type frame_offset: int
+
+    :return: A numpy array of the STEM images.
+    :rtype: numpy.ndarray
+    """
+    return create_stem_images(data, inner_radii, outer_radii,
+                              scan_dimensions, center, frame_dimensions,
+                              frame_offset)
+
+@deprecation.deprecated(
+    deprecated_in='1.0', removed_in='1.1',
+    details='Use stempy.image.create_stem_images() instead.')
+def create_stem_image_sparse(data, inner_radius, outer_radius,
+                             scan_dimensions=None, frame_dimensions=None,
+                             center=(-1, -1), frame_offset=0):
+    """Create a stem image from sparsified data.
+
+    :param data: the input sparsified data.
+    :type data: ElectronCountedData or numpy.ndarray
+    :param inner_radius: the inner radius to use.
+    :type inner_radius: int
+    :param outer_radius: the outer radius to use.
+    :type outer_radius: int
+    :param scan_dimensions: the dimensions of the scan, where the order is
+                            (width, height). Required if `data` is a
+                            numpy.ndarray.
+    :type scan_dimensions: tuple of ints of length 2
+    :param frame_dimensions: the dimensions of each frame, where the order is
+                             (width, height). Required if `data` is a
+                             numpy.ndarray.
+    :type frame_dimensions: tuple of ints of length 2
+    :param center: the center of the images, where the order is (x, y). If set
+                   to (-1, -1), the center will be set to
+                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
+    :type center: tuple of ints of length 2
+    :param frame_offset: the amount by which to offset the frame.
+    :type frame_offset: int
+
+    :return: The STEM image that was generated.
+    :rtype: numpy.ndarray
+    """
+    return create_stem_images(data, inner_radius, outer_radius,
+                              scan_dimensions, center, frame_dimensions,
+                              frame_offset)[0]
 
 def create_stem_histogram(numBins, reader, inner_radii,
                           outer_radii, scan_dimensions=(0, 0),
@@ -86,111 +221,6 @@ def create_stem_histogram(numBins, reader, inner_radii,
         allFreqs.append(freq)
 
     return allBins, allFreqs
-
-# This one exists for backward compatibility
-def create_stem_image(reader, inner_radius, outer_radius,
-                      scan_dimensions=(0, 0), center=(-1, -1)):
-    """Create a stem image from the input.
-
-    :param reader: the file reader that has already opened the data.
-    :type reader: stempy.io.reader or an h5py file
-    :param inner_radius: the inner radius to use.
-    :type inner_radius: int
-    :param outer_radius: the outer radius to use.
-    :type outer_radius: int
-    :param scan_dimensions: the dimensions of the scan, where the order is
-                            (width, height). If set to (0, 0), an attempt
-                            will be made to read the scan dimensions from
-                            the data file.
-    :type scan_dimensions: tuple of ints of length 2
-    :param center: the center of the image, where the order is (x, y). If set
-                   to (-1, -1), the center will be set to
-                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
-
-    :return: The STEM image that was generated.
-    :rtype: numpy.ndarray
-    """
-    return create_stem_images(reader, (inner_radius,), (outer_radius,),
-                              scan_dimensions, center)[0]
-
-def create_stem_images_sparse(data, inner_radii, outer_radii,
-                              scan_dimensions=None, frame_dimensions=None,
-                              center=(-1, -1), frame_offset=0):
-    """Create a series of stem images from sparsified data.
-
-    :param data: the input sparsified data.
-    :type data: ElectronCountedData or numpy.ndarray
-    :param inner_radii: a list of inner radii. Must match
-                        the length of `outer_radii`.
-    :type inner_radii: list of ints
-    :param outer_radii: a list of outer radii. Must match
-                        the length of `inner_radii`.
-    :type outer_radii: list of ints
-    :param scan_dimensions: the dimensions of the scan, where the order is
-                            (width, height). Required if `data` is a
-                            numpy.ndarray.
-    :type scan_dimensions: tuple of ints of length 2
-    :param frame_dimensions: the dimensions of each frame, where the order is
-                             (width, height). Required if `data` is a
-                             numpy.ndarray.
-    :type frame_dimensions: tuple of ints of length 2
-    :param center: the center of the images, where the order is (x, y). If set
-                   to (-1, -1), the center will be set to
-                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
-    :param frame_offset: the amount by which to offset the frame.
-    :type frame_offset: int
-
-    :return: A numpy array of the STEM images.
-    :rtype: numpy.ndarray
-    """
-    if not isinstance(data, np.ndarray):
-        # Assume it is an ElectronCountedData named tuple
-        imgs = _image.create_stem_images_sparse(data._electron_counted_data,
-                                                inner_radii, outer_radii,
-                                                center)
-    else:
-        imgs = _image.create_stem_images_sparse(data, inner_radii, outer_radii,
-                                                scan_dimensions,
-                                                frame_dimensions, center,
-                                                frame_offset)
-
-    images = [np.array(img, copy=False) for img in imgs]
-    return np.array(images, copy=False)
-
-def create_stem_image_sparse(data, inner_radius, outer_radius,
-                             scan_dimensions=None, frame_dimensions=None,
-                             center=(-1, -1), frame_offset=0):
-    """Create a stem image from sparsified data.
-
-    :param data: the input sparsified data.
-    :type data: ElectronCountedData or numpy.ndarray
-    :param inner_radius: the inner radius to use.
-    :type inner_radius: int
-    :param outer_radius: the outer radius to use.
-    :type outer_radius: int
-    :param scan_dimensions: the dimensions of the scan, where the order is
-                            (width, height). Required if `data` is a
-                            numpy.ndarray.
-    :type scan_dimensions: tuple of ints of length 2
-    :param frame_dimensions: the dimensions of each frame, where the order is
-                             (width, height). Required if `data` is a
-                             numpy.ndarray.
-    :type frame_dimensions: tuple of ints of length 2
-    :param center: the center of the images, where the order is (x, y). If set
-                   to (-1, -1), the center will be set to
-                   (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
-    :param frame_offset: the amount by which to offset the frame.
-    :type frame_offset: int
-
-    :return: The STEM image that was generated.
-    :rtype: numpy.ndarray
-    """
-    return create_stem_images_sparse(data, [inner_radius], [outer_radius],
-                                     scan_dimensions, frame_dimensions, center,
-                                     frame_offset)[0]
 
 class ImageArray(np.ndarray):
     def __new__(cls, array, dtype=None, order=None):
