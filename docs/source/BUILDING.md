@@ -1,4 +1,4 @@
-Building Stempy
+Building stempy
 ===============
 
 The following system dependencies are required for building stempy:
@@ -74,7 +74,7 @@ such as CUDA or TBB may be used by enabling their respective options. However,
 note that if VTK-m is built with CUDA turned on, stempy *must* also be
 built with CUDA turned on, or there will be compile errors.
 
-Building Stempy
+Building stempy
 ---------------
 Stempy may be built using instructions similar to the following
 (this example uses the [ninja build system](https://ninja-build.org/)):
