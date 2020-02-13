@@ -95,13 +95,16 @@ def reader(path, version=FileVersion.VERSION1):
 
     return reader
 
-def save_raw_data(path, data, zip_data=False):
+def save_raw_data(path, data, scan_positions=None, zip_data=False):
     """Save the raw data to an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
     :param data: the raw data to save.
     :type data: numpy.ndarray
+    :param scan_positions: the scan positions of each frame. This is
+                           only needed if the frames are not sorted.
+    :type scan_positions: list of ints
     :param zip_data: whether or not to compress the data with gzip.
     :type zip_data: bool
     """
@@ -122,6 +125,9 @@ def save_raw_data(path, data, zip_data=False):
                              chunks=chunk_shape)
         else:
             f.create_dataset('frames', data=data)
+
+        if scan_positions is not None:
+            f.create_dataset('scan_positions', data=scan_positions)
 
 def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
     """Save the electron counted data to an HDF5 file.

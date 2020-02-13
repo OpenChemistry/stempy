@@ -602,7 +602,7 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
     size_t counts[3] = { 1, b.header.frameDimensions.second,
                          b.header.frameDimensions.first };
     for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
-      auto pos = b.header.imageNumbers[0];
+      auto pos = b.header.imageNumbers[i];
       auto offset = i * FRAME_DIMENSIONS.first * FRAME_DIMENSIONS.second;
       start[0] = pos;
 
