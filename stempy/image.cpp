@@ -352,7 +352,7 @@ void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
   }
 }
 
-vector<STEMImage> createSTEMImagesSparse(
+vector<STEMImage> createSTEMImages(
   const vector<vector<uint32_t>>& sparseData, const vector<int>& innerRadii,
   const vector<int>& outerRadii, Dimensions2D scanDimensions,
   Dimensions2D frameDimensions, Coordinates2D center, int frameOffset)
@@ -386,14 +386,14 @@ vector<STEMImage> createSTEMImagesSparse(
   return images;
 }
 
-vector<STEMImage> createSTEMImagesSparse(const ElectronCountedData& data,
-                                         const vector<int>& innerRadii,
-                                         const vector<int>& outerRadii,
-                                         Coordinates2D center)
+vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii,
+                                   Coordinates2D center)
 {
-  return createSTEMImagesSparse(data.data, innerRadii, outerRadii,
-                                data.scanDimensions, data.frameDimensions,
-                                center);
+  return createSTEMImages(data.data, innerRadii, outerRadii,
+                          data.scanDimensions, data.frameDimensions,
+                          center);
 }
 
 template <typename InputIt>
