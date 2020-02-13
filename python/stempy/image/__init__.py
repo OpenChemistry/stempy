@@ -1,6 +1,6 @@
 from stempy import _image
 from stempy import _io
-from stempy.io import get_hdf5_reader, ReaderMixin
+from stempy.io import get_hdf5_reader, ReaderMixin, PyReader
 
 from collections import namedtuple
 import deprecation
@@ -13,7 +13,9 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
 
     :param input: the file reader that has already opened the data, or an
                   open h5py file, or an ElectronCountedData namedtuple
-                  containing sparse data, or a numpy.ndarray of sparse data.
+                  containing sparse data, or a numpy.ndarray of either the
+                  sparse or the raw data (if the frame_dimensions argument
+                  is supplied, numpy.ndarray is inferred to be sparse data).
     :type input: stempy.io.reader, an h5py file, ElectronCountedData, or
                  numpy.ndarray
     :param inner_radii: a list of inner radii. Must match
@@ -33,10 +35,12 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :type center: tuple of ints of length 2
     :param frame_dimensions: the dimensions of each frame, where the order is
                              (width, height). Only used for input of type
-                             numpy.ndarray, in which case it is required.
+                             numpy.ndarray, in which case its presence implies
+                             that the input is sparse data rather than raw
+                             data.
     :type frame_dimensions: tuple of ints of length 2
     :param frame_offset: the amount by which to offset the frame. Only used
-                         for input of type numpy.ndarray.
+                         for sparse data input of type numpy.ndarray.
     :type frame_offset: int
 
     :return: A numpy array of the STEM images.
@@ -64,10 +68,29 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         imgs = _image.create_stem_images(input._electron_counted_data,
                                          inner_radii, outer_radii, center)
     elif isinstance(input, np.ndarray):
-        # Handle sparse data
-        imgs = _image.create_stem_images(input, inner_radii, outer_radii,
-                                         scan_dimensions, frame_dimensions,
-                                         center, frame_offset)
+        # The presence of frame dimensions implies it is sparse data
+        if frame_dimensions is not None:
+            # Handle sparse data
+            imgs = _image.create_stem_images(input, inner_radii, outer_radii,
+                                             scan_dimensions, frame_dimensions,
+                                             center, frame_offset)
+        else:
+            # Handle raw data
+            # Make sure the scan dimensions were passed
+            if not scan_dimensions or scan_dimensions == (0, 0):
+                msg = ('scan_dimensions must be provided for np.ndarray '
+                       'raw data input')
+                raise Exception(msg)
+
+            # Should have shape (num_images, frame_height, frame_width)
+            num_images = input.shape[0]
+            image_numbers = np.arange(num_images)
+            block_size = 32
+            reader = PyReader(input, image_numbers, scan_dimensions, block_size, num_images)
+
+            imgs = _image.create_stem_images(reader.begin(), reader.end(),
+                                             inner_radii, outer_radii,
+                                             scan_dimensions, center)
     else:
         raise Exception('Type of input, ' + str(type(input)) +
                         ', is not known to stempy.image.create_stem_images()')
