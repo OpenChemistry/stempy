@@ -80,8 +80,8 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
 
         # In order to avoid two copies of the data, we must allocate
         # space for the large numpy array first.
-        raw_data = np.zeros((np.prod(scan_dimensions), frame_dimensions[0],
-                            frame_dimensions[1]), dtype=np.uint16)
+        raw_data = np.zeros((np.prod(scan_dimensions), frame_dimensions[1],
+                            frame_dimensions[0]), dtype=np.uint16)
 
         # Make sure the frames are sorted in order
         for block in reader:
