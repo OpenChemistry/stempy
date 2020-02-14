@@ -4,7 +4,7 @@ Toolkit for processing 4D STEM image data on HPC.
 
 Singularity instructions may be found [here](https://stempy.readthedocs.io/en/latest/singularity.html).
 
-Build instructions may be found [here](docs/source/BUILDING.md).
+Build instructions may be found [here](https://stempy.readthedocs.io/en/latest/BUILDING.html).
 
 Example usage
 -------------
