@@ -2,40 +2,35 @@
 
 Toolkit for processing 4D STEM image data on HPC.
 
-Singularity instructions may be found [here](https://stempy.readthedocs.io/en/latest/singularity.html).
-
-Build instructions may be found [here](https://stempy.readthedocs.io/en/latest/BUILDING.html).
+* [Documentation](http://stempy.readthedocs.io/)
+  * [Singularity instructions](https://stempy.readthedocs.io/en/latest/singularity.html)
+  * [Build instructions](https://stempy.readthedocs.io/en/latest/BUILDING.html)
 
 Example usage
 -------------
 
-Build repo and set PYTHONPATH:
-
-```bash
-export PYTHONPATH=<build dir>/lib/
-```
-
+The following example of creating STEM images can be found
+[here](examples/stem_image.ipynb):
 
 ```python
+import glob
+from stempy import io, image
+import matplotlib.pyplot as plt
 
-Python 3.6.7 (default, Oct 22 2018, 11:32:17)
-[GCC 8.2.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> from stempy import io
->>> r = io.reader('/data/4dstem/smallScanningDiffraction/data0000.dat')
->>> b = r.read()
->>> b.header.images_in_block
-32
->>> b.header.image_numbers
-[1, 33, 65, 97, 129, 161, 193, 225, 257, 289, 321, 353, 385, 417, 449, 481, 513, 545, 577, 609, 641, 673, 705, 737, 769, 801, 833, 865, 897, 929, 961, 993]
->>> b.data[0]
-array([[   0,    0,    0, ...,    0,    0,    0],
-       [   0,    0,    0, ...,    0,    0,    0],
-       [   0,    0,    0, ...,    0,    0,    0],
-       ...,
-       [ 932, 1017,  976, ...,  984,  834, 1031],
-       [ 928, 1081, 1100, ..., 1020,  985,  969],
-       [ 989,  940, 1045, ..., 1010,  959,  887]], dtype=uint16)
->>>
+files = glob.glob('/data/4dstem/smallScanningDiffraction/data*.dat')
 
+inner_radii = [0, 40]
+outer_radii = [288, 288]
+
+reader = io.reader(files)
+imgs = image.create_stem_images(reader, inner_radii, outer_radii, scan_dimensions=(160, 160))
+
+for img in imgs:
+    fig,ax=plt.subplots(figsize=(6,6))
+    ax.matshow(img, cmap=plt.cm.gray)
+    plt.show()
 ```
+
+![bright](docs/images/stem_image_0_288.png)
+
+![dark](docs/images/stem_image_40_288.png)
