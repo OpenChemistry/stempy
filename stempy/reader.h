@@ -8,6 +8,10 @@
 #include <utility>
 #include <vector>
 
+#include <chrono>
+
+using Clock = std::chrono::system_clock;
+
 namespace h5 {
 class H5ReadWrite;
 }
@@ -198,6 +202,9 @@ private:
   std::vector<std::string> m_files;
   std::vector<SectorStream> m_streams;
   std::vector<SectorStream>::iterator m_streamsIterator;
+  std::chrono::time_point<Clock> m_debugTimer;
+  size_t m_totalFramesReconstructed = 0;
+  size_t m_framesReconstructedAtLastPrint = 0;
 
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_streams.empty(); }

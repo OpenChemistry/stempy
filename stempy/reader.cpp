@@ -13,6 +13,11 @@
 #include <sstream>
 #include <vector>
 
+#include <ctime>
+
+// Interval in seconds for printing the debug info
+#define SECTOR_DEBUG_INTERVAL 60
+
 using std::copy;
 using std::invalid_argument;
 using std::ios;
@@ -397,6 +402,25 @@ Block SectorStreamReader::read()
 {
   while (!m_streams.empty()) {
     while (m_streamsIterator != m_streams.end()) {
+      auto now = Clock::now();
+      auto secondsSinceLastPrint =
+        std::chrono::duration_cast<std::chrono::seconds>(now - m_debugTimer);
+      if (secondsSinceLastPrint.count() > SECTOR_DEBUG_INTERVAL) {
+        auto numFramesReconstructed =
+          m_totalFramesReconstructed - m_framesReconstructedAtLastPrint;
+        auto reconRate = numFramesReconstructed /
+          static_cast<double>(secondsSinceLastPrint.count());
+        auto now_time_t = Clock::to_time_t(now);
+        std::cout << "\nAt time: " << ctime(&now_time_t)
+                  << "    frame cache size is: " << m_frameCache.size()
+                  << "\n    frames reconstructed since last print is: "
+                  << numFramesReconstructed
+                  << "\n    reconstruction rate is: "
+                  << reconRate << " frames per second" << std::endl;
+        m_debugTimer = now;
+        m_framesReconstructedAtLastPrint = m_totalFramesReconstructed;
+      }
+
       auto& sectorStream = *m_streamsIterator;
       auto& stream = sectorStream.stream;
       auto sector = sectorStream.sector;
@@ -446,6 +470,7 @@ Block SectorStreamReader::read()
           m_frameCache.erase(pos);
           m_streamsIterator++;
 
+          ++m_totalFramesReconstructed;
           return b;
         }
       }
@@ -460,6 +485,7 @@ Block SectorStreamReader::read()
 
   // Now  return the partial frames
   if (!m_frameCache.empty()) {
+    std::cout << "Returning partial frame" << std::endl;
     auto iter = m_frameCache.begin();
     auto& frame = (*iter).second;
     auto block = frame.block;
