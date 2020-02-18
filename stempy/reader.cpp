@@ -600,6 +600,9 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
 
+    // FIXME: we are completely skipping the writing of the data
+    continue;
+
     // When we receive the first header we can create the file
     if (!created) {
       std::vector<int> dims = {
