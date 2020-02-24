@@ -266,12 +266,15 @@ public:
    * @param path The path where the dataset will be created.
    * @param type The type of data to update.
    * @param data A pointer to the data to update.
+   * @param dataSetDimensions The dimensions of the dataset.
    * @param start The start of the block of data to be updated.
    * @param counts The number of data elements to be updated.
    * @return True on success, false on failure.
    */
-  bool updateData(const std::string& path, const DataType& type, void* data,
-                  size_t* start = nullptr, size_t* counts = nullptr);
+  bool updateData(const std::string& path,
+                  const std::vector<int>& dataSetDimensions,
+                  const DataType& type, void* data, size_t* start = nullptr,
+                  size_t* counts = nullptr);
 
   /**
    * Set an attribute on a specified path.
