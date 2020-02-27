@@ -571,17 +571,18 @@ float SectorStreamReader::dataCaptured()
 void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
+  std::vector<int> dims;
+
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
 
     // When we receive the first header we can create the file
     if (!created) {
-      std::vector<int> dims = {
-        static_cast<int>(b.header.scanDimensions.first) *
-          static_cast<int>(b.header.scanDimensions.second),
-        static_cast<int>(FRAME_DIMENSIONS.first),
-        static_cast<int>(FRAME_DIMENSIONS.first)
-      };
+      dims.push_back(static_cast<int>(b.header.scanDimensions.first) *
+                     static_cast<int>(b.header.scanDimensions.second));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+
       std::vector<int> chunkDims = {
         1, static_cast<int>(FRAME_DIMENSIONS.first),
         static_cast<int>(FRAME_DIMENSIONS.second)
@@ -607,8 +608,8 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
       start[0] = pos;
 
       auto data = b.data.get() + offset;
-      if (!writer.updateData("/frames", h5::H5ReadWrite::DataType::UInt16, data,
-                             start, counts)) {
+      if (!writer.updateData("/frames", dims, h5::H5ReadWrite::DataType::UInt16,
+                             data, start, counts)) {
         throw std::runtime_error("Unable to update HDF5.");
       }
     }
@@ -618,16 +619,18 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 void SectorStreamReader::toHdf5DataCubeFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
+  std::vector<int> dims;
+
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
 
     // When we receive the first header we can create the file
     if (!created) {
-      std::vector<int> dims = { static_cast<int>(b.header.scanDimensions.first),
-                                static_cast<int>(
-                                  b.header.scanDimensions.second),
-                                static_cast<int>(FRAME_DIMENSIONS.first),
-                                static_cast<int>(FRAME_DIMENSIONS.first) };
+      dims.push_back(static_cast<int>(b.header.scanDimensions.first));
+      dims.push_back(static_cast<int>(b.header.scanDimensions.second));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+
       std::vector<int> chunkDims = {
         1, 1, static_cast<int>(FRAME_DIMENSIONS.first),
         static_cast<int>(FRAME_DIMENSIONS.second)
@@ -649,8 +652,9 @@ void SectorStreamReader::toHdf5DataCubeFormat(h5::H5ReadWrite& writer)
       start[1] = y;
 
       auto data = b.data.get() + offset;
-      if (!writer.updateData("/datacube", h5::H5ReadWrite::DataType::UInt16,
-                             data, start, counts)) {
+      if (!writer.updateData("/datacube", dims,
+                             h5::H5ReadWrite::DataType::UInt16, data, start,
+                             counts)) {
         throw std::runtime_error("Unable to update HDF5.");
       }
     }
