@@ -46,10 +46,10 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :return: A numpy array of the STEM images.
     :rtype: numpy.ndarray
     """
-    # Ensure the inner and outer radii are lists
-    if not isinstance(inner_radii, list):
+    # Ensure the inner and outer radii are tuples or lists
+    if not isinstance(inner_radii, (tuple, list)):
         inner_radii = [inner_radii]
-    if not isinstance(outer_radii, list):
+    if not isinstance(outer_radii, (tuple, list)):
         outer_radii = [outer_radii]
 
     if isinstance(input, h5py._hl.files.File):
