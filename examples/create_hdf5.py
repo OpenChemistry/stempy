@@ -89,7 +89,8 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
                 num = block.header.image_numbers[i]
                 raw_data[num] = block.data[i]
 
-        io.save_raw_data(output, raw_data, zip_data=zip_raw)
+        io.save_raw_data(output, raw_data, scan_dimensions=scan_dimensions,
+                         zip_data=zip_raw)
 
 if __name__ == '__main__':
     make_stem_hdf5()

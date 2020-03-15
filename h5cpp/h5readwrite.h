@@ -287,6 +287,17 @@ public:
   bool setAttribute(const std::string& path, const std::string& name, T value);
 
   /**
+   * Set an attribute on a specified path.
+   * @param path The path where the attribute will be written.
+   * @param name The name of the attribute.
+   * @param values The values of the attribute.
+   * @return True on success, false on failure.
+   */
+  template <typename T>
+  bool setAttribute(const std::string& path, const std::string& name,
+                    const std::vector<T>& values);
+
+  /**
    * Create a group.
    * @param path The path to the group that will be created.
    * @return True on success, false on failure

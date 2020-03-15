@@ -17,10 +17,10 @@ def save_img(stem_image_data, name, scan_dimensions):
 with h5py.File('stem_image.h5', 'r') as rf:
     frames = rf['/electron_events/frames'][()]
     attrs = rf['/electron_events/frames'].attrs
-    frame_dimensions = (attrs['Nx'], attrs['Ny'])
+    frame_dimensions = attrs['frame_dimensions']
 
     attrs = rf['/electron_events/scan_positions'].attrs
-    scan_dimensions = (attrs['Nx'], attrs['Ny'])
+    scan_dimensions = attrs['scan_dimensions']
 
 num_pixels = frame_dimensions[0] * frame_dimensions[1]
 

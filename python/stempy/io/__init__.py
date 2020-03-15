@@ -56,9 +56,7 @@ def get_hdf5_reader(h5file):
     dset_frame=h5file['frames']
     dset_frame_shape=dset_frame.shape
     totalImgNum=dset_frame_shape[0]
-
-    dset_stem_shape=h5file['stem/images'].shape
-    scan_dimensions = (dset_stem_shape[2], dset_stem_shape[1])
+    scan_dimensions = dset_frame.attrs['scan_dimensions']
 
     blocksize=32
     # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
@@ -95,13 +93,17 @@ def reader(path, version=FileVersion.VERSION1):
 
     return reader
 
-def save_raw_data(path, data, scan_positions=None, zip_data=False):
+def save_raw_data(path, data, scan_dimensions=None, scan_positions=None,
+                  zip_data=False):
     """Save the raw data to an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
     :param data: the raw data to save.
     :type data: numpy.ndarray
+    :param scan_dimensions: the dimensions of the scan, where the order is
+                            (width, height).
+    :type scan_dimensions: tuple of ints of length 2
     :param scan_positions: the scan positions of each frame. This is
                            only needed if the frames are not sorted.
     :type scan_positions: list of ints
@@ -121,10 +123,13 @@ def save_raw_data(path, data, scan_positions=None, zip_data=False):
         if zip_data:
             # Make each chunk the size of a frame
             chunk_shape = (1, data.shape[1], data.shape[2])
-            f.create_dataset('frames', data=data, compression='gzip',
-                             chunks=chunk_shape)
+            frames = f.create_dataset('frames', data=data, compression='gzip',
+                                      chunks=chunk_shape)
         else:
-            f.create_dataset('frames', data=data)
+            frames = f.create_dataset('frames', data=data)
+
+        if scan_dimensions is not None:
+            frames.attrs['scan_dimensions'] = scan_dimensions
 
         if scan_positions is not None:
             f.create_dataset('scan_positions', data=scan_positions)
@@ -150,15 +155,13 @@ def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
         # be used to derive the scan_postions.
         # TODO: This should be passed to use
         scan_positions[...] = [i for i in range(0, events.shape[0])]
-        scan_positions.attrs['Nx'] = scan_dimensions[0]
-        scan_positions.attrs['Ny'] = scan_dimensions[1]
+        scan_positions.attrs['scan_dimensions'] = scan_dimensions
 
         coordinates_type = h5py.special_dtype(vlen=np.uint32)
         frames = group.create_dataset('frames', (events.shape[0],), dtype=coordinates_type)
         # Add the frame dimensions as attributes
         if frame_dimensions is not None:
-            frames.attrs['Nx'] = frame_dimensions[0]
-            frames.attrs['Ny'] = frame_dimensions[1]
+            frames.attrs['frame_dimensions'] = frame_dimensions
 
         frames[...] = events
 
