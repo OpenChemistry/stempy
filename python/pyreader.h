@@ -14,6 +14,39 @@ namespace stempy {
 struct PYBIND11_EXPORT DataHolder
 {
   DataHolder() = default;
+  DataHolder(const DataHolder&) = default;
+  DataHolder(DataHolder&&) = default;
+
+  DataHolder& operator=(const DataHolder& other)
+  {
+    if (this != &other) {
+      // Need to acquire the gil before deleting the python array
+      // or there may be a crash.
+      py::gil_scoped_acquire gil;
+      this->array = other.array;
+    }
+
+    return *this;
+  }
+
+  DataHolder& operator=(DataHolder&& other)
+  {
+    if (this != &other) {
+      // Need to acquire the gil before deleting the python array
+      // or there may be a crash.
+      py::gil_scoped_acquire gil;
+      this->array = std::move(other.array);
+    }
+
+    return *this;
+  }
+
+  ~DataHolder()
+  {
+    // Need to acquire the gil before deleting the python array
+    // or there may be a crash.
+    reset();
+  }
 
   const uint16_t* get()
   {
