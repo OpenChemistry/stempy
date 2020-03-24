@@ -162,6 +162,31 @@ def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
 
         frames[...] = events
 
+def read_electron_counts(path):
+    """Read electron counted data from an HDF5 file.
+
+    :param path: path to the HDF5 file.
+    :type path: str
+
+    :return: the coordinates of the electron hits for each frame.
+    :rtype: ElectronCountedData (named tuple with fields 'data',
+            'scan_dimensions', and 'frame_dimensions')
+    """
+
+    ret = namedtuple('ElectronCountedData',
+                     ['data', 'scan_dimensions', 'frame_dimensions'])
+
+    with h5py.File(path, 'r') as f:
+        frames = f['electron_events/frames']
+        scan_positions = f['electron_events/scan_positions']
+
+        ret.data = frames[()]
+        ret.scan_dimensions = [scan_positions.attrs[x] for x in ['Nx', 'Ny']]
+        if 'Nx' in frames.attrs and 'Ny' in frames.attrs:
+            ret.frame_dimensions = [frames.attrs[x] for x in ['Nx', 'Ny']]
+
+    return ret
+
 def save_stem_images(outputFile, images, names):
     """Save STEM images to an HDF5 file.
 
