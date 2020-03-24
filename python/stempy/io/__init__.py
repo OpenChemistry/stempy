@@ -129,20 +129,24 @@ def save_raw_data(path, data, scan_positions=None, zip_data=False):
         if scan_positions is not None:
             f.create_dataset('scan_positions', data=scan_positions)
 
-def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
+def save_electron_counts(path, data):
     """Save the electron counted data to an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
-    :param events: the electron counted data.
-    :type events: numpy.ndarray
-    :param scan_dimensions: the dimensions of the scan, where the order is
-                            (width, height).
-    :type scan_dimensions: tuple of ints of length 2
-    :param frame_dimensions: the dimensions of each frame, where the order is
-                             (width, height).
-    :type frame_dimensions: tuple of ints of length 2
+    :param data: the electron counted data.
+    :type data: ElectronCountedData (named tuple with fields 'data',
+                'scan_dimensions', and 'frame_dimensions')
     """
+    # Electron counted data attributes
+    ecd_attrs = ['data', 'scan_dimensions', 'frame_dimensions']
+    if not all([hasattr(data, x) for x in ecd_attrs]):
+        raise Exception('`data` must be electron counted data')
+
+    events = data.data
+    scan_dimensions = data.scan_dimensions
+    frame_dimensions = data.frame_dimensions
+
     with h5py.File(path, 'a') as f:
         group = f.require_group('electron_events')
         scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
@@ -156,9 +160,8 @@ def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
         coordinates_type = h5py.special_dtype(vlen=np.uint32)
         frames = group.create_dataset('frames', (events.shape[0],), dtype=coordinates_type)
         # Add the frame dimensions as attributes
-        if frame_dimensions is not None:
-            frames.attrs['Nx'] = frame_dimensions[0]
-            frames.attrs['Ny'] = frame_dimensions[1]
+        frames.attrs['Nx'] = frame_dimensions[0]
+        frames.attrs['Ny'] = frame_dimensions[1]
 
         frames[...] = events
 
@@ -182,8 +185,7 @@ def load_electron_counts(path):
 
         ret.data = frames[()]
         ret.scan_dimensions = [scan_positions.attrs[x] for x in ['Nx', 'Ny']]
-        if 'Nx' in frames.attrs and 'Ny' in frames.attrs:
-            ret.frame_dimensions = [frames.attrs[x] for x in ['Nx', 'Ny']]
+        ret.frame_dimensions = [frames.attrs[x] for x in ['Nx', 'Ny']]
 
     return ret
 
