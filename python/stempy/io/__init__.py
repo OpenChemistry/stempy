@@ -162,8 +162,8 @@ def save_electron_counts(path, events, scan_dimensions, frame_dimensions=None):
 
         frames[...] = events
 
-def read_electron_counts(path):
-    """Read electron counted data from an HDF5 file.
+def load_electron_counts(path):
+    """Load electron counted data from an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
