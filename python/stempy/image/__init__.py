@@ -66,8 +66,12 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         imgs = _image.create_stem_images(input.begin(), input.end(),
                                          inner_radii, outer_radii,
                                          scan_dimensions, center)
+    elif hasattr(input, '_electron_counted_data'):
+        # Handle electron counted data with C++ object
+        imgs = _image.create_stem_images(input._electron_counted_data,
+                                         inner_radii, outer_radii, center)
     elif all([hasattr(input, x) for x in ecd_attrs]):
-        # Handle electron counted data
+        # Handle electron counted data without C++ object
         imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
                                          input.scan_dimensions,
                                          input.frame_dimensions, center, 0)
