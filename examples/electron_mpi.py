@@ -1,6 +1,7 @@
 from stempy import io, image
 
 import click
+from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpi4py import MPI
 import numpy as np
@@ -86,20 +87,21 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         print('time: %s' % (end - start))
 
     if rank == 0:
-        # Write out the HDF5 file
-        scan_dimensions = electron_counted_data.scan_dimensions
-        frame_dimensions = electron_counted_data.frame_dimensions
+        # Create new electron counted data with the global frame events
+        data = namedtuple('ElectronCountedData',
+                          ['data', 'scan_dimensions', 'frame_dimensions'])
+        data.data = global_frame_events
+        data.scan_dimensions = electron_counted_data.scan_dimensions
+        data.frame_dimensions = electron_counted_data.frame_dimensions
 
-        io.save_electron_counts(output_file, global_frame_events,
-                                scan_dimensions, frame_dimensions)
+        # Write out the HDF5 file
+        io.save_electron_counts(output_file, data)
 
         if generate_sparse:
             # Save out the sparse image
 
-            stem_imgs = image.create_stem_images(
-                global_frame_events, inner_radii, outer_radii,
-                scan_dimensions=scan_dimensions,
-                frame_dimensions=frame_dimensions, center=center)
+            stem_imgs = image.create_stem_images(data, inner_radii,
+                                                 outer_radii, center=center)
 
             for i, img in enumerate(stem_imgs):
                 fig, ax = plt.subplots(figsize=(12, 12))

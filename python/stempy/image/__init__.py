@@ -52,6 +52,9 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     if not isinstance(outer_radii, (tuple, list)):
         outer_radii = [outer_radii]
 
+    # Electron counted data attributes
+    ecd_attrs = ['data', 'scan_dimensions', 'frame_dimensions']
+
     if isinstance(input, h5py._hl.files.File):
         # Handle h5py file
         input = get_hdf5_reader(input)
@@ -64,9 +67,14 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
                                          inner_radii, outer_radii,
                                          scan_dimensions, center)
     elif hasattr(input, '_electron_counted_data'):
-        # Handle electron counted data
+        # Handle electron counted data with C++ object
         imgs = _image.create_stem_images(input._electron_counted_data,
                                          inner_radii, outer_radii, center)
+    elif all([hasattr(input, x) for x in ecd_attrs]):
+        # Handle electron counted data without C++ object
+        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
+                                         input.scan_dimensions,
+                                         input.frame_dimensions, center, 0)
     elif isinstance(input, np.ndarray):
         # The presence of frame dimensions implies it is sparse data
         if frame_dimensions is not None:
