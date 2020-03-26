@@ -1,6 +1,7 @@
 from stempy import io, image
 
 import click
+from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpi4py import MPI
 import numpy as np
@@ -17,8 +18,7 @@ def get_files(files):
 @click.command()
 @click.argument('files', nargs=-1,
                 type=click.Path(exists=True, dir_okay=False))
-@click.option('-d', '--dark-file', help='The file for dark field reference',
-              required=True)
+@click.option('-d', '--dark-file', help='The file for dark field reference')
 @click.option('-c', '--center', help='The center (comma separated)',
               required=True)
 @click.option('-i', '--inner-radii', help='The inner radii (comma separated)',
@@ -36,7 +36,7 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         msg = 'Center must be of the form: center_x,center_y.'
         raise click.ClickException(msg)
 
-    center_x, center_y = [int(x) for x in center]
+    center = tuple(int(x) for x in center)
 
     inner_radii = inner_radii.split(',')
     outer_radii = outer_radii.split(',')
@@ -61,9 +61,12 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
     comm.Barrier()
     start = MPI.Wtime()
 
-    # Every process will do the dark field reference average for now
-    reader = io.reader(dark_file, version=io.FileVersion.VERSION3)
-    dark = image.calculate_average(reader)
+    if dark_file is not None:
+        # Every process will do the dark field reference average for now
+        reader = io.reader(dark_file, version=io.FileVersion.VERSION3)
+        dark = image.calculate_average(reader)
+    else:
+        dark = np.zeros((576, 576))
 
     # Split up the files among processes
     files = get_files(files)
@@ -84,27 +87,21 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
         print('time: %s' % (end - start))
 
     if rank == 0:
-        # Write out the HDF5 file
-        scan_width = electron_counted_data.scan_width
-        scan_height = electron_counted_data.scan_height
-        frame_width = electron_counted_data.frame_width
-        frame_height = electron_counted_data.frame_height
+        # Create new electron counted data with the global frame events
+        data = namedtuple('ElectronCountedData',
+                          ['data', 'scan_dimensions', 'frame_dimensions'])
+        data.data = global_frame_events
+        data.scan_dimensions = electron_counted_data.scan_dimensions
+        data.frame_dimensions = electron_counted_data.frame_dimensions
 
-        io.save_electron_counts(output_file, global_frame_events, scan_width,
-                                scan_height, frame_width, frame_height)
+        # Write out the HDF5 file
+        io.save_electron_counts(output_file, data)
 
         if generate_sparse:
             # Save out the sparse image
-            width = electron_counted_data.scan_width
-            height = electron_counted_data.scan_height
-            frame_width = electron_counted_data.frame_width
-            frame_height = electron_counted_data.frame_height
 
-            stem_imgs = image.create_stem_images_sparse(
-                global_frame_events, inner_radii, outer_radii, width=width,
-                height=height, frame_width=frame_width,
-                frame_height=frame_height, center_x=center_x,
-                center_y=center_y)
+            stem_imgs = image.create_stem_images(data, inner_radii,
+                                                 outer_radii, center=center)
 
             for i, img in enumerate(stem_imgs):
                 fig, ax = plt.subplots(figsize=(12, 12))

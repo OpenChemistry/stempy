@@ -1,6 +1,8 @@
 #ifndef stempymask_h
 #define stempymask_h
 
+#include "reader.h"
+
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -8,9 +10,8 @@
 
 namespace stempy {
 
-uint16_t* createAnnularMask(int width, int height, int innerRadius,
-                            int outerRadius, int centerX = -1,
-                            int centerY = -1);
+uint16_t* createAnnularMask(Dimensions2D dimensions, int innerRadius,
+                            int outerRadius, Coordinates2D center = { -1, -1 });
 }
 
 #endif

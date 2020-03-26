@@ -37,10 +37,11 @@ using std::vector;
 namespace stempy {
 
 template <typename T>
-Image<T>::Image(uint32_t w, uint32_t h)
-  : width(w), height(h), data(new T[w * h], std::default_delete<T[]>())
+Image<T>::Image(Dimensions2D dims)
+  : dimensions(dims),
+    data(new T[dims.first * dims.second], std::default_delete<T[]>())
 {
-  std::fill(this->data.get(), this->data.get() + width * height, 0);
+  std::fill(this->data.get(), this->data.get() + dims.first * dims.second, 0);
 }
 
 STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
@@ -58,10 +59,12 @@ STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
 }
 
 template <typename T>
-RadialSum<T>::RadialSum(uint32_t w, uint32_t h, uint32_t r)
-  : width(w), height(h), radii(r), data(new T[w * h * r], std::default_delete<T[]>())
+RadialSum<T>::RadialSum(Dimensions2D dims, uint32_t r)
+  : dimensions(dims), radii(r),
+    data(new T[dims.first * dims.second * r], std::default_delete<T[]>())
 {
-  std::fill(this->data.get(), this->data.get() + width * height * radii, 0);
+  std::fill(this->data.get(),
+            this->data.get() + dims.first * dims.second * radii, 0);
 }
 
 
@@ -166,8 +169,9 @@ void _runCalculateSTEMValues(const uint16_t data[],
 template <typename InputIt>
 vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
                                    const vector<int>& innerRadii,
-                                   const vector<int>& outerRadii, int width,
-                                   int height, int centerX, int centerY)
+                                   const vector<int>& outerRadii,
+                                   Dimensions2D scanDimensions,
+                                   Coordinates2D center)
 {
   if (first == last) {
     ostringstream msg;
@@ -188,13 +192,12 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   }
 
   // If we haven't been provided with width and height, try the header.
-  if (width == 0 || height == 0) {
-    width = first->header.scanWidth;
-    height = first->header.scanHeight;
+  if (scanDimensions.first == 0 || scanDimensions.second == 0) {
+    scanDimensions = first->header.scanDimensions;
   }
 
   // Raise an exception if we still don't have valid width and height
-  if (width <= 0 || height <= 0) {
+  if (scanDimensions.first <= 0 || scanDimensions.second <= 0) {
     ostringstream msg;
     msg << "No scan image size provided.";
     throw invalid_argument(msg.str());
@@ -203,12 +206,11 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
   vector<STEMImage> images;
   for (const auto& r : innerRadii) {
     (void)r;
-    images.push_back(STEMImage(width, height));
+    images.push_back(STEMImage(scanDimensions));
   }
   // Get image size from first block
-  auto frameWidth = first->header.frameWidth;
-  auto frameHeight = first->header.frameHeight;
-  auto numberOfPixels = frameWidth * frameHeight;
+  auto frameDimensions = first->header.frameDimensions;
+  auto numberOfPixels = frameDimensions.first * frameDimensions.second;
 
   vector<uint16_t*> masks;
 
@@ -218,8 +220,8 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
 #endif
 
   for (size_t i = 0; i < innerRadii.size(); ++i) {
-    masks.push_back(createAnnularMask(frameWidth, frameHeight, innerRadii[i],
-                                      outerRadii[i], centerX, centerY));
+    masks.push_back(
+      createAnnularMask(frameDimensions, innerRadii[i], outerRadii[i], center));
 
 #ifdef VTKm
     maskHandles.push_back(
@@ -285,12 +287,12 @@ vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
 std::vector<double> getContainer(const STEMImage& inImage, const int numBins)
 {
   // information about input STEMImage
-  int width = inImage.width;
-  int height = inImage.height;
+  auto scanDimensions = inImage.dimensions;
   auto curData = inImage.data;
 
   auto result =
-    std::minmax_element(curData.get(), curData.get() + width * height);
+    std::minmax_element(curData.get(), curData.get() + scanDimensions.first *
+                                                         scanDimensions.second);
   double min = *result.first;
   double max = *result.second;
 
@@ -316,12 +318,11 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
   std::vector<int> frequencies(numBins, 0);
 
   // STEMImage info
-  int width = inImage.width;
-  int height = inImage.height;
+  auto scanDimensions = inImage.dimensions;
   auto curData = inImage.data;
 
   // get a histrogram
-  for (int i = 0; i < width * height; i++) {
+  for (uint32_t i = 0; i < scanDimensions.first * scanDimensions.second; ++i) {
     auto value = curData[i];
     // check which bin it belongs to
     for (int j = 0; j < numBins; j++) {
@@ -351,10 +352,10 @@ void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
   }
 }
 
-vector<STEMImage> createSTEMImagesSparse(
+vector<STEMImage> createSTEMImages(
   const vector<vector<uint32_t>>& sparseData, const vector<int>& innerRadii,
-  const vector<int>& outerRadii, int width, int height, int frameWidth,
-  int frameHeight, int centerX, int centerY, int frameOffset)
+  const vector<int>& outerRadii, Dimensions2D scanDimensions,
+  Dimensions2D frameDimensions, Coordinates2D center, int frameOffset)
 {
   if (innerRadii.empty() || outerRadii.empty()) {
     ostringstream msg;
@@ -371,9 +372,9 @@ vector<STEMImage> createSTEMImagesSparse(
   vector<STEMImage> images;
   vector<uint16_t*> masks;
   for (size_t i = 0; i < innerRadii.size(); ++i) {
-    images.push_back(STEMImage(width, height));
-    masks.push_back(createAnnularMask(frameWidth, frameHeight, innerRadii[i],
-                                      outerRadii[i], centerX, centerY));
+    images.push_back(STEMImage(scanDimensions));
+    masks.push_back(
+      createAnnularMask(frameDimensions, innerRadii[i], outerRadii[i], center));
   }
 
   for (size_t i = 0; i < masks.size(); ++i)
@@ -385,23 +386,22 @@ vector<STEMImage> createSTEMImagesSparse(
   return images;
 }
 
-vector<STEMImage> createSTEMImagesSparse(const ElectronCountedData& data,
-                                         const vector<int>& innerRadii,
-                                         const vector<int>& outerRadii,
-                                         int centerX, int centerY)
+vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii,
+                                   Coordinates2D center)
 {
-  return createSTEMImagesSparse(
-    data.data, innerRadii, outerRadii, data.scanWidth, data.scanHeight,
-    data.frameWidth, data.frameHeight, centerX, centerY);
+  return createSTEMImages(data.data, innerRadii, outerRadii,
+                          data.scanDimensions, data.frameDimensions,
+                          center);
 }
 
 template <typename InputIt>
 Image<double> calculateAverage(InputIt first, InputIt last)
 {
-  auto frameWidth = first->header.frameWidth;
-  auto frameHeight = first->header.frameHeight;
-  auto numDetectorPixels = frameWidth*frameHeight;
-  Image<double> image(frameWidth, frameHeight);
+  auto frameDimensions = first->header.frameDimensions;
+  auto numDetectorPixels = frameDimensions.first * frameDimensions.second;
+  Image<double> image(frameDimensions);
 
   std::fill(image.data.get(), image.data.get() + numDetectorPixels, 0.0);
   uint64_t numberOfImages = 0;
@@ -410,14 +410,16 @@ Image<double> calculateAverage(InputIt first, InputIt last)
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
-      auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
+      auto numberOfPixels = block.header.frameDimensions.first *
+                            block.header.frameDimensions.second;
       for (unsigned j = 0; j < numberOfPixels; j++) {
         image.data[j] += blockData[i*numberOfPixels+j];
       }
     }
   }
 
-  for (unsigned i = 0; i < frameHeight * frameWidth; i++) {
+  for (unsigned i = 0; i < frameDimensions.first * frameDimensions.second;
+       i++) {
     image.data[i] /= numberOfImages;
   }
 
@@ -428,21 +430,21 @@ double inline distance(int x1, int y1, int x2, int y2) {
   return sqrt(pow((x1 - x2), 2.0) + pow((y1 - y2), 2.0));
 }
 
-void radialSumFrame(int centerX, int centerY, const uint16_t data[],
-                    uint64_t offset, int frameWidth, int frameHeight,
+void radialSumFrame(Coordinates2D center, const uint16_t data[],
+                    uint64_t offset, Dimensions2D frameDimensions,
                     int imageNumber, RadialSum<uint64_t>& radialSum)
 {
-  auto numberOfPixels = frameWidth*frameHeight;
-  for (int i=0; i< numberOfPixels; i++) {
-    auto x = i % frameWidth;
-    auto y = i / frameWidth;
-    auto radius = static_cast<int>(
-        std::ceil(
-            distance(x, y, centerX, centerY)
-        )
-    );
+  auto numberOfPixels = frameDimensions.first * frameDimensions.second;
+  for (uint32_t i = 0; i < numberOfPixels; ++i) {
+    auto x = i % frameDimensions.first;
+    auto y = i / frameDimensions.first;
+    auto radius =
+      static_cast<int>(std::ceil(distance(x, y, center.first, center.second)));
     // Use compiler intrinsic to ensure atomic add
-    auto address = radialSum.data.get() + radius*radialSum.width*radialSum.height + imageNumber;
+    auto address =
+      radialSum.data.get() +
+      radius * radialSum.dimensions.first * radialSum.dimensions.second +
+      imageNumber;
     __sync_fetch_and_add(address, data[offset + i]);
   }
 }
@@ -490,12 +492,12 @@ void radialSumFrame(const vtkm::Vec<int, 2>& center,
          data, radialSum);
 }
 
-void radialSumFrames(int centerX, int centerY, const uint16_t data[],
+void radialSumFrames(Coordinates2D center, const uint16_t data[],
                      int frameWidth, std::vector<uint32_t>& imageNumbers,
                      uint32_t numberOfPixels, uint32_t numberOfScanPositions,
                      vtkm::cont::ArrayHandle<vtkm::Int64>& radialSum)
 {
-  vtkm::Vec<int, 2> center = { centerX, centerY };
+  vtkm::Vec<int, 2> centerVec = { center.first, center.second };
   auto dataHandle =
     vtkm::cont::make_ArrayHandle(data, numberOfPixels * imageNumbers.size());
   // Use view to the array already transfered
@@ -505,14 +507,14 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
     auto view =
       vtkm::cont::make_ArrayHandleView(dataHandle, offset, numberOfPixels);
 
-    radialSumFrame(center, view, frameWidth, imageNumbers[i], numberOfScanPositions,
-                   radialSum);
+    radialSumFrame(centerVec, view, frameWidth, imageNumbers[i],
+                   numberOfScanPositions, radialSum);
   }
 }
 
 #else
-void radialSumFrames(int centerX, int centerY, const uint16_t data[],
-                     int frameWidth, int frameHeight,
+void radialSumFrames(Coordinates2D center, const uint16_t data[],
+                     Dimensions2D frameDimensions,
                      std::vector<uint32_t>& imageNumbers,
                      uint32_t numberOfPixels, RadialSum<uint64_t>& radialSum)
 {
@@ -520,16 +522,16 @@ void radialSumFrames(int centerX, int centerY, const uint16_t data[],
     // We need to ensure we are using int64_t to prevent overflow.
     auto offset = static_cast<int64_t>(i) * numberOfPixels;
     auto imageNumber = imageNumbers[i];
-    radialSumFrame(centerX, centerY, data, offset,
-        frameWidth, frameHeight, imageNumber, radialSum);
+    radialSumFrame(center, data, offset, frameDimensions, imageNumber,
+                   radialSum);
   }
 }
 #endif
 }
 
 template <typename InputIt>
-RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int scanHeight,
-      int centerX, int centerY)
+RadialSum<uint64_t> radialSum(InputIt first, InputIt last,
+                              Dimensions2D scanDimensions, Coordinates2D center)
 {
   if (first == last) {
     ostringstream msg;
@@ -538,36 +540,36 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
   }
 
   // If we haven't been provided with width and height, try the header.
-  if (scanWidth == 0 || scanHeight == 0) {
-    scanWidth = first->header.scanWidth;
-    scanHeight = first->header.scanHeight;
+  if (scanDimensions.first == 0 || scanDimensions.second == 0) {
+    scanDimensions = first->header.scanDimensions;
   }
 
   // Raise an exception if we still don't have valid width and height
-  if (scanWidth <= 0 || scanHeight <= 0) {
+  if (scanDimensions.first <= 0 || scanDimensions.second <= 0) {
     ostringstream msg;
     msg << "No scan image size provided.";
     throw invalid_argument(msg.str());
   }
 
   // Get image size from first block
-  auto frameWidth = first->header.frameWidth;
-  auto frameHeight = first->header.frameHeight;
-  auto numberOfPixels = frameWidth * frameHeight;
+  auto frameDimensions = first->header.frameDimensions;
+  auto numberOfPixels = frameDimensions.first * frameDimensions.second;
 
   // Default the center if necessary
-  if (centerX < 0)
-    centerX = static_cast<int>(std::round(frameWidth / 2.0));
+  if (center.first < 0)
+    center.first = static_cast<int>(std::round(frameDimensions.first / 2.0));
 
-  if (centerY < 0)
-    centerY = static_cast<int>(std::round(frameHeight / 2.0));
+  if (center.second < 0)
+    center.second = static_cast<int>(std::round(frameDimensions.second / 2.0));
 
   // Calculate the maximum possible radius for the frame, the maximum distance
   // from all four corners
   double max = 0.0;
   for(int x=0; x<2; x++) {
     for(int y=0; y<2; y++) {
-      auto dist = distance(x*frameWidth, y*frameHeight, centerX, centerY);
+      auto dist =
+        distance(x * frameDimensions.first, y * frameDimensions.second,
+                 center.first, center.second);
       if (dist > max) {
         max = dist;
       }
@@ -582,14 +584,14 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
   // 2 threads to be ideal.
   int numThreads = 2;
   ThreadPool pool(numThreads);
-  RadialSum<uint64_t> radialSum(scanWidth, scanHeight, maxRadius+1);
+  RadialSum<uint64_t> radialSum(scanDimensions, maxRadius + 1);
 
 #ifdef VTKm
   // We need the reinterpret_cast as vtkm currently doesn't support atomic
   // access for uint64.
   auto radialSumHandle = vtkm::cont::make_ArrayHandle(
     reinterpret_cast<vtkm::Int64*>(radialSum.data.get()),
-    radialSum.radii * radialSum.width * radialSum.height);
+    radialSum.radii * radialSum.dimensions.first * radialSum.dimensions.second);
 #endif
 
   // Populate the worker pool
@@ -602,11 +604,12 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
     // lambda so that we can explicity delete the block. Otherwise,
     // the block will not be deleted until the threads are destroyed.
 #ifdef VTKm
-    auto numberOfScanPositions = radialSum.width * radialSum.height;
-    futures.emplace_back(pool.enqueue(
-      [b, numberOfPixels, centerX, centerY, frameWidth,
-       &radialSumHandle, numberOfScanPositions]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth,
+    auto numberOfScanPositions =
+      radialSum.dimensions.first * radialSum.dimensions.second;
+    futures.emplace_back(
+      pool.enqueue([b, numberOfPixels, center, frameDimensions,
+                    &radialSumHandle, numberOfScanPositions]() mutable {
+        radialSumFrames(center, b.data.get(), frameDimensions.first,
                         b.header.imageNumbers, numberOfPixels,
                         numberOfScanPositions, radialSumHandle);
         // If we don't reset this, it won't get reset until the thread is
@@ -614,10 +617,10 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last, int scanWidth, int sc
         b.data.reset();
       }));
 #else
-    futures.emplace_back(
-      pool.enqueue([b, numberOfPixels, centerX, centerY,  frameWidth, frameHeight, &radialSum]() mutable {
-        radialSumFrames(centerX, centerY, b.data.get(), frameWidth, frameHeight, b.header.imageNumbers,
-            numberOfPixels, radialSum);
+    futures.emplace_back(pool.enqueue(
+      [b, numberOfPixels, center, frameDimensions, &radialSum]() mutable {
+        radialSumFrames(center, b.data.get(), frameDimensions,
+                        b.header.imageNumbers, numberOfPixels, radialSum);
         // If we don't reset this, it won't get reset until the thread is
         // destroyed.
         b.data.reset();
@@ -636,10 +639,9 @@ template <typename InputIt>
 Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
                                         const Image<double>& darkreference)
 {
-  auto frameWidth = first->header.frameWidth;
-  auto frameHeight = first->header.frameHeight;
-  auto numDetectorPixels = frameWidth * frameHeight;
-  Image<double> maxDiffPattern(frameWidth, frameHeight);
+  auto frameDimensions = first->header.frameDimensions;
+  auto numDetectorPixels = frameDimensions.first * frameDimensions.second;
+  Image<double> maxDiffPattern(frameDimensions);
 
   std::fill(maxDiffPattern.data.get(),
             maxDiffPattern.data.get() + numDetectorPixels, 0);
@@ -649,7 +651,8 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
     auto blockData = block.data.get();
     numberOfImages += block.header.imagesInBlock;
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
-      auto numberOfPixels = block.header.frameHeight * block.header.frameWidth;
+      auto numberOfPixels = block.header.frameDimensions.first *
+                            block.header.frameDimensions.second;
       for (unsigned j = 0; j < numberOfPixels; j++) {
         if (blockData[i * numberOfPixels + j] > maxDiffPattern.data[j]) {
           maxDiffPattern.data[j] = blockData[i * numberOfPixels + j];
@@ -659,7 +662,7 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
   }
 
   // If we have been given a darkreference substract it
-  if (darkreference.width > 0) {
+  if (darkreference.dimensions.first > 0) {
     for (unsigned i = 0; i < numDetectorPixels; i++) {
       maxDiffPattern.data[i] -= darkreference.data[i];
     }
@@ -680,23 +683,23 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last)
 // Instantiate the ones that can be used
 template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
   StreamReader::iterator first, StreamReader::iterator last,
-  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
-  int height, int centerX, int centerY);
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, Coordinates2D center);
 
 template vector<STEMImage> createSTEMImages<PyReader::iterator>(
   PyReader::iterator first, PyReader::iterator last,
-  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
-  int height, int centerX, int centerY);
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, Coordinates2D center);
 
 template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(
   vector<Block>::iterator first, vector<Block>::iterator last,
-  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
-  int height, int centerX, int centerY);
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, Coordinates2D center);
 
 template vector<STEMImage> createSTEMImages<SectorStreamReader::iterator>(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last,
-  const vector<int>& innerRadii, const vector<int>& outerRadii, int width,
-  int height, int centerX, int centerY);
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, Coordinates2D center);
 
 template Image<double> calculateAverage(StreamReader::iterator first,
                                         StreamReader::iterator last);
@@ -707,19 +710,22 @@ template Image<double> calculateAverage(SectorStreamReader::iterator first,
 template Image<double> calculateAverage(PyReader::iterator first,
                                         PyReader::iterator last);
 
-
-template RadialSum<uint64_t> radialSum(StreamReader::iterator first, StreamReader::iterator last,
-      int scanWidth, int scanHeight, int centerX, int centerY);
-template RadialSum<uint64_t> radialSum(vector<Block>::iterator, vector<Block>::iterator last,
-      int scanWidth, int scanHeight, int centerX, int centerY);
+template RadialSum<uint64_t> radialSum(StreamReader::iterator first,
+                                       StreamReader::iterator last,
+                                       Dimensions2D scanDimensions,
+                                       Coordinates2D center);
+template RadialSum<uint64_t> radialSum(vector<Block>::iterator,
+                                       vector<Block>::iterator last,
+                                       Dimensions2D scanDimensions,
+                                       Coordinates2D center);
 template RadialSum<uint64_t> radialSum(SectorStreamReader::iterator first,
                                        SectorStreamReader::iterator last,
-                                       int scanWidth, int scanHeight,
-                                       int centerX, int centerY);
+                                       Dimensions2D scanDimensions,
+                                       Coordinates2D center);
 template RadialSum<uint64_t> radialSum(PyReader::iterator first,
                                        PyReader::iterator last,
-                                       int scanWidth, int scanHeight,
-                                       int centerX, int centerY);
+                                       Dimensions2D scanDimensions,
+                                       Coordinates2D center);
 
 template Image<double> maximumDiffractionPattern(
   StreamReader::iterator first, StreamReader::iterator last,

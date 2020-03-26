@@ -232,8 +232,9 @@ public:
     return dataId >= 0;
   }
 
-  bool updateData(const string& path, hid_t memTypeId, const void* data,
-                  size_t* start = nullptr, size_t* counts = nullptr)
+  bool updateData(const string& path, const std::vector<int>& dataSetDimensions,
+                  hid_t memTypeId, const void* data, size_t* start = nullptr,
+                  size_t* counts = nullptr)
   {
     if (!fileIsValid()) {
       cerr << "File is invalid\n";
@@ -256,8 +257,7 @@ public:
 
     HIDCloser dataSpaceCloser(dataSpaceId, H5Sclose);
 
-    auto dims = getDimensions(path);
-    size_t ndims = dims.size();
+    auto ndims = dataSetDimensions.size();
 
     auto stridesVector = vector<hsize_t>(ndims, 1);
     // stridesVector[2] = 10;
@@ -274,7 +274,7 @@ public:
     } else {
       countsVector.resize(ndims);
       for (size_t i = 0; i < countsVector.size(); ++i) {
-        countsVector[i] = dims[i] - startVector[i];
+        countsVector[i] = dataSetDimensions[i] - startVector[i];
       }
     }
 
@@ -894,8 +894,10 @@ bool H5ReadWrite::createDataSet(const std::string& path,
   return m_impl->createDataSet(path, name, dims, dataTypeId, chunkDims);
 }
 
-bool H5ReadWrite::updateData(const std::string& path, const DataType& type,
-                             void* data, size_t* start, size_t* counts)
+bool H5ReadWrite::updateData(const std::string& path,
+                             const std::vector<int>& dimensions,
+                             const DataType& type, void* data, size_t* start,
+                             size_t* counts)
 {
   auto memIt = DataTypeToH5MemType.find(type);
   if (memIt == DataTypeToH5MemType.end()) {
@@ -904,7 +906,7 @@ bool H5ReadWrite::updateData(const std::string& path, const DataType& type,
   }
 
   hid_t memTypeId = memIt->second;
-  return m_impl->updateData(path, memTypeId, data, start, counts);
+  return m_impl->updateData(path, dimensions, memTypeId, data, start, counts);
 }
 
 template <typename T>

@@ -27,29 +27,24 @@ using std::vector;
 namespace stempy {
 
 /// Currently the detector data is written in four sectors
-const int SECTOR_WIDTH = 144;
-const int SECTOR_HEIGHT = 576;
+const Dimensions2D SECTOR_DIMENSIONS = { 144, 576 };
 
 /// This is the detector size at  NCEM
-const int FRAME_WIDTH = 576;
-const int FRAME_HEIGHT = 576;
+const Dimensions2D FRAME_DIMENSIONS = { 576, 576 };
 
-Header::Header(uint32_t frameWidth_, uint32_t frameHeight_,
-               uint32_t imageNumInBlock_, uint32_t scanWidth_,
-               uint32_t scanHeight_, vector<uint32_t>& imageNumbers_)
+Header::Header(Dimensions2D frameDimensions_, uint32_t imageNumInBlock_,
+               Dimensions2D scanDimensions_, vector<uint32_t>& imageNumbers_)
 {
-  this->frameWidth = frameWidth_;
-  this->frameHeight = frameHeight_;
+  this->frameDimensions = frameDimensions_;
   this->imagesInBlock = imageNumInBlock_;
-  this->scanHeight = scanHeight_;
-  this->scanWidth = scanWidth_;
+  this->scanDimensions = scanDimensions_;
   this->imageNumbers = imageNumbers_;
 }
 
 Block::Block(const Header& h)
-  : header(h),
-    data(new uint16_t[h.frameWidth * h.frameHeight * h.imagesInBlock],
-         std::default_delete<uint16_t[]>())
+  : header(h), data(new uint16_t[h.frameDimensions.first *
+                                 h.frameDimensions.second * h.imagesInBlock],
+                    std::default_delete<uint16_t[]>())
 {}
 
 StreamReader::StreamReader(const vector<string>& files, uint8_t version)
@@ -130,8 +125,8 @@ Header StreamReader::readHeaderVersion1() {
 
   int index = 0;
   header.imagesInBlock = headerData[index++];
-  header.frameHeight = headerData[index++];
-  header.frameWidth = headerData[index++];
+  header.frameDimensions.second = headerData[index++];
+  header.frameDimensions.first = headerData[index++];
   header.version = headerData[index++];
   header.timestamp =  headerData[index++];
   // Skip over 6 - 10 - reserved
@@ -165,8 +160,7 @@ Header StreamReader::readHeaderVersion2() {
   firstImageNumber = 0;
 
   header.imagesInBlock = 1600;
-  header.frameWidth = FRAME_WIDTH;
-  header.frameHeight = FRAME_HEIGHT;
+  header.frameDimensions = FRAME_DIMENSIONS;
   header.version = 2;
 
   // Now generate the image numbers
@@ -192,8 +186,7 @@ Header StreamReader::readHeaderVersion3()
   Header header;
 
   header.imagesInBlock = 1;
-  header.frameWidth = FRAME_WIDTH;
-  header.frameHeight = FRAME_HEIGHT;
+  header.frameDimensions = FRAME_DIMENSIONS;
   header.version = 3;
 
   // Read scan and frame number
@@ -209,14 +202,14 @@ Header StreamReader::readHeaderVersion3()
   index = 0;
   read(headerPositions, 4 * sizeof(uint16_t));
 
-  // Note: The order is currently reversed y then x rather than the other way around
-  header.scanHeight = headerPositions[index++];
-  header.scanWidth = headerPositions[index++];
+  header.scanDimensions.first = headerPositions[index++];
+  header.scanDimensions.second = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanYPosition = headerPositions[index++];
   auto scanXPosition = headerPositions[index++];
-  header.imageNumbers.push_back(scanYPosition * header.scanWidth  + scanXPosition);
+  auto scanYPosition = headerPositions[index++];
+  header.imageNumbers.push_back(scanYPosition * header.scanDimensions.first +
+                                scanXPosition);
 
   return header;
 }
@@ -257,8 +250,8 @@ Block StreamReader::read()
 
     Block b(header);
 
-    auto dataSize =
-      b.header.frameWidth * b.header.frameHeight * b.header.imagesInBlock;
+    auto dataSize = b.header.frameDimensions.first *
+                    b.header.frameDimensions.second * b.header.imagesInBlock;
     read(b.data.get(), dataSize * sizeof(uint16_t));
 
     return b;
@@ -323,8 +316,7 @@ Header SectorStreamReader::readHeader(std::ifstream& stream)
   Header header;
 
   header.imagesInBlock = 1;
-  header.frameWidth = SECTOR_WIDTH;
-  header.frameHeight = SECTOR_HEIGHT;
+  header.frameDimensions = SECTOR_DIMENSIONS;
   header.version = 4;
 
   // Read scan and frame number
@@ -340,14 +332,14 @@ Header SectorStreamReader::readHeader(std::ifstream& stream)
   index = 0;
   read(stream, headerPositions, 4 * sizeof(uint16_t));
 
-  header.scanHeight = headerPositions[index++];
-  header.scanWidth = headerPositions[index++];
+  header.scanDimensions.first = headerPositions[index++];
+  header.scanDimensions.second = headerPositions[index++];
 
   // Now get the image numbers
-  auto scanYPosition = headerPositions[index++];
   auto scanXPosition = headerPositions[index++];
+  auto scanYPosition = headerPositions[index++];
 
-  header.imageNumbers.push_back(scanYPosition * header.scanWidth +
+  header.imageNumbers.push_back(scanYPosition * header.scanDimensions.first +
                                 scanXPosition);
 
   return header;
@@ -426,25 +418,26 @@ Block SectorStreamReader::read()
         if (frame.block.header.version == 0) {
           frame.block.header.version = 4;
           frame.block.header.scanNumber = header.scanNumber;
-          frame.block.header.scanWidth = header.scanWidth;
-          frame.block.header.scanHeight = header.scanHeight;
+          frame.block.header.scanDimensions = header.scanDimensions;
           frame.block.header.imagesInBlock = 1;
           frame.block.header.imageNumbers.push_back(pos);
-          frame.block.header.frameWidth = FRAME_WIDTH;
-          frame.block.header.frameHeight = FRAME_HEIGHT;
-          frame.block.data.reset(new uint16_t[frame.block.header.frameWidth *
-                                              frame.block.header.frameHeight],
-                                 std::default_delete<uint16_t[]>());
-          std::fill(
-            frame.block.data.get(),
-            frame.block.data.get() + frame.block.header.frameWidth * frame.block.header.frameHeight, 0);
+          frame.block.header.frameDimensions = FRAME_DIMENSIONS;
+          frame.block.data.reset(
+            new uint16_t[frame.block.header.frameDimensions.first *
+                         frame.block.header.frameDimensions.second],
+            std::default_delete<uint16_t[]>());
+          std::fill(frame.block.data.get(),
+                    frame.block.data.get() +
+                      frame.block.header.frameDimensions.first *
+                        frame.block.header.frameDimensions.second,
+                    0);
         }
 
-        auto frameX = sector * SECTOR_WIDTH;
-        for (unsigned frameY = 0; frameY < FRAME_HEIGHT; frameY++) {
-          auto offset = FRAME_WIDTH * frameY + frameX;
+        auto frameX = sector * SECTOR_DIMENSIONS.first;
+        for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second; frameY++) {
+          auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
           read(frame.block.data.get() + offset,
-               SECTOR_WIDTH * sizeof(uint16_t));
+               SECTOR_DIMENSIONS.first * sizeof(uint16_t));
         }
         frame.sectorCount++;
 
@@ -533,15 +526,15 @@ void SectorStreamReader::readAll(Functor func)
       }
       auto header = readHeader(stream);
       auto skip = [&stream, &header]() {
-        auto dataSize =
-          header.frameWidth * header.frameHeight * header.imagesInBlock;
+        auto dataSize = header.frameDimensions.first *
+                        header.frameDimensions.second * header.imagesInBlock;
         stream.seekg(dataSize * sizeof(uint16_t), stream.cur);
       };
 
       auto block = [&stream, &header]() -> Block {
         Block b(header);
-        auto dataSize =
-          header.frameWidth * header.frameHeight * header.imagesInBlock;
+        auto dataSize = header.frameDimensions.first *
+                        header.frameDimensions.second * header.imagesInBlock;
         stream.read(reinterpret_cast<char*>(b.data.get()),
                     dataSize * sizeof(uint16_t));
 
@@ -556,22 +549,21 @@ void SectorStreamReader::readAll(Functor func)
 float SectorStreamReader::dataCaptured()
 {
   uint64_t numberOfSectors = 0;
-  uint32_t scanWidth;
-  uint32_t scanHeight;
+  Dimensions2D scanDimensions;
 
-  auto func = [&numberOfSectors, &scanWidth, &scanHeight](
-                int sector, Header& header, auto& skip, auto& block) {
+  auto func = [&numberOfSectors, &scanDimensions](int sector, Header& header,
+                                                  auto& skip, auto& block) {
     (void)block;
     (void)sector;
     numberOfSectors++;
-    scanWidth = header.scanWidth;
-    scanHeight = header.scanHeight;
+    scanDimensions = header.scanDimensions;
     skip();
   };
 
   readAll(func);
 
-  auto expectedNumberOfSectors = scanWidth * scanHeight * 4;
+  auto expectedNumberOfSectors =
+    scanDimensions.first * scanDimensions.second * 4;
 
   return static_cast<float>(numberOfSectors) / expectedNumberOfSectors;
 }
@@ -579,17 +571,28 @@ float SectorStreamReader::dataCaptured()
 void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
+  std::vector<int> dims;
+
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
 
     // When we receive the first header we can create the file
     if (!created) {
-      std::vector<int> dims = { b.header.scanWidth * b.header.scanHeight,
-                                FRAME_WIDTH, FRAME_WIDTH };
-      std::vector<int> chunkDims = { 1, FRAME_WIDTH, FRAME_HEIGHT };
+      dims.push_back(static_cast<int>(b.header.scanDimensions.first) *
+                     static_cast<int>(b.header.scanDimensions.second));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+
+      std::vector<int> chunkDims = {
+        1, static_cast<int>(FRAME_DIMENSIONS.first),
+        static_cast<int>(FRAME_DIMENSIONS.second)
+      };
       writer.createDataSet("/", "frames", dims,
                            h5::H5ReadWrite::DataType::UInt16, chunkDims);
-      std::vector<int> scanSize = { 0, b.header.scanHeight, b.header.scanWidth };
+      std::vector<int> scanSize = {
+        0, static_cast<int>(b.header.scanDimensions.second),
+        static_cast<int>(b.header.scanDimensions.first)
+      };
       writer.createGroup("/stem");
       writer.createDataSet("/stem", "images", scanSize,
                            h5::H5ReadWrite::DataType::UInt64);
@@ -597,15 +600,16 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
     }
 
     size_t start[3] = { 0, 0, 0 };
-    size_t counts[3] = { 1, b.header.frameHeight, b.header.frameWidth };
+    size_t counts[3] = { 1, b.header.frameDimensions.second,
+                         b.header.frameDimensions.first };
     for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
-      auto pos = b.header.imageNumbers[0];
-      auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
+      auto pos = b.header.imageNumbers[i];
+      auto offset = i * FRAME_DIMENSIONS.first * FRAME_DIMENSIONS.second;
       start[0] = pos;
 
       auto data = b.data.get() + offset;
-      if (!writer.updateData("/frames", h5::H5ReadWrite::DataType::UInt16, data,
-                             start, counts)) {
+      if (!writer.updateData("/frames", dims, h5::H5ReadWrite::DataType::UInt16,
+                             data, start, counts)) {
         throw std::runtime_error("Unable to update HDF5.");
       }
     }
@@ -615,32 +619,42 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 void SectorStreamReader::toHdf5DataCubeFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
+  std::vector<int> dims;
+
   for (auto iter = this->begin(); iter != this->end(); ++iter) {
     auto b = std::move(*iter);
 
     // When we receive the first header we can create the file
     if (!created) {
-      std::vector<int> dims = { b.header.scanWidth, b.header.scanHeight,
-                                FRAME_WIDTH, FRAME_WIDTH };
-      std::vector<int> chunkDims = { 1, 1, FRAME_WIDTH, FRAME_HEIGHT };
+      dims.push_back(static_cast<int>(b.header.scanDimensions.first));
+      dims.push_back(static_cast<int>(b.header.scanDimensions.second));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+      dims.push_back(static_cast<int>(FRAME_DIMENSIONS.first));
+
+      std::vector<int> chunkDims = {
+        1, 1, static_cast<int>(FRAME_DIMENSIONS.first),
+        static_cast<int>(FRAME_DIMENSIONS.second)
+      };
       writer.createDataSet("/", "datacube", dims,
                            h5::H5ReadWrite::DataType::UInt16, chunkDims);
       created = true;
     }
 
     size_t start[4] = { 0, 0, 0, 0 };
-    size_t counts[4] = { 1, 1, b.header.frameHeight, b.header.frameWidth };
+    size_t counts[4] = { 1, 1, b.header.frameDimensions.second,
+                         b.header.frameDimensions.first };
     for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
       auto pos = b.header.imageNumbers[0];
-      auto offset = i * FRAME_WIDTH * FRAME_HEIGHT;
-      auto x = pos % b.header.scanWidth;
-      auto y = pos / b.header.scanWidth;
+      auto offset = i * FRAME_DIMENSIONS.first * FRAME_DIMENSIONS.second;
+      auto x = pos % b.header.scanDimensions.first;
+      auto y = pos / b.header.scanDimensions.first;
       start[0] = x;
       start[1] = y;
 
       auto data = b.data.get() + offset;
-      if (!writer.updateData("/datacube", h5::H5ReadWrite::DataType::UInt16,
-                             data, start, counts)) {
+      if (!writer.updateData("/datacube", dims,
+                             h5::H5ReadWrite::DataType::UInt16, data, start,
+                             counts)) {
         throw std::runtime_error("Unable to update HDF5.");
       }
     }

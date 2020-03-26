@@ -1,6 +1,10 @@
+[![Documentation Status](https://readthedocs.org/projects/stempy/badge/?version=latest)](https://stempy.readthedocs.io/en/latest/?badge=latest)
+
 Toolkit for processing 4D STEM image data on HPC.
 
-Build instructions may be found [here](BUILDING.md).
+Singularity instructions may be found [here](https://stempy.readthedocs.io/en/latest/singularity.html).
+
+Build instructions may be found [here](https://stempy.readthedocs.io/en/latest/BUILDING.html).
 
 Example usage
 -------------

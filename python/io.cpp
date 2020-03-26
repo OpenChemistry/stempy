@@ -13,46 +13,52 @@ PYBIND11_MODULE(_io, m)
 {
   py::class_<Header>(m, "_header")
     .def_readonly("images_in_block", &Header::imagesInBlock)
-    .def_readonly("frame_height", &Header::frameHeight)
-    .def_readonly("frame_width", &Header::frameWidth)
+    .def_readonly("frame_dimensions", &Header::frameDimensions)
     .def_readonly("version", &Header::version)
     .def_readonly("timestamp", &Header::timestamp)
     .def_readonly("image_numbers", &Header::imageNumbers)
-    .def_readonly("scan_height", &Header::scanHeight)
-    .def_readonly("scan_width", &Header::scanWidth);
+    .def_readonly("scan_dimensions", &Header::scanDimensions);
 
   py::class_<Block>(m, "_block", py::buffer_protocol())
     .def_readonly("header", &Block::header)
     .def_buffer([](Block& b) {
       return py::buffer_info(
-        b.data.get(),     /* Pointer to buffer */
-        sizeof(uint16_t), /* Size of one scalar */
-        py::format_descriptor<
-          uint16_t>::format(), /* Python struct-style format descriptor */
-        3,                     /* Number of dimensions */
-        { b.header.imagesInBlock, b.header.frameHeight,
-          b.header.frameWidth }, /* Buffer dimensions */
-        { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
-          sizeof(uint16_t) *
-            b.header.frameHeight, /* Strides (in bytes) for each index */
-          sizeof(uint16_t) });
+        // const_cast is needed because the buffer_info constructor
+        // requires a non-const pointer. pybind11 also internally uses
+        // const_cast to achieve the same purpose.
+        const_cast<uint16_t*>(b.data.get()),       /* Pointer to buffer */
+        sizeof(uint16_t),                          /* Size of one scalar */
+        py::format_descriptor<uint16_t>::format(), /* Python struct-style format
+                                                      descriptor */
+        3,                                         /* Number of dimensions */
+        { b.header.imagesInBlock, b.header.frameDimensions.second,
+          b.header.frameDimensions.first }, /* Buffer dimensions */
+        { sizeof(uint16_t) * b.header.frameDimensions.second *
+            b.header.frameDimensions.first,
+          sizeof(uint16_t) * b.header.frameDimensions.second,
+          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+      );
     });
 
   py::class_<PyBlock>(m, "_pyblock", py::buffer_protocol())
     .def_readonly("header", &PyBlock::header)
     .def_buffer([](PyBlock& b) {
       return py::buffer_info(
-        b.data.get(),     /* Pointer to buffer */
-        sizeof(uint16_t), /* Size of one scalar */
-        py::format_descriptor<
-          uint16_t>::format(), /* Python struct-style format descriptor */
-        3,                     /* Number of dimensions */
-        { b.header.imagesInBlock, b.header.frameHeight,
-          b.header.frameWidth }, /* Buffer dimensions */
-        { sizeof(uint16_t) * b.header.frameHeight * b.header.frameWidth,
-          sizeof(uint16_t) *
-            b.header.frameHeight, /* Strides (in bytes) for each index */
-          sizeof(uint16_t) });
+        // const_cast is needed because the buffer_info constructor
+        // requires a non-const pointer. pybind11 also internally uses
+        // const_cast to achieve the same purpose.
+        const_cast<uint16_t*>(b.data.get()),       /* Pointer to buffer */
+        sizeof(uint16_t),                          /* Size of one scalar */
+        py::format_descriptor<uint16_t>::format(), /* Python struct-style format
+                                                      descriptor */
+        3,                                         /* Number of dimensions */
+        { b.header.imagesInBlock, b.header.frameDimensions.second,
+          b.header.frameDimensions.first }, /* Buffer dimensions */
+        { sizeof(uint16_t) * b.header.frameDimensions.second *
+            b.header.frameDimensions.first,
+          sizeof(uint16_t) * b.header.frameDimensions.second,
+          sizeof(uint16_t) } /* Strides (in bytes) for each index */
+      );
     });
 
   py::class_<StreamReader::iterator>(m, "_reader_iterator")
@@ -72,8 +78,8 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<PyReader*>());
 
   py::class_<PyReader>(m, "_pyreader")
-    .def(py::init<py::object, std::vector<uint32_t>&, uint32_t, uint32_t,
-                  uint32_t, uint32_t>())
+    .def(py::init<py::object, std::vector<uint32_t>&, Dimensions2D, uint32_t,
+                  uint32_t>())
     .def("read", (PyBlock(PyReader::*)()) & PyReader::read)
     .def("reset", &PyReader::reset)
     .def("begin", (PyReader::iterator(PyReader::*)()) & PyReader::begin)
