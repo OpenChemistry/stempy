@@ -70,3 +70,4 @@ array([[   0,    0,    0, ...,    0,    0,    0],
 >>> plt.imshow(dp)
 ```
 ![Brightfield STEM image](https:/url.to.image/image.jpg)
+![Brightfield STEM image](https:/url.to.pattern/pattern.jpg)

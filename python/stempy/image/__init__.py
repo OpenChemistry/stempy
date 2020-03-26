@@ -205,7 +205,7 @@ def com_sparse(electron_counts, frame_dimensions):
     return com_x, com_y
 
 
-def calculate_average_sparse(electron_counts, frame_dimensions):
+def calculate_sum_sparse(electron_counts, frame_dimensions):
     """ Compute a diffraction pattern from sparse electron counted data.
 
     Parameters
@@ -213,6 +213,7 @@ def calculate_average_sparse(electron_counts, frame_dimensions):
         electron_counts : ndarray (1D)
             A vector of electron positions flattened. Each pixel can only be
             a 1 (electron) or a 0 (no electron)
+
         frame_dimensions : 2-tuple
             The shape of the detector.
 
@@ -228,7 +229,7 @@ def calculate_average_sparse(electron_counts, frame_dimensions):
         x, y = np.unravel_index(ev, dp.shape)
         dp[x, y] += 1
 
-        return dp
+    return dp
 
 
 def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions, center):
