@@ -58,5 +58,15 @@ array([[   0,    0,    0, ...,    0,    0,    0],
 # Now create a bright field STEM image from the data
 >>> bf = stim.create_stem_images(events, 0, 110)
 >>> plt.imshow(bf)
+
+# Create a summed diffraction pattern
+>>> dp = np.zeros((576,576), dtype='<u4')
+>>> for ev in events:
+>>>     try:
+>>>         xx, yy = np.unravel_index(ev, (576,576))
+>>>     except:  # needed for empty frames
+>>>         pass
+>>>     dp[xx,yy] += 1
+>>> plt.imshow(dp)
 ```
 ![Brightfield STEM image](https:/url.to.image/image.jpg)
