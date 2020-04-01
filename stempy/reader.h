@@ -1,10 +1,16 @@
 #ifndef stempyreader_h
 #define stempyreader_h
 
+#include <ThreadPool.h>
+#include <atomic>
+#include <condition_variable>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <utility>
 #include <vector>
 
@@ -19,6 +25,12 @@ using Coordinates2D = std::pair<int, int>;
 
 // Convention is (width, height)
 using Dimensions2D = std::pair<uint32_t, uint32_t>;
+
+/// Currently the detector data is written in four sectors
+const Dimensions2D SECTOR_DIMENSIONS = { 144, 576 };
+
+/// This is the detector size at  NCEM
+const Dimensions2D FRAME_DIMENSIONS = { 576, 576 };
 
 struct EofException : public std::exception
 {
@@ -169,6 +181,8 @@ public:
   ~SectorStreamReader();
 
   Block read();
+  template <typename Functor>
+  void readAll(Functor f);
 
   // Reset to the start of the first file
   void reset();
@@ -180,30 +194,34 @@ public:
   iterator end() { return iterator(nullptr); }
   void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
 
-private:
-  struct Frame
-  {
-    Block block;
-    int sectorCount = 0;
-  };
-
   struct SectorStream
   {
     std::unique_ptr<std::ifstream> stream;
     int sector = -1;
-    SectorStream(std::ifstream* str, int sec) : stream(str), sector(sec) {}
+    SectorStream(std::ifstream* str, int sec) : stream(str), sector(sec){};
   };
 
+protected:
+  struct Frame
+  {
+    Block block;
+    std::atomic<int> sectorCount = { 0 };
+    std::mutex mutex;
+  };
   std::map<uint32_t, Frame> m_frameCache;
-  std::vector<std::string> m_files;
   std::vector<SectorStream> m_streams;
+
+  Header readHeader();
+  Header readHeader(std::ifstream& stream);
+
+private:
+  std::vector<std::string> m_files;
+
   std::vector<SectorStream>::iterator m_streamsIterator;
 
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_streams.empty(); }
 
-  Header readHeader();
-  Header readHeader(std::ifstream& stream);
   template <typename T>
   std::istream& read(T& value);
   template <typename T>
@@ -215,8 +233,6 @@ private:
   std::istream& read(std::ifstream& stream, T* value, std::streamsize size);
 
   void openFiles();
-  template <typename Functor>
-  void readAll(Functor f);
   void toHdf5FrameFormat(h5::H5ReadWrite& writer);
   void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
 };
@@ -224,6 +240,163 @@ private:
 inline SectorStreamReader::SectorStreamReader(const std::string& path)
   : SectorStreamReader(std::vector<std::string>{ path })
 {}
+
+class ElectronCountedData;
+template <typename T>
+class Image;
+
+using SectorStreamPair = std::pair<std::ifstream*, int>;
+
+class SectorStreamThreadedReader : public SectorStreamReader
+{
+public:
+  SectorStreamThreadedReader(const std::string& path);
+  SectorStreamThreadedReader(const std::vector<std::string>& files);
+  SectorStreamThreadedReader(const std::string& path, int threads);
+  SectorStreamThreadedReader(const std::vector<std::string>& files,
+                             int threads);
+
+  template <typename Functor>
+  std::future<void> readAll(Functor f);
+
+private:
+  // The number of threads to use
+  int m_threads = -1;
+
+  // The thread pool
+  std::unique_ptr<ThreadPool> m_pool;
+
+  // The futures associated with the worker threads
+  std::vector<std::future<void>> m_futures;
+
+  // Protect access to frame cache
+  std::mutex m_cacheMutex;
+
+  // Protect access to the streams
+  std::mutex m_streamsMutex;
+
+  // Protect access to samples
+  std::mutex m_sampleMutex;
+
+  // Control collection of samples
+  std::condition_variable m_sampleCondition;
+
+  // The samples to use for calculating the thresholds
+  std::vector<Block> m_sampleBlocks;
+
+  // Queue of sector streams to be read by threads
+  std::mutex m_queueMutex;
+  std::queue<SectorStreamPair> m_streamQueue;
+
+  void initNumberOfThreads();
+  bool nextSectorStreamPair(SectorStreamPair& pair);
+};
+
+template <typename Functor>
+std::future<void> SectorStreamThreadedReader::readAll(Functor func)
+{
+  m_pool = std::make_unique<ThreadPool>(m_threads);
+
+  auto streamsIterator = m_streams.begin();
+
+  while (streamsIterator != m_streams.end()) {
+    auto& s = *streamsIterator;
+    m_streamQueue.push(std::make_pair(s.stream.get(), s.sector));
+    streamsIterator++;
+  }
+
+  // Create worker threads
+  for (int i = 0; i < m_threads; i++) {
+    m_futures.emplace_back(m_pool->enqueue([this, &func]() {
+      std::ifstream* close = nullptr;
+
+      while (!m_streams.empty()) {
+        // Get the next stream to read from
+        SectorStreamPair sectorStreamPair;
+        if (!nextSectorStreamPair(sectorStreamPair)) {
+          continue;
+        }
+        auto& stream = sectorStreamPair.first;
+        auto sector = sectorStreamPair.second;
+
+        // First read the header
+        auto header = readHeader(*stream);
+
+        for (unsigned i = 0; i < header.imagesInBlock; i++) {
+          auto pos = header.imageNumbers[i];
+
+          std::unique_lock<std::mutex> mutexLock(m_cacheMutex);
+          auto& frame = m_frameCache[pos];
+          mutexLock.unlock();
+
+          // Do we need to allocate the frame, use a double check lock
+          if (std::atomic_load(&frame.block.data) == nullptr) {
+            std::unique_lock<std::mutex> lock(frame.mutex);
+            // Check again now we have the mutex
+            if (std::atomic_load(&frame.block.data) == nullptr) {
+              frame.block.header.version = 4;
+              frame.block.header.scanNumber = header.scanNumber;
+              frame.block.header.scanDimensions = header.scanDimensions;
+              frame.block.header.imagesInBlock = 1;
+              frame.block.header.imageNumbers.push_back(pos);
+              frame.block.header.frameDimensions = FRAME_DIMENSIONS;
+              std::shared_ptr<uint16_t> data;
+
+              data.reset(
+                new uint16_t[frame.block.header.frameDimensions.first *
+                             frame.block.header.frameDimensions.second],
+                std::default_delete<uint16_t[]>());
+              std::fill(data.get(),
+                        data.get() +
+                          frame.block.header.frameDimensions.first *
+                            frame.block.header.frameDimensions.second,
+                        0);
+              std::atomic_store(&frame.block.data, data);
+            }
+          }
+
+          auto frameX = sector * SECTOR_DIMENSIONS.first;
+          for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second;
+               frameY++) {
+            auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
+            stream->read(
+              reinterpret_cast<char*>(frame.block.data.get() + offset),
+              SECTOR_DIMENSIONS.first * sizeof(uint16_t));
+          }
+
+          // Return the stream to the queue so other threads can read from it.
+          {
+            std::unique_lock<std::mutex> queueLock(m_queueMutex);
+            m_streamQueue.push(sectorStreamPair);
+          }
+
+          frame.sectorCount++;
+
+          // Now now have the complete frame
+          if (frame.sectorCount == 4) {
+            auto b = frame.block;
+            {
+              std::unique_lock<std::mutex> lock(m_cacheMutex);
+              m_frameCache.erase(pos);
+            }
+
+            // Call the function todo the processing
+            func(b);
+          }
+        }
+      }
+    }));
+  }
+
+  // Return a future that is resolved once the processing is complete
+  auto complete = std::async(std::launch::deferred, [this]() {
+    for (auto& future : this->m_futures) {
+      future.get();
+    }
+  });
+
+  return complete;
+}
 }
 
 #endif
