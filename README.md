@@ -39,3 +39,35 @@ array([[   0,    0,    0, ...,    0,    0,    0],
 >>>
 
 ```
+
+```python
+# Example of electron counting raw 4d Camera data
+>>> from pathlib import Path
+>>> import stempy.io as stio
+>>> import stempy.image as stim
+>>> import numpy as np
+>>> import matplotlib.pyplot as plt
+>>> data_path = Path('/mnt/hdd1/')
+>>> files = sorted(data_path.glob('data_scan16*.data'))  # raw data files
+>>> sReader = stio.reader(files, stio.FileVersion.VERSION4)
+>>> events = stim.electron_count(sReader, np.zeros((576,576)))
+>>> stio.save_electron_counts('/mnt/hdd1/data_scan16_electrons.h5',
+                          events,
+                          events.scan_dimensions,
+                          frame_dimensions=(576,576))
+# Now create a bright field STEM image from the data
+>>> bf = stim.create_stem_images(events, 0, 110)
+>>> plt.imshow(bf)
+
+# Create a summed diffraction pattern
+>>> dp = np.zeros((576,576), dtype='<u4')
+>>> for ev in events:
+>>>     try:
+>>>         xx, yy = np.unravel_index(ev, (576,576))
+>>>     except:  # needed for empty frames
+>>>         pass
+>>>     dp[xx,yy] += 1
+>>> plt.imshow(dp)
+```
+![Brightfield STEM image](https:/url.to.image/image.jpg)
+![Brightfield STEM image](https:/url.to.pattern/pattern.jpg)
