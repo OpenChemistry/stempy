@@ -415,22 +415,18 @@ def maximum_diffraction_pattern(reader, darkreference=None):
 
 
 def com_sparse(electron_counts, frame_dimensions):
-    """ Compute center of mass for counted data directly from sparse (single)
+    """Compute center of mass for counted data directly from sparse (single)
     electron data.
 
-        Parameters
-        ----------
-            electron_counts : ndarray (1D)
-                A vector of electron positions flattened. Each pixel can only be
-                a 1 (electron) or a 0 (no electron)
-            frame_dimensions : 2-tuple
-                The shape of the detector.
+    :param electron_counts: A vector of electron positions flattened. Each
+                            pixel can only be a 1 (electron) or a 0
+                            (no electron).
+    :type electron_counts: numpy.ndarray (1D)
+    :param frame_dimensions: The shape of the detector.
+    :type frame_dimensions: tuple of ints of length 2
 
-        Returns
-        -------
-            : tuple
-                The center of mass in X and Y.
-
+    :return: The center of mass in X and Y.
+    :rtype: tuple of ints of length 2
     """
     x, y = np.unravel_index(electron_counts, frame_dimensions)
     mm = electron_counts.shape[0]  # number of non zero pixels
@@ -440,23 +436,17 @@ def com_sparse(electron_counts, frame_dimensions):
 
 
 def calculate_sum_sparse(electron_counts, frame_dimensions):
-    """ Compute a diffraction pattern from sparse electron counted data.
+    """Compute a diffraction pattern from sparse electron counted data.
 
-    Parameters
-    ----------
-        electron_counts : ndarray (1D)
-            A vector of electron positions flattened. Each pixel can only be
-            a 1 (electron) or a 0 (no electron)
+    :param electron_counts: A vector of electron positions flattened. Each
+                            pixel can only be a 1 (electron) or a 0
+                            (no electron).
+    :type electron_counts: numpy.ndarray (1D)
+    :param frame_dimensions: The shape of the detector.
+    :type frame_dimensions: tuple of ints of length 2
 
-        frame_dimensions : 2-tuple
-            The shape of the detector.
-
-    Returns
-    -------
-        : np.ndarray
-            A summed diffraction pattern.
-
-
+    :return: A summed diffraction pattern.
+    :rtype: numpy.ndarray
     """
     dp = np.zeros(frame_dimensions, '<u8')
     for ii, ev in enumerate(electron_counts):
@@ -466,26 +456,24 @@ def calculate_sum_sparse(electron_counts, frame_dimensions):
     return dp
 
 
-def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions, center):
-    """ Radial sum of sparse (single) electron counted data
+def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
+                      center):
+    """Radial sum of sparse (single) electron counted data
 
-    Parameters
-    ----------
-        electron_counts : ndarray (1D)
-            A vector of electron positions flattened. Each pixel can only be
-            a 1 (electron) or a 0 (no electron)
-        scan_dimensions : 2-tuple
-            The number of X and Y scan positions in pixels.
-        frame_dimensions : 2-tuple
-            The shape of the detector in pixels.
-        center : 2-tuple
-            The center of the diffraction pattern in pixels.
+    :param electron_counts: A vector of electron positions flattened. Each
+                            pixel can only be a 1 (electron) or a 0
+                            (no electron).
+    :type electron_counts: numpy.ndarray (1D)
+    :param scan_dimensions: The number of X and Y scan positions in pixels.
+    :type scan_dimensions: tuple of ints of length 2
+    :param frame_dimensions: The shape of the detector.
+    :type frame_dimensions: tuple of ints of length 2
+    :param center: The center of the diffraction pattern in pixels.
+    :type center: tuple of ints of length 2
 
-    Returns
-    -------
-        : ndarray
-            A ndarray of the radial sum of shape (scan_dimensions[0], scan_dimensions[0], max(frame_dimensions)/2)
-
+    :return: A ndarray of the radial sum of shape (scan_dimensions[0],
+             scan_dimensions[0], max(frame_dimensions/2)
+    :rtype: numpy.ndarray
     """
     num_bins = int(max(frame_dimensions) / 2)
     r_sum = np.zeros((scan_dimensions[0] * scan_dimensions[1], num_bins),
