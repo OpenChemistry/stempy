@@ -482,7 +482,7 @@ def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
     for ii, ev in enumerate(electron_counts):
         x, y = np.unravel_index(ev, frame_dimensions)
         r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        hh, hhx = np.histogram(r, bins=range(0, num_bins))
+        hh, hhx = np.histogram(r, bins=range(0, num_bins + 1))
         r_sum[ii, :] = hh
     r_sum = r_sum.reshape((scan_dimensions[0], scan_dimensions[1], num_bins))
 
