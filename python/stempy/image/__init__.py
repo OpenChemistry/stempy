@@ -443,6 +443,7 @@ def com_sparse(electron_counts, frame_dimensions):
             com[:, ii] = frame_center
     return com
 
+
 def calculate_sum_sparse(electron_counts, frame_dimensions):
     """Compute a diffraction pattern from sparse electron counted data.
 
