@@ -423,23 +423,32 @@ def maximum_diffraction_pattern(reader, darkreference=None):
 
 def com_sparse(electron_counts, frame_dimensions):
     """Compute center of mass for counted data directly from sparse (single)
-    electron data.
+        electron data.
 
-    :param electron_counts: A vector of electron positions flattened. Each
-                            pixel can only be a 1 (electron) or a 0
-                            (no electron).
-    :type electron_counts: numpy.ndarray (1D)
-    :param frame_dimensions: The shape of the detector.
-    :type frame_dimensions: tuple of ints of length 2
+        :param electron_counts: A vector of electron positions flattened. Each
+                                pixel can only be a 1 (electron) or a 0
+                                (no electron).
+        :type electron_counts: numpy.ndarray (1D)
+        :param frame_dimensions: The shape of the detector.
+        :type frame_dimensions: tuple of ints of length 2
 
-    :return: The center of mass in X and Y.
-    :rtype: tuple of ints of length 2
-    """
-    x, y = np.unravel_index(electron_counts, frame_dimensions)
-    mm = electron_counts.shape[0]  # number of non zero pixels
-    com_x = np.sum(x) / mm
-    com_y = np.sum(y) / mm
-    return com_x, com_y
+        :return: The center of mass in X and Y for each scan position. If a position
+                has no data (len(electron_counts) == 0) then the center of the
+                frame is used as the center of mass.
+        :rtype: numpy.ndarray (2D)
+        """
+    frame_center = [int(ii/2)-1 for ii in frame_dimensions]
+    com = np.zeros((2, len(electron_counts)), 'f')
+    for ii, ev in enumerate(electron_counts):
+        if len(ev) > 0:
+            x, y = np.unravel_index(ev, frame_dimensions)
+            mm = len(ev)
+            com_x = np.sum(x) / mm
+            com_y = np.sum(y) / mm
+            com[:, ii] = (com_y, com_x)
+        else:
+            com[:, ii] = frame_center
+    return com
 
 
 def calculate_sum_sparse(electron_counts, frame_dimensions):
@@ -489,7 +498,7 @@ def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
     for ii, ev in enumerate(electron_counts):
         x, y = np.unravel_index(ev, frame_dimensions)
         r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        hh, hhx = np.histogram(r, bins=range(0, num_bins))
+        hh, hhx = np.histogram(r, bins=range(0, num_bins + 1))
         r_sum[ii, :] = hh
     r_sum = r_sum.reshape((scan_dimensions[0], scan_dimensions[1], num_bins))
 
