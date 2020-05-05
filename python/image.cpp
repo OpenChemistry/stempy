@@ -47,6 +47,17 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                        xRayThreshold, scanDimensions);
 }
 
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, py::array_t<double> darkReference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false)
+{
+  return electronCount(reader, darkReference.data(), thresholdNumberOfBlocks,
+                       numberOfSamples, backgroundThresholdNSigma,
+                       xRayThresholdNSigma, scanDimensions, verbose);
+}
+
 } // namespace stempy
 
 PYBIND11_MODULE(_image, m)
@@ -192,6 +203,17 @@ PYBIND11_MODULE(_image, m)
                                 Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<double>&,
+                                int, int, double, double, Dimensions2D, bool)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "electron_count",
+    (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<double>,
+                            int, int, double, double, Dimensions2D, bool)) &
+      electronCount,
+    py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults(*)(vector<Block>&, Image<double>&, int,
                                        double, double)) &

@@ -110,4 +110,10 @@ PYBIND11_MODULE(_io, m)
   sectorReader.def("to_hdf5", &SectorStreamReader::toHdf5, "Write data to HDF5",
                    py::arg("path"),
                    py::arg("format") = SectorStreamReader::H5Format::Frame);
+
+  py::class_<SectorStreamThreadedReader>(m, "_threaded_reader")
+    .def(py::init<const std::string&>())
+    .def(py::init<const std::vector<std::string>&>())
+    .def(py::init<const std::string&, int>())
+    .def(py::init<const std::vector<std::string>&, int>());
 }

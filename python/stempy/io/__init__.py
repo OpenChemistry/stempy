@@ -2,7 +2,7 @@ from collections import namedtuple
 import numpy as np
 import h5py
 
-from stempy._io import _reader, _sector_reader, _pyreader
+from stempy._io import _reader, _sector_reader, _pyreader, _threaded_reader
 
 
 class FileVersion(object):
@@ -51,6 +51,9 @@ class SectorReader(ReaderMixin, _sector_reader):
 class PyReader(ReaderMixin, _pyreader):
     pass
 
+class SectorThreadedReader(ReaderMixin, _threaded_reader):
+    pass
+
 def get_hdf5_reader(h5file):
     # the initialization is at the io.cpp
     dset_frame=h5file['frames']
@@ -71,7 +74,7 @@ def get_hdf5_reader(h5file):
     return h5reader
 
 
-def reader(path, version=FileVersion.VERSION1):
+def reader(path, version=FileVersion.VERSION1, backend=None, **options):
     """reader(path, version=FileVersion.VERSION1)
 
     Create a file reader to read the data.
@@ -89,7 +92,10 @@ def reader(path, version=FileVersion.VERSION1):
     if(isinstance(path, h5py._hl.files.File)):
         reader = get_hdf5_reader(path)
     elif version == FileVersion.VERSION4:
-        reader = SectorReader(path)
+        if backend == 'thread':
+            reader = SectorThreadedReader(path, **options)
+        else:
+            reader = SectorReader(path)
     else:
         reader = Reader(path, version)
 

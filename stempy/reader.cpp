@@ -1,11 +1,12 @@
 #include "reader.h"
 #include "config.h"
+#include "electron.h"
 #include "h5cpp/h5readwrite.h"
 #include "image.h"
 #include "mask.h"
 
-#include <ThreadPool.h>
 #include <fstream>
+#include <future>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -25,12 +26,6 @@ using std::string;
 using std::vector;
 
 namespace stempy {
-
-/// Currently the detector data is written in four sectors
-const Dimensions2D SECTOR_DIMENSIONS = { 144, 576 };
-
-/// This is the detector size at  NCEM
-const Dimensions2D FRAME_DIMENSIONS = { 576, 576 };
 
 Header::Header(Dimensions2D frameDimensions_, uint32_t imageNumInBlock_,
                Dimensions2D scanDimensions_, vector<uint32_t>& imageNumbers_)
@@ -672,5 +667,88 @@ void SectorStreamReader::toHdf5(const std::string& path,
   } else {
     toHdf5DataCubeFormat(writer);
   }
+}
+
+bool operator==(const SectorStreamReader::SectorStream& lhs,
+                const SectorStreamReader::SectorStream& rhs)
+{
+  return lhs.stream.get() == rhs.stream.get();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path)
+  : SectorStreamReader(path)
+{
+  initNumberOfThreads();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(
+  const std::vector<std::string>& files)
+  : SectorStreamReader(files)
+{
+  initNumberOfThreads();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path,
+                                                       int threads)
+  : SectorStreamReader(path), m_threads(threads)
+{
+  initNumberOfThreads();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(
+  const std::vector<std::string>& files, int threads)
+  : SectorStreamReader(files), m_threads(threads)
+{
+  initNumberOfThreads();
+}
+
+void SectorStreamThreadedReader::initNumberOfThreads()
+{
+  if (m_threads < 1) {
+    m_threads = std::thread::hardware_concurrency();
+    // May not be able to determine
+    if (m_threads == 0) {
+      std::cout << "WARNING: Unable to determine hardware concurrency, "
+                   "defaulting to 10."
+                << std::endl;
+      m_threads = 10;
+    }
+  }
+}
+
+bool SectorStreamThreadedReader::nextSectorStreamPair(
+  SectorStreamPair& sectorStreamPair)
+{
+  {
+    std::unique_lock<std::mutex> queueLock(m_queueMutex);
+    if (m_streamQueue.empty()) {
+      return false;
+    }
+    sectorStreamPair = m_streamQueue.front();
+    m_streamQueue.pop();
+  }
+
+  auto& stream = sectorStreamPair.first;
+  auto sector = sectorStreamPair.second;
+
+  auto c = stream->peek();
+  // If we have reached the end close the stream and remove if from
+  // the list.
+  if (c == EOF) {
+    stream->close();
+    auto iter = m_streams.begin();
+    while (iter != m_streams.end()) {
+      if ((*iter).stream.get() == stream) {
+        break;
+      }
+      iter++;
+    }
+
+    m_streams.erase(iter);
+
+    return false;
+  }
+
+  return true;
 }
 }
