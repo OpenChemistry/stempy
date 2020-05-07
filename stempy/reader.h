@@ -27,7 +27,8 @@ using Coordinates2D = std::pair<int, int>;
 using Dimensions2D = std::pair<uint32_t, uint32_t>;
 
 /// Currently the detector data is written in four sectors
-const Dimensions2D SECTOR_DIMENSIONS = { 144, 576 };
+const Dimensions2D SECTOR_DIMENSIONS_VERSION_4 = { 144, 576 };
+const Dimensions2D SECTOR_DIMENSIONS_VERSION_5 = { 576, 144 };
 
 /// This is the detector size at  NCEM
 const Dimensions2D FRAME_DIMENSIONS = { 576, 576 };
@@ -176,8 +177,9 @@ public:
     DataCube
   };
 
-  SectorStreamReader(const std::string& path);
-  SectorStreamReader(const std::vector<std::string>& files);
+  SectorStreamReader(const std::string& path, uint8_t version = 5);
+  SectorStreamReader(const std::vector<std::string>& files,
+                     uint8_t version = 5);
   ~SectorStreamReader();
 
   Block read();
@@ -193,6 +195,7 @@ public:
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
   void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
+  uint8_t version() const { return m_version; };
 
   struct SectorStream
   {
@@ -213,11 +216,14 @@ protected:
 
   Header readHeader();
   Header readHeader(std::ifstream& stream);
+  void readSectorData(Block& block, int sector);
 
 private:
   std::vector<std::string> m_files;
 
   std::vector<SectorStream>::iterator m_streamsIterator;
+
+  uint8_t m_version;
 
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_streams.empty(); }
@@ -235,10 +241,13 @@ private:
   void openFiles();
   void toHdf5FrameFormat(h5::H5ReadWrite& writer);
   void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
+  void readSectorDataVersion4(Block& block, int sector);
+  void readSectorDataVersion5(Block& block, int sector);
 };
 
-inline SectorStreamReader::SectorStreamReader(const std::string& path)
-  : SectorStreamReader(std::vector<std::string>{ path })
+inline SectorStreamReader::SectorStreamReader(const std::string& path,
+                                              uint8_t version)
+  : SectorStreamReader(std::vector<std::string>{ path }, version)
 {}
 
 class ElectronCountedData;
@@ -250,11 +259,13 @@ using SectorStreamPair = std::pair<std::ifstream*, int>;
 class SectorStreamThreadedReader : public SectorStreamReader
 {
 public:
-  SectorStreamThreadedReader(const std::string& path);
-  SectorStreamThreadedReader(const std::vector<std::string>& files);
-  SectorStreamThreadedReader(const std::string& path, int threads);
+  SectorStreamThreadedReader(const std::string& path, uint8_t version = 5);
   SectorStreamThreadedReader(const std::vector<std::string>& files,
-                             int threads);
+                             uint8_t version = 5);
+  SectorStreamThreadedReader(const std::string& path, uint8_t version = 5,
+                             int threads = 0);
+  SectorStreamThreadedReader(const std::vector<std::string>& files,
+                             uint8_t version, int threads = 0);
 
   template <typename Functor>
   std::future<void> readAll(Functor f);
@@ -355,14 +366,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
             }
           }
 
-          auto frameX = sector * SECTOR_DIMENSIONS.first;
-          for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second;
-               frameY++) {
-            auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
-            stream->read(
-              reinterpret_cast<char*>(frame.block.data.get() + offset),
-              SECTOR_DIMENSIONS.first * sizeof(uint16_t));
-          }
+          readSectorData(frame.block, sector);
 
           // Return the stream to the queue so other threads can read from it.
           {
