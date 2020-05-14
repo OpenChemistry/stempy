@@ -1,6 +1,6 @@
 from stempy import _image
 from stempy import _io
-from stempy.io import get_hdf5_reader, ReaderMixin, PyReader
+from stempy.io import get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader
 
 from collections import namedtuple
 import deprecation
@@ -314,50 +314,57 @@ def electron_count(reader, darkreference, number_of_samples=40,
     :rtype: ElectronCountedData (named tuple with fields 'data',
             'scan_dimensions', and 'frame_dimensions')
     """
-    blocks = []
-    for i in range(threshold_num_blocks):
-        blocks.append(next(reader))
 
-    if hasattr(darkreference, '_image'):
-        darkreference = darkreference._image
+    # Special case for threaded reader
+    if isinstance(reader, SectorThreadedReader):
+        data = _image.electron_count(reader, darkreference, threshold_num_blocks,
+                                     number_of_samples, background_threshold_n_sigma,
+                                  xray_threshold_n_sigma, scan_dimensions, verbose)
+    else:
+        blocks = []
+        for i in range(threshold_num_blocks):
+            blocks.append(next(reader))
 
-    res = _image.calculate_thresholds(
-        [b._block for b in blocks], darkreference, number_of_samples,
-        background_threshold_n_sigma, xray_threshold_n_sigma)
+        if hasattr(darkreference, '_image'):
+            darkreference = darkreference._image
 
-    background_threshold = res.background_threshold
-    xray_threshold = res.xray_threshold
+        res = _image.calculate_thresholds(
+            [b._block for b in blocks], darkreference, number_of_samples,
+            background_threshold_n_sigma, xray_threshold_n_sigma)
 
-    if verbose:
-        print('****Statistics for calculating electron thresholds****')
-        print('number of samples:', res.number_of_samples)
-        print('min sample:', res.min_sample)
-        print('max sample:', res.max_sample)
-        print('mean:', res.mean)
-        print('variance:', res.variance)
-        print('std dev:', res.std_dev)
-        print('number of bins:', res.number_of_bins)
-        print('x-ray threshold n sigma:', res.xray_threshold_n_sigma)
-        print('background threshold n sigma:',
-              res.background_threshold_n_sigma)
-        print('optimized mean:', res.optimized_mean)
-        print('optimized std dev:', res.optimized_std_dev)
-        print('background threshold:', background_threshold)
-        print('xray threshold:', xray_threshold)
+        background_threshold = res.background_threshold
+        xray_threshold = res.xray_threshold
 
-    # Reset the reader
-    reader.reset()
+        if verbose:
+            print('****Statistics for calculating electron thresholds****')
+            print('number of samples:', res.number_of_samples)
+            print('min sample:', res.min_sample)
+            print('max sample:', res.max_sample)
+            print('mean:', res.mean)
+            print('variance:', res.variance)
+            print('std dev:', res.std_dev)
+            print('number of bins:', res.number_of_bins)
+            print('x-ray threshold n sigma:', res.xray_threshold_n_sigma)
+            print('background threshold n sigma:',
+                res.background_threshold_n_sigma)
+            print('optimized mean:', res.optimized_mean)
+            print('optimized std dev:', res.optimized_std_dev)
+            print('background threshold:', background_threshold)
+            print('xray threshold:', xray_threshold)
 
-    data = _image.electron_count(reader.begin(), reader.end(),
-                                 darkreference, background_threshold,
-                                 xray_threshold, scan_dimensions)
+        # Reset the reader
+        reader.reset()
+
+        data = _image.electron_count(reader.begin(), reader.end(),
+                                    darkreference, background_threshold,
+                                    xray_threshold, scan_dimensions)
 
     electron_counted_data = namedtuple('ElectronCountedData',
                                        ['data', 'scan_dimensions',
                                         'frame_dimensions'])
 
     # Convert to numpy array
-    electron_counted_data.data = np.array([np.array(x) for x in data.data])
+    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data])
     electron_counted_data.scan_dimensions = data.scan_dimensions
     electron_counted_data.frame_dimensions = data.frame_dimensions
 

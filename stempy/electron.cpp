@@ -1,6 +1,7 @@
 #include "electron.h"
 #include "electronthresholds.h"
 #include "python/pyreader.h"
+#include "reader.h"
 
 #include "config.h"
 
@@ -275,6 +276,177 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 {
   return electronCount(first, last, darkReference.data.get(),
                        backgroundThreshold, xRayThreshold, scanDimensions);
+}
+
+std::vector<uint32_t> electronCount(std::vector<uint16_t>& frame,
+                                    Dimensions2D frameDimensions,
+                                    const double darkReference[],
+                                    double backgroundThreshold,
+                                    double xRayThreshold)
+{
+
+  for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
+    // Subtract darkfield reference
+    frame[j] -= darkReference[j];
+    // Threshold the electron events
+    if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
+      frame[j] = 0;
+    }
+  }
+  // Now find the maximal events
+  return maximalPoints(frame, frameDimensions);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  Image<double>& darkReference,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount(
+    reader, darkReference.data.get(), thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, scanDimensions, verbose);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  const double darkReference[],
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  // This is where we will save the electron events as the calculated
+  std::vector<std::vector<uint32_t>> events;
+
+  // Used to signal that we have moved into the electron counting phase after
+  // collecting samples to calculate threshold.
+  std::atomic<bool> electronCounting = { false };
+
+  // These hold the optimized thresholds.
+  double backgroundThreshold;
+  double xRayThreshold;
+
+  // Mutexes to control/protect counting process
+  std::mutex sampleMutex;
+  std::condition_variable sampleCondition;
+
+  // The sample blocks that will be used to calculate the thresholds
+  std::vector<Block> sampleBlocks;
+
+  auto counter = [&events, &electronCounting, &backgroundThreshold,
+                  &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
+                  thresholdNumberOfBlocks, numberOfSamples,
+                  darkReference](Block& b) {
+    // If we are still collecting sample block for calculating the threshold
+    if (!electronCounting) {
+      std::unique_lock<std::mutex> sampleLock(sampleMutex);
+      if (sampleBlocks.size() < thresholdNumberOfBlocks) {
+        sampleBlocks.push_back(std::move(b));
+        if (sampleBlocks.size() == thresholdNumberOfBlocks) {
+          sampleLock.unlock();
+          sampleCondition.notify_all();
+        }
+      }
+      // We have our samples, so we should wait for the threshold to be
+      // calculated in the main thread, before we can start counting.
+      else {
+        sampleCondition.wait(sampleLock, [&electronCounting]() {
+          return electronCounting.load();
+        });
+      }
+    }
+    // We are electron counting
+    else {
+      auto data = b.data.get();
+      auto frameDimensions = b.header.frameDimensions;
+      for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+        auto frameStart =
+          data + i * frameDimensions.first * frameDimensions.second;
+        std::vector<uint16_t> frame(frameStart,
+                                    frameStart + frameDimensions.first *
+                                                   frameDimensions.second);
+
+        auto frameEvents = electronCount(frame, frameDimensions, darkReference,
+                                         backgroundThreshold, xRayThreshold);
+        events[b.header.imageNumbers[i]] = frameEvents;
+      }
+    }
+  };
+
+  auto done = reader->readAll(counter);
+
+  // Wait for enought blocks to come in to calculate the threadhold.
+  std::unique_lock<std::mutex> lock(sampleMutex);
+  sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
+    return sampleBlocks.size() == thresholdNumberOfBlocks;
+  });
+
+  // Now calculate the threshold
+  auto threshold =
+    calculateThresholds(sampleBlocks, darkReference, numberOfSamples,
+                        backgroundThresholdNSigma, xRayThresholdNSigma);
+
+  if (verbose) {
+    std::cout << "****Statistics for calculating electron thresholds****"
+              << std::endl;
+    std::cout << "number of samples:" << threshold.numberOfSamples << std::endl;
+    std::cout << "min sample:" << threshold.minSample << std::endl;
+    std::cout << "max sample:" << threshold.maxSample << std::endl;
+    std::cout << "mean:" << threshold.mean << std::endl;
+    std::cout << "variance:" << threshold.variance << std::endl;
+    std::cout << "std dev:" << threshold.stdDev << std::endl;
+    std::cout << "number of bins:" << threshold.numberOfBins << std::endl;
+    std::cout << "x-ray threshold n sigma:" << threshold.xRayThresholdNSigma
+              << std::endl;
+    std::cout << "background threshold n sigma:"
+              << threshold.backgroundThresholdNSigma << std::endl;
+    std::cout << "optimized mean:" << threshold.optimizedMean << std::endl;
+    std::cout << "optimized std dev:" << threshold.optimizedStdDev << std::endl;
+    std::cout << "background threshold:" << threshold.backgroundThreshold
+              << std::endl;
+    std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+  }
+
+  // Now setup  electron count output
+  auto scanSize = sampleBlocks[0].header.scanDimensions;
+  auto frameSize = sampleBlocks[0].header.frameDimensions;
+  events.resize(scanSize.first * scanSize.second);
+
+  // Now tell our workers to proceed
+  electronCounting = true;
+  backgroundThreshold = threshold.backgroundThreshold;
+  xRayThreshold = threshold.xRayThreshold;
+  lock.unlock();
+  sampleCondition.notify_all();
+
+  // Count the sample blocks
+  for (auto& b : sampleBlocks) {
+    auto data = b.data.get();
+    auto frameDimensions = b.header.frameDimensions;
+    for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+      auto frameStart =
+        data + i * frameDimensions.first * frameDimensions.second;
+      std::vector<uint16_t> frame(frameStart,
+                                  frameStart + frameDimensions.first *
+                                                 frameDimensions.second);
+      auto frameEvents = electronCount(frame, frameDimensions, darkReference,
+                                       backgroundThreshold, xRayThreshold);
+      events[b.header.imageNumbers[i]] = frameEvents;
+    }
+  }
+
+  // Make sure all threads are finished before returning the result
+  done.wait();
+
+  ElectronCountedData ret;
+  ret.data = events;
+  ret.scanDimensions = scanSize;
+  ret.frameDimensions = frameSize;
+
+  return ret;
 }
 
 // Instantiate the ones that can be used
