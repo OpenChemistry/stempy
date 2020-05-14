@@ -283,14 +283,14 @@ SectorStreamReader::SectorStreamReader(const vector<string>& files,
   : m_files(files), m_version(version)
 {
   // Validate version
-  switch (this->m_version) {
+  switch (m_version) {
     case 4:
     case 5:
       break;
     default:
       std::ostringstream ss;
       ss << "Unsupported version: ";
-      ss << this->m_version;
+      ss << m_version;
       throw invalid_argument(ss.str());
   }
 
