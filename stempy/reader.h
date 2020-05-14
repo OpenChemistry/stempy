@@ -265,7 +265,7 @@ public:
   SectorStreamThreadedReader(const std::string& path, uint8_t version = 5,
                              int threads = 0);
   SectorStreamThreadedReader(const std::vector<std::string>& files,
-                             uint8_t version, int threads = 0);
+                             uint8_t version = 5, int threads = 0);
 
   template <typename Functor>
   std::future<void> readAll(Functor f);
@@ -345,7 +345,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
             std::unique_lock<std::mutex> lock(frame.mutex);
             // Check again now we have the mutex
             if (std::atomic_load(&frame.block.data) == nullptr) {
-              frame.block.header.version = 4;
+              frame.block.header.version = version();
               frame.block.header.scanNumber = header.scanNumber;
               frame.block.header.scanDimensions = header.scanDimensions;
               frame.block.header.imagesInBlock = 1;

@@ -94,7 +94,7 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
         reader = get_hdf5_reader(path)
     elif version in [FileVersion.VERSION4, FileVersion.VERSION5]:
         if backend == 'thread':
-            reader = SectorThreadedReader(path, **options)
+            reader = SectorThreadedReader(path, version, **options)
         else:
             reader = SectorReader(path, version)
     else:
