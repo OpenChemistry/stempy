@@ -214,9 +214,8 @@ protected:
   std::map<uint32_t, Frame> m_frameCache;
   std::vector<SectorStream> m_streams;
 
-  Header readHeader();
   Header readHeader(std::ifstream& stream);
-  void readSectorData(Block& block, int sector);
+  void readSectorData(std::ifstream& stream, Block& block, int sector);
 
 private:
   std::vector<std::string> m_files;
@@ -228,6 +227,8 @@ private:
   // Whether or not we are at the end of all of the files
   bool atEnd() const { return m_streams.empty(); }
 
+  Header readHeader();
+  void readSectorData(Block& block, int sector);
   template <typename T>
   std::istream& read(T& value);
   template <typename T>
@@ -241,8 +242,8 @@ private:
   void openFiles();
   void toHdf5FrameFormat(h5::H5ReadWrite& writer);
   void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
-  void readSectorDataVersion4(Block& block, int sector);
-  void readSectorDataVersion5(Block& block, int sector);
+  void readSectorDataVersion4(std::ifstream& stream, Block& block, int sector);
+  void readSectorDataVersion5(std::ifstream& stream, Block& block, int sector);
 };
 
 inline SectorStreamReader::SectorStreamReader(const std::string& path,
@@ -366,13 +367,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
             }
           }
 
-          readSectorData(frame.block, sector);
-
-          // Return the stream to the queue so other threads can read from it.
-          {
-            std::unique_lock<std::mutex> queueLock(m_queueMutex);
-            m_streamQueue.push(sectorStreamPair);
-          }
+          readSectorData(*stream, frame.block, sector);
 
           frame.sectorCount++;
 
@@ -387,6 +382,12 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
             // Call the function todo the processing
             func(b);
           }
+        }
+
+        // Return the stream to the queue so other threads can read from it.
+        {
+          std::unique_lock<std::mutex> queueLock(m_queueMutex);
+          m_streamQueue.push(sectorStreamPair);
         }
       }
     }));

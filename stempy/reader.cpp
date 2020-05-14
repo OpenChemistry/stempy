@@ -478,33 +478,44 @@ Block SectorStreamReader::read()
   return Block();
 }
 
-void SectorStreamReader::readSectorData(Block& block, int sector)
+void SectorStreamReader::readSectorData(std::ifstream& stream, Block& block,
+                                        int sector)
 {
   if (version() == 4) {
-    readSectorDataVersion4(block, sector);
+    readSectorDataVersion4(stream, block, sector);
   } else {
-    readSectorDataVersion5(block, sector);
+    readSectorDataVersion5(stream, block, sector);
   }
 }
 
-void SectorStreamReader::readSectorDataVersion4(Block& block, int sector)
+void SectorStreamReader::readSectorData(Block& block, int sector)
+{
+  auto& sectorStream = *m_streamsIterator;
+  auto& stream = sectorStream.stream;
+
+  readSectorData(*stream.get(), block, sector);
+}
+
+void SectorStreamReader::readSectorDataVersion4(std::ifstream& stream,
+                                                Block& block, int sector)
 {
   auto frameX = sector * SECTOR_DIMENSIONS_VERSION_4.first;
   for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second; frameY++) {
     auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
-    read(block.data.get() + offset,
+    read(stream, block.data.get() + offset,
          SECTOR_DIMENSIONS_VERSION_4.first * sizeof(uint16_t));
   }
 }
 
-void SectorStreamReader::readSectorDataVersion5(Block& block, int sector)
+void SectorStreamReader::readSectorDataVersion5(std::ifstream& stream,
+                                                Block& block, int sector)
 {
   auto frameY = sector * SECTOR_DIMENSIONS_VERSION_5.second;
   auto offset = frameY * FRAME_DIMENSIONS.first;
 
-  read(block.data.get() + offset, SECTOR_DIMENSIONS_VERSION_5.first *
-                                    SECTOR_DIMENSIONS_VERSION_5.second *
-                                    sizeof(uint16_t));
+  read(stream, block.data.get() + offset,
+       SECTOR_DIMENSIONS_VERSION_5.first * SECTOR_DIMENSIONS_VERSION_5.second *
+         sizeof(uint16_t));
 }
 
 void SectorStreamReader::openFiles()
