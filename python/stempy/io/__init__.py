@@ -10,6 +10,7 @@ class FileVersion(object):
     VERSION2 = 2
     VERSION3 = 3
     VERSION4 = 4
+    VERSION5 = 5
 
 class ReaderMixin(object):
     def __iter__(self):
@@ -91,11 +92,11 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
     # check if the input is the hdf5 dataset
     if(isinstance(path, h5py._hl.files.File)):
         reader = get_hdf5_reader(path)
-    elif version == FileVersion.VERSION4:
+    elif version in [FileVersion.VERSION4, FileVersion.VERSION5]:
         if backend == 'thread':
-            reader = SectorThreadedReader(path, **options)
+            reader = SectorThreadedReader(path, version, **options)
         else:
-            reader = SectorReader(path)
+            reader = SectorReader(path, version)
     else:
         reader = Reader(path, version)
 

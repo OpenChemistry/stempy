@@ -95,8 +95,8 @@ PYBIND11_MODULE(_io, m)
     .value("DataCube", SectorStreamReader::H5Format::DataCube)
     .export_values();
 
-  sectorReader.def(py::init<const std::string&>());
-  sectorReader.def(py::init<const std::vector<std::string>&>());
+  sectorReader.def(py::init<const std::string&, uint8_t>());
+  sectorReader.def(py::init<const std::vector<std::string>&, uint8_t>());
   sectorReader.def("read",
                    (Block(SectorStreamReader::*)()) & SectorStreamReader::read);
   sectorReader.def("reset", &SectorStreamReader::reset);
@@ -112,8 +112,8 @@ PYBIND11_MODULE(_io, m)
                    py::arg("format") = SectorStreamReader::H5Format::Frame);
 
   py::class_<SectorStreamThreadedReader>(m, "_threaded_reader")
-    .def(py::init<const std::string&>())
-    .def(py::init<const std::vector<std::string>&>())
-    .def(py::init<const std::string&, int>())
-    .def(py::init<const std::vector<std::string>&, int>());
+    .def(py::init<const std::string&, uint8_t, int>(), py::arg("path"),
+         py::arg("version") = 5, py::arg("threads") = 0)
+    .def(py::init<const std::vector<std::string>&, uint8_t, int>(),
+         py::arg("files"), py::arg("version") = 5, py::arg("threads") = 0);
 }
