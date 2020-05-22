@@ -1,0 +1,60 @@
+FROM jupyter/scipy-notebook
+
+USER root
+
+# Install deps
+RUN apt-get update && \
+  apt-get upgrade -y && \
+  apt-get install -y \
+  libeigen3-dev \
+  libssl1.0-dev \
+  git \
+  autoconf \
+  automake \
+  gcc \
+  g++ \
+  make \
+  gfortran \
+  wget \
+  zlib1g-dev \
+  libffi-dev \
+  software-properties-common \
+  apt-transport-https \
+  ca-certificates \
+  gnupg && \
+  apt-get clean all
+
+# Install CMake
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add - && \
+  apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' && \
+  apt-get update && \
+  apt-get install -y kitware-archive-keyring && \
+  apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA && \
+  apt-get install -y cmake && \
+  apt-get clean all && \
+  rm -rf /var/lib/apt/lists/*
+
+USER $NB_UID
+WORKDIR $HOME
+
+RUN mkdir build/ && mkdir source/
+
+# Build stempy
+COPY --chown=$NB_UID . source/stempy
+
+RUN mkdir -p build/stempy && \
+  cd build/stempy && \
+  cmake -DCMAKE_BUILD_TYPE:STRING=Release \
+  -Dstempy_ENABLE_VTKm:BOOL=OFF \
+  ../../source/stempy . && \
+  make -j4
+
+# Install stempy
+RUN pip install source/stempy && \
+    cp build/stempy/lib/stempy/*.so /opt/conda/lib/python3.7/site-packages/stempy
+
+RUN rm -rf build
+
+RUN fix-permissions /home/$NB_USER
+
+USER $NB_UID
