@@ -269,7 +269,7 @@ public:
                              uint8_t version = 5, int threads = 0);
 
   template <typename Functor>
-  std::future<void> readAll(Functor f);
+  std::future<void> readAll(Functor& f);
 
 private:
   // The number of threads to use
@@ -305,7 +305,7 @@ private:
 };
 
 template <typename Functor>
-std::future<void> SectorStreamThreadedReader::readAll(Functor func)
+std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 {
   m_pool = std::make_unique<ThreadPool>(m_threads);
 
