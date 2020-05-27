@@ -283,7 +283,7 @@ def calculate_average(reader):
 def electron_count(reader, darkreference, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
                    threshold_num_blocks=1, scan_dimensions=(0, 0),
-                   verbose=False):
+                   verbose=False, gain=None):
     """Generate a list of coordinates of electron hits.
 
     :param reader: the file reader that has already opened the data.
@@ -309,6 +309,8 @@ def electron_count(reader, darkreference, number_of_samples=40,
     :type scan_dimensions: tuple of ints of length 2
     :param verbose: whether or not to print out verbose output.
     :type verbose: bool
+    :param gain: the gain mask to apply. Must match the frame dimensions
+    :type gain: numpy.ndarray (2D)
 
     :return: the coordinates of the electron hits for each frame.
     :rtype: ElectronCountedData (named tuple with fields 'data',
@@ -317,9 +319,20 @@ def electron_count(reader, darkreference, number_of_samples=40,
 
     # Special case for threaded reader
     if isinstance(reader, SectorThreadedReader):
-        data = _image.electron_count(reader, darkreference, threshold_num_blocks,
-                                     number_of_samples, background_threshold_n_sigma,
-                                  xray_threshold_n_sigma, scan_dimensions, verbose)
+        args = [reader, darkreference]
+
+        # add the gain arg if we have been given one.
+        if gain is not None:
+            # Invert as we will multiple in C++
+            gain = np.power(gain, -1)
+            args.append(gain)
+
+        # Now add the other args
+        args = args + [threshold_num_blocks, number_of_samples,
+                       background_threshold_n_sigma, xray_threshold_n_sigma,
+                       scan_dimensions, verbose]
+
+        data = _image.electron_count(*args)
     else:
         blocks = []
         for i in range(threshold_num_blocks):
@@ -328,9 +341,15 @@ def electron_count(reader, darkreference, number_of_samples=40,
         if hasattr(darkreference, '_image'):
             darkreference = darkreference._image
 
-        res = _image.calculate_thresholds(
-            [b._block for b in blocks], darkreference, number_of_samples,
-            background_threshold_n_sigma, xray_threshold_n_sigma)
+        args = [[b._block for b in blocks], darkreference]
+
+        if gain is not None:
+            args.append(gain)
+
+        args = args + [number_of_samples, background_threshold_n_sigma, xray_threshold_n_sigma]
+
+
+        res = _image.calculate_thresholds(*args)
 
         background_threshold = res.background_threshold
         xray_threshold = res.xray_threshold
@@ -355,9 +374,14 @@ def electron_count(reader, darkreference, number_of_samples=40,
         # Reset the reader
         reader.reset()
 
-        data = _image.electron_count(reader.begin(), reader.end(),
-                                    darkreference, background_threshold,
-                                    xray_threshold, scan_dimensions)
+        args = [reader.begin(), reader.end(), darkreference]
+        if gain is not None:
+            args.append(gain)
+
+
+        args = args + [background_threshold, xray_threshold, scan_dimensions]
+
+        data = _image.electron_count(*args)
 
     electron_counted_data = namedtuple('ElectronCountedData',
                                        ['data', 'scan_dimensions',
