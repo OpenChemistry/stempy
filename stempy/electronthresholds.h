@@ -11,7 +11,7 @@ namespace py = pybind11;
 
 namespace stempy {
 
-template<typename FrameType>
+template <typename FrameType>
 struct CalculateThresholdsResults
 {
   double backgroundThreshold = 0.0;
@@ -52,22 +52,20 @@ CalculateThresholdsResults<uint16_t> calculateThresholds(
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, Image<double>& darkreference,
-  const float gain[], int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10);
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, const double darkreference[],
-  const float gain[],   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10);
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, py::array_t<double> darkreference,
-  const float gain[], int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10);
-
-
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
 }
 
 #endif /* STEMPY_ELECTRONTHRESHOLDS_H_ */

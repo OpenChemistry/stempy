@@ -59,7 +59,7 @@ ElectronCountedData electronCount(
 
 ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, Image<double>& darkreference,
-  const  float gain[], int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
+  const float gain[], int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
 
@@ -68,7 +68,6 @@ ElectronCountedData electronCount(
   const float gain[], int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
 }
 
 #endif /* STEMPY_ELECTRON_H_ */
