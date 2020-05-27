@@ -83,14 +83,14 @@ struct ApplyGainSubtractAndThreshold
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
   using ControlSignature = void(CellSetIn, FieldInOutPoint value,
-                                FieldInPoint background, gain);
+                                FieldInPoint background, FieldInPoint gain);
 
-  using ExecutionSignature = void(_2, _3);
+  using ExecutionSignature = void(_2, _3, _4);
 
   VTKM_EXEC void operator()(uint16_t& val, double background, float gain) const
   {
 
-    val = val * gain - static_cast<float>(background);
+    val = static_cast<uint16_t>(val * gain - static_cast<float>(background));
 
     if (val <= m_lower || val >= m_upper)
       val = 0;
@@ -106,10 +106,10 @@ private:
 };
 
 template <typename FrameType>
-std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
+std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
                                             Dimensions2D frameDimensions,
                                             const double* darkReferenceData,
-                                            const float gain[],
+                                            const float* gain,
                                             double backgroundThreshold,
                                             double xRayThreshold)
 {
@@ -137,16 +137,15 @@ std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
     // Background subtraction and thresholding
     invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet,
            frameHandle, darkRefHandle);
-    // We are applying a gain
-    else
-    {
-      auto gainRefHandle = vtkm::cont::make_ArrayHandle(
-        gain, frameDimensions.first * frameDimensions.second);
-      // Apply gain, background subtraction and thresholding
-      invoke(
-        ApplyGainSubtractAndThreshold{ backgroundThreshold, xRayThreshold },
-        cellSet, frameHandle, darkRefHandle, gainRefHandle);
-    }
+  }
+  // We are applying a gain
+  else {
+    auto gainRefHandle = vtkm::cont::make_ArrayHandle(
+      gain, frameDimensions.first * frameDimensions.second);
+    // Apply gain, background subtraction and thresholding
+    invoke(ApplyGainSubtractAndThreshold{ backgroundThreshold, xRayThreshold },
+           cellSet, frameHandle, darkRefHandle, gainRefHandle);
+  }
     // Find maximal pixels
     invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
 
@@ -279,14 +278,14 @@ ElectronCountedData electronCount(
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart =
         data + i * frameDimensions.first * frameDimensions.second;
-      std::vector<FrameType> frame(frameStart,
-                                   frameStart + frameDimensions.first *
-                                                  frameDimensions.second);
+      std::vector<uint16_t> frame(frameStart,
+                                  frameStart + frameDimensions.first *
+                                                 frameDimensions.second);
 
 #ifdef VTKm
-      events[block.header.imageNumbers[i]] =
-        maximalPointsParallel<FrameType>(frame, frameDimensions, darkReference,
-                                         backgroundThreshold, xRayThreshold);
+      events[block.header.imageNumbers[i]] = maximalPointsParallel<FrameType>(
+        frame, frameDimensions, darkReference, gain, backgroundThreshold,
+        xRayThreshold);
 #else
       for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
         // Subtract darkfield reference and apply gain if we have one, this will
@@ -369,13 +368,14 @@ std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
                                     double xRayThreshold)
 {
 
-  for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
+  for (unsigned j = 0; j < frameDimensions.first * frameDimensions.second;
+       j++) {
     // Subtract darkfield reference and apply gain if we have one, this will
     // be based on our template type, it can be evaluated a compile time.
     if (std::is_integral<FrameType>::value) {
-      frame[j] -= darkReference[j];
+      frame[j] -= static_cast<uint16_t>(darkReference[j]);
     } else {
-      frame[j] = frame[j] * gain[j] - darkReference[j];
+      frame[j] = frame[j] * gain[j] - static_cast<float>(darkReference[j]);
     }
     // Threshold the electron events
     if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
@@ -439,9 +439,11 @@ ElectronCountedData electronCount(
     // If we are still collecting sample block for calculating the threshold
     if (!electronCounting) {
       std::unique_lock<std::mutex> sampleLock(sampleMutex);
-      if (sampleBlocks.size() < thresholdNumberOfBlocks) {
+      if (sampleBlocks.size() <
+          static_cast<unsigned>(thresholdNumberOfBlocks)) {
         sampleBlocks.push_back(std::move(b));
-        if (sampleBlocks.size() == thresholdNumberOfBlocks) {
+        if (sampleBlocks.size() ==
+            static_cast<unsigned>(thresholdNumberOfBlocks)) {
           sampleLock.unlock();
           sampleCondition.notify_all();
         }
@@ -478,13 +480,14 @@ ElectronCountedData electronCount(
   // Wait for enought blocks to come in to calculate the threadhold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
-    return sampleBlocks.size() == thresholdNumberOfBlocks;
+    return sampleBlocks.size() ==
+           static_cast<unsigned>(thresholdNumberOfBlocks);
   });
 
   // Now calculate the threshold
-  auto threshold =
-    calculateThresholds(sampleBlocks, darkReference, gain, numberOfSamples,
-                        backgroundThresholdNSigma, xRayThresholdNSigma);
+  auto threshold = calculateThresholds<Block, FrameType>(
+    sampleBlocks, darkReference, gain, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma);
 
   if (verbose) {
     std::cout << "****Statistics for calculating electron thresholds****"
@@ -508,9 +511,14 @@ ElectronCountedData electronCount(
   }
 
   // Now setup  electron count output
-  auto scanSize = sampleBlocks[0].header.scanDimensions;
   auto frameSize = sampleBlocks[0].header.frameDimensions;
-  events.resize(scanSize.first * scanSize.second);
+
+  // If we haven't been provided with width and height, try the header.
+  if (scanDimensions.first == 0 || scanDimensions.second == 0) {
+    scanDimensions = sampleBlocks[0].header.scanDimensions;
+  }
+
+  events.resize(scanDimensions.first * scanDimensions.second);
 
   // Now tell our workers to proceed
   electronCounting = true;
@@ -541,7 +549,7 @@ ElectronCountedData electronCount(
 
   ElectronCountedData ret;
   ret.data = events;
-  ret.scanDimensions = scanSize;
+  ret.scanDimensions = scanDimensions;
   ret.frameDimensions = frameSize;
 
   return ret;

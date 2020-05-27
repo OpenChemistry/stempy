@@ -320,7 +320,6 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
   // Create worker threads
   for (int i = 0; i < m_threads; i++) {
     m_futures.emplace_back(m_pool->enqueue([this, &func]() {
-      std::ifstream* close = nullptr;
 
       while (!m_streams.empty()) {
         // Get the next stream to read from
@@ -334,8 +333,8 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
         // First read the header
         auto header = readHeader(*stream);
 
-        for (unsigned i = 0; i < header.imagesInBlock; i++) {
-          auto pos = header.imageNumbers[i];
+        for (unsigned j = 0; j < header.imagesInBlock; j++) {
+          auto pos = header.imageNumbers[j];
 
           std::unique_lock<std::mutex> mutexLock(m_cacheMutex);
           auto& frame = m_frameCache[pos];

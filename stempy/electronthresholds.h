@@ -29,6 +29,12 @@ struct CalculateThresholdsResults
   double optimizedStdDev = 0.0;
 };
 
+template <typename BlockType, typename FrameType>
+CalculateThresholdsResults<FrameType> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+
 // Without gain
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
