@@ -464,11 +464,10 @@ def calculate_sum_sparse(electron_counts, frame_dimensions):
     :return: A summed diffraction pattern.
     :rtype: numpy.ndarray
     """
-    dp = np.zeros(frame_dimensions, '<u8')
+    dp = np.zeros((frame_dimensions[0] * frame_dimensions[1]), '<u8')
     for ii, ev in enumerate(electron_counts):
-        x, y = np.unravel_index(ev, dp.shape)
-        dp[x, y] += 1
-
+        dp[ev] += 1
+    dp = dp.reshape(frame_dimensions)
     return dp
 
 
