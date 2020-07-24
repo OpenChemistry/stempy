@@ -451,6 +451,30 @@ def com_sparse(electron_counts, frame_dimensions):
     return com
 
 
+def com_dense(frames):
+    """Compute the center of mass for a set of dense 2D frames.
+
+    :param frames: The frames to calculate the center of mass from
+    :type frames: numpy.ndarray (2D or 3D)
+
+    :return: The center of mass along each axis of set of frames
+    :
+
+    """
+    # Make 3D if its only 2D
+    if frames.ndim == 2:
+        frames = frames[None, :, :]
+
+    YY, XX = np.mgrid[0:frames.shape[1], 0:frames.shape[2]]
+    com = np.zeros((2, frames.shape[0]), dtype=np.float64)
+    for ii, dp in enumerate(frames):
+        mm = dp.sum()
+        com_x = np.sum(XX * dp)
+        com_y = np.sum(YY * dp)
+        com[:, ii] = (com_x / mm, com_y / mm)
+    return com
+
+
 def calculate_sum_sparse(electron_counts, frame_dimensions):
     """Compute a diffraction pattern from sparse electron counted data.
 
