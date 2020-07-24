@@ -34,7 +34,7 @@ for drive in drives:
 iFiles = sorted(iFiles)
 
 # Electron count the data
-sReader = stio.reader(iFiles,stio.FileVersion.VERSION4, backend='thread')
+sReader = stio.reader(iFiles,stio.FileVersion.VERSION5, backend='thread')
 
 print('start counting')
 t0 = time.time()
@@ -42,8 +42,6 @@ ee = stim.electron_count(sReader,dark0,number_of_samples=1200,
                                             verbose=False,threshold_num_blocks=20,
                                             xray_threshold_n_sigma=175,
                                             background_threshold_n_sigma=threshold)
-
-frame_events = ee.data
 
 t1 = time.time()
 print('total time = {}'.format(t1-t0))
@@ -55,5 +53,3 @@ while outPath.exists():
     outPath = Path(outPath.stem + '_{:03d}'.format(ii))
 print('Saving to {}'.format(outPath))
 stio.save_electron_counts(str(outPath), ee)
-
-
