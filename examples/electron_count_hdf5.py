@@ -22,26 +22,20 @@ iPath = dPath / fPath
 dark0 = np.zeros((576,576))
 
 print('Opening: {}'.format(iPath))
-with h5py.File(iPath,'r') as f0:
+with h5py.File(iPath, 'r') as f0:
 
-    # Electron count the data
-    #sReader = stio.reader(f0, backend='threaded')
-    
     sReader = stio.reader(f0)
     
     print('start counting')
     t0 = time.time()
 
-    ee = stim.electron_count(sReader,dark0,number_of_samples=1200,
-                                            verbose=True,
-                                            xray_threshold_n_sigma=175,
-                                            background_threshold_n_sigma=threshold)
+    ee = stim.electron_count(sReader, dark0, number_of_samples=1200,
+                                             verbose=True,
+                                             xray_threshold_n_sigma=175,
+                                             background_threshold_n_sigma=threshold)
     
     t1 = time.time()
 
-    frame_events = ee.data
-    
-    scanXY = f0['stem/images'].shape[1:]
 print('total time = {}'.format(t1-t0))
 
 outPath = Path('/mnt/hdd1/data_scan{}_th{}_electrons.h5'.format(scanNum, threshold))
