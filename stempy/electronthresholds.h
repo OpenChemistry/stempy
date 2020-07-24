@@ -11,13 +11,14 @@ namespace py = pybind11;
 
 namespace stempy {
 
+template <typename FrameType>
 struct CalculateThresholdsResults
 {
   double backgroundThreshold = 0.0;
   double xRayThreshold = 0.0;
   int numberOfSamples = 0;
-  int16_t minSample = 0;
-  int16_t maxSample = 0;
+  FrameType minSample = 0;
+  FrameType maxSample = 0;
   double mean = 0.0;
   double variance = 0.0;
   double stdDev = 0.0;
@@ -28,23 +29,49 @@ struct CalculateThresholdsResults
   double optimizedStdDev = 0.0;
 };
 
+template <typename BlockType, typename FrameType>
+CalculateThresholdsResults<FrameType> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+
+// Without gain
 template <typename BlockType>
-CalculateThresholdsResults calculateThresholds(
+CalculateThresholdsResults<uint16_t> calculateThresholds(
   std::vector<BlockType>& blocks, Image<double>& darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
-CalculateThresholdsResults calculateThresholds(
+CalculateThresholdsResults<uint16_t> calculateThresholds(
   std::vector<BlockType>& blocks, const double darkreference[],
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
-CalculateThresholdsResults calculateThresholds(
+CalculateThresholdsResults<uint16_t> calculateThresholds(
   std::vector<BlockType>& blocks, py::array_t<double> darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
+
+// With gain
+template <typename BlockType>
+CalculateThresholdsResults<float> calculateThresholds(
+  std::vector<BlockType>& blocks, Image<double>& darkreference,
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+
+template <typename BlockType>
+CalculateThresholdsResults<float> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+
+template <typename BlockType>
+CalculateThresholdsResults<float> calculateThresholds(
+  std::vector<BlockType>& blocks, py::array_t<double> darkreference,
+  const float gain[], int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
 }
 
 #endif /* STEMPY_ELECTRONTHRESHOLDS_H_ */

@@ -10,12 +10,14 @@
 
 namespace stempy {
 
-double calculateMean(std::vector<int16_t>& values)
+template <typename T>
+double calculateMean(std::vector<T>& values)
 {
   return std::accumulate(values.begin(), values.end(), 0.0) / values.size();
 }
 
-double calculateVariance(std::vector<int16_t>& values, double mean)
+template <typename T>
+double calculateVariance(std::vector<T>& values, double mean)
 {
   double v1 = 0;
   double sigma2;
@@ -69,12 +71,11 @@ struct GaussianErrorFunctor : Eigen::DenseFunctor<double>
   Eigen::VectorXd m_histogram;
 };
 
-template <typename BlockType>
-CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
-                                               const double darkReference[],
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma)
+template <typename BlockType, typename FrameType>
+CalculateThresholdsResults<FrameType> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkReference[],
+  const float gain[], int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
 {
   auto frameDimensions = blocks[0].header.frameDimensions;
   auto numberOfPixels = frameDimensions.first * frameDimensions.second;
@@ -85,7 +86,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
 
   int numberSamplePixels =
     frameDimensions.first * frameDimensions.second * numberOfSamples;
-  std::vector<int16_t> samples(numberSamplePixels, 0);
+  std::vector<FrameType> samples(numberSamplePixels, 0);
   for (int i = 0; i < numberOfSamples; i++) {
     std::uniform_int_distribution<int> randomBlockDist(0, blocks.size() - 1);
     auto randomBlockIndex = randomBlockDist(randomEngine);
@@ -98,9 +99,19 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
     for (unsigned j = 0; j < numberOfPixels; j++) {
       // For now just use the index, the image number don't seem to work, in the
       // current data set. In the future we should be using the image number.
-      samples[i * numberOfPixels + j] =
-        blockData[randomFrameIndex * numberOfPixels + j] -
-        static_cast<int16_t>(darkReference[j]);
+
+      // This will be evaluated a compile time.
+      if (std::is_integral<FrameType>::value) {
+        samples[i * numberOfPixels + j] =
+          blockData[randomFrameIndex * numberOfPixels + j] -
+          static_cast<int16_t>(darkReference[j]);
+      }
+      // if not integral type then we know we have gain and need to muliple
+      else {
+        samples[i * numberOfPixels + j] =
+          blockData[randomFrameIndex * numberOfPixels + j] * gain[j] -
+          static_cast<float>(darkReference[j]);
+      }
     }
   }
 
@@ -113,7 +124,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   // Now generate a histograms
   auto minMax = std::minmax_element(samples.begin(), samples.end());
   auto minSample = *minMax.first;
-  auto maxSample = static_cast<int16_t>(std::ceil(*minMax.second));
+  auto maxSample = static_cast<FrameType>(std::ceil(*minMax.second));
   auto maxBin = std::min(static_cast<int>(maxSample),
                          static_cast<int>(mean + xrayThreshold * stdDev));
   auto minBin = std::max(static_cast<int>(minSample),
@@ -160,7 +171,7 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   auto backgroundThreshold =
     optimizedMean + optimizedStdDev * backgroundThresholdNSigma;
 
-  CalculateThresholdsResults ret;
+  CalculateThresholdsResults<FrameType> ret;
   ret.numberOfSamples = numberOfSamples;
   ret.minSample = minSample;
   ret.maxSample = maxSample;
@@ -178,28 +189,82 @@ CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
   return ret;
 }
 
+// Without gain
 template <typename BlockType>
-CalculateThresholdsResults calculateThresholds(std::vector<BlockType>& blocks,
-                                               Image<double>& darkReference,
-                                               int numberOfSamples,
-                                               double backgroundThresholdNSigma,
-                                               double xRayThresholdNSigma)
+CalculateThresholdsResults<uint16_t> calculateThresholds(
+  std::vector<BlockType>& blocks, Image<double>& darkreference,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
 {
-  return calculateThresholds(blocks, darkReference.data.get(), numberOfSamples,
-                             backgroundThresholdNSigma, xRayThresholdNSigma);
+  return calculateThresholds<BlockType, uint16_t>(
+    blocks, darkreference.data.get(), nullptr, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma);
 }
 
-template CalculateThresholdsResults calculateThresholds<Block>(
+template <typename BlockType>
+CalculateThresholdsResults<uint16_t> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
+{
+  return calculateThresholds<BlockType, uint16_t>(
+    blocks, darkreference, nullptr, numberOfSamples, backgroundThresholdNSigma,
+    xRayThresholdNSigma);
+}
+
+// With gain
+template <typename BlockType>
+CalculateThresholdsResults<float> calculateThresholds(
+  std::vector<BlockType>& blocks, Image<double>& darkreference,
+  const float gain[], int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
+{
+  return calculateThresholds<BlockType, float>(
+    blocks, darkreference.data.get(), gain, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma);
+}
+
+template <typename BlockType>
+CalculateThresholdsResults<float> calculateThresholds(
+  std::vector<BlockType>& blocks, const double darkreference[],
+  const float gain[], int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma)
+{
+  return calculateThresholds<BlockType, float>(
+    blocks, darkreference, gain, numberOfSamples, backgroundThresholdNSigma,
+    xRayThresholdNSigma);
+}
+
+// With gain
+template CalculateThresholdsResults<float> calculateThresholds<Block>(
+  std::vector<Block>& blocks, Image<double>& darkReference, const float gain[],
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults<float> calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, Image<double>& darkReference,
+  const float gain[], int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults<float> calculateThresholds<Block>(
+  std::vector<Block>& blocks, const double darkReference[], const float gain[],
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+template CalculateThresholdsResults<float> calculateThresholds<PyBlock>(
+  std::vector<PyBlock>& blocks, const double darkReference[],
+  const float gain[], int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma);
+
+// No gain
+template CalculateThresholdsResults<uint16_t> calculateThresholds<Block>(
   std::vector<Block>& blocks, Image<double>& darkReference, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma);
-template CalculateThresholdsResults calculateThresholds<PyBlock>(
+template CalculateThresholdsResults<uint16_t> calculateThresholds<PyBlock>(
   std::vector<PyBlock>& blocks, Image<double>& darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma);
-template CalculateThresholdsResults calculateThresholds<Block>(
+template CalculateThresholdsResults<uint16_t> calculateThresholds<Block>(
   std::vector<Block>& blocks, const double darkReference[], int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma);
-template CalculateThresholdsResults calculateThresholds<PyBlock>(
+template CalculateThresholdsResults<uint16_t> calculateThresholds<PyBlock>(
   std::vector<PyBlock>& blocks, const double darkReference[],
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma);

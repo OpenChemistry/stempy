@@ -29,6 +29,22 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions = { 0, 0 });
 
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  Image<double>& darkreference,
+                                  const float gain[],
+                                  double backgroundThreshold,
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions = { 0, 0 });
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  const double darkreference[],
+                                  const float gain[],
+                                  double backgroundThreshold,
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions = { 0, 0 });
+
 ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, Image<double>& darkreference,
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
@@ -38,6 +54,18 @@ ElectronCountedData electronCount(
 ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, const double darkreference[],
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, Image<double>& darkreference,
+  const float gain[], int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, const double darkreference[],
+  const float gain[], int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
 }

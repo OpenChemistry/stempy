@@ -269,7 +269,7 @@ public:
                              uint8_t version = 5, int threads = 0);
 
   template <typename Functor>
-  std::future<void> readAll(Functor f);
+  std::future<void> readAll(Functor& f);
 
 private:
   // The number of threads to use
@@ -305,7 +305,7 @@ private:
 };
 
 template <typename Functor>
-std::future<void> SectorStreamThreadedReader::readAll(Functor func)
+std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 {
   m_pool = std::make_unique<ThreadPool>(m_threads);
 
@@ -320,7 +320,6 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
   // Create worker threads
   for (int i = 0; i < m_threads; i++) {
     m_futures.emplace_back(m_pool->enqueue([this, &func]() {
-      std::ifstream* close = nullptr;
 
       while (!m_streams.empty()) {
         // Get the next stream to read from
@@ -334,8 +333,8 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor func)
         // First read the header
         auto header = readHeader(*stream);
 
-        for (unsigned i = 0; i < header.imagesInBlock; i++) {
-          auto pos = header.imageNumbers[i];
+        for (unsigned j = 0; j < header.imagesInBlock; j++) {
+          auto pos = header.imageNumbers[j];
 
           std::unique_lock<std::mutex> mutexLock(m_cacheMutex);
           auto& frame = m_frameCache[pos];

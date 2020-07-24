@@ -783,7 +783,6 @@ bool SectorStreamThreadedReader::nextSectorStreamPair(
   }
 
   auto& stream = sectorStreamPair.first;
-  auto sector = sectorStreamPair.second;
 
   auto c = stream->peek();
   // If we have reached the end close the stream and remove if from
