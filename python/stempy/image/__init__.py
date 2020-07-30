@@ -388,7 +388,7 @@ def electron_count(reader, darkreference, number_of_samples=40,
                                         'frame_dimensions'])
 
     # Convert to numpy array
-    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data])
+    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
     electron_counted_data.scan_dimensions = data.scan_dimensions
     electron_counted_data.frame_dimensions = data.frame_dimensions
 
