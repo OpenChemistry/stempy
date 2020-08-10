@@ -12,9 +12,14 @@ Install singularity (Ubuntu)
 
 ``sudo apt-get install singularity-container``
 
-Note: Version 2.4.2-dist on Ubuntu has a bug with squashfs. Version 3.6.1
+Note
+####
+
+Version 2.4.2-dist on Ubuntu has a bug with squashfs. Version 3.6.1
 has been tested to work. Follow installation instructions here:
 https://github.com/hpcng/singularity/blob/master/INSTALL.md
+
+Then you will run ``/usr/local/bin/singularity``
 
 Pulling the latest image
 ------------------------
