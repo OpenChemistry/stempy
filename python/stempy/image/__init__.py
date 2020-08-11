@@ -280,7 +280,7 @@ def calculate_average(reader):
     return img
 
 
-def electron_count(reader, darkreference, number_of_samples=40,
+def electron_count(reader, darkreference=None, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
                    threshold_num_blocks=1, scan_dimensions=(0, 0),
                    verbose=False, gain=None):
@@ -316,21 +316,26 @@ def electron_count(reader, darkreference, number_of_samples=40,
     :rtype: ElectronCountedData (named tuple with fields 'data',
             'scan_dimensions', and 'frame_dimensions')
     """
+    if gain is not None:
+        # Invert as we will multiple in C++
+        gain = np.power(gain, -1)
 
     # Special case for threaded reader
     if isinstance(reader, SectorThreadedReader):
-        args = [reader, darkreference]
+        args = [reader]
 
-        # add the gain arg if we have been given one.
-        if gain is not None:
-            # Invert as we will multiple in C++
-            gain = np.power(gain, -1)
-            args.append(gain)
+        if darkreference is not None:
+            args = args + [darkreference]
 
         # Now add the other args
         args = args + [threshold_num_blocks, number_of_samples,
-                       background_threshold_n_sigma, xray_threshold_n_sigma,
-                       scan_dimensions, verbose]
+                       background_threshold_n_sigma, xray_threshold_n_sigma]
+
+        # add the gain arg if we have been given one.
+        if gain is not None:
+            args.append(gain)
+
+        args = args + [scan_dimensions, verbose]
 
         data = _image.electron_count(*args)
     else:
@@ -338,16 +343,18 @@ def electron_count(reader, darkreference, number_of_samples=40,
         for i in range(threshold_num_blocks):
             blocks.append(next(reader))
 
-        if hasattr(darkreference, '_image'):
+
+        if darkreference is not None and hasattr(darkreference, '_image'):
             darkreference = darkreference._image
 
-        args = [[b._block for b in blocks], darkreference]
-
-        if gain is not None:
-            args.append(gain)
+        args = [[b._block for b in blocks]]
+        if darkreference is not None:
+            args.append(darkreference)
 
         args = args + [number_of_samples, background_threshold_n_sigma, xray_threshold_n_sigma]
 
+        if gain is not None:
+            args.append(gain)
 
         res = _image.calculate_thresholds(*args)
 
@@ -374,12 +381,17 @@ def electron_count(reader, darkreference, number_of_samples=40,
         # Reset the reader
         reader.reset()
 
-        args = [reader.begin(), reader.end(), darkreference]
+        args = [reader.begin(), reader.end()]
+
+        if darkreference is not None:
+            args.append(darkreference)
+
+        args = args + [background_threshold, xray_threshold]
+
         if gain is not None:
             args.append(gain)
 
-
-        args = args + [background_threshold, xray_threshold, scan_dimensions]
+        args = args + [scan_dimensions]
 
         data = _image.electron_count(*args)
 

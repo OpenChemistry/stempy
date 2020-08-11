@@ -29,11 +29,11 @@ struct CalculateThresholdsResults
   double optimizedStdDev = 0.0;
 };
 
-template <typename BlockType, typename FrameType>
+template <typename BlockType, typename FrameType, bool dark = true>
 CalculateThresholdsResults<FrameType> calculateThresholds(
   std::vector<BlockType>& blocks, const double darkreference[],
-  const float gain[], int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[]);
 
 // Without gain
 template <typename BlockType>
@@ -58,20 +58,56 @@ CalculateThresholdsResults<uint16_t> calculateThresholds(
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, Image<double>& darkreference,
-  const float gain[], int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[]);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, const double darkreference[],
-  const float gain[], int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[]);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
   std::vector<BlockType>& blocks, py::array_t<double> darkreference,
-  const float gain[], int numberOfSamples = 20,
+  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
+  double xRayThresholdNSigma = 10);
+
+// Without gain, without darkreference
+template <typename BlockType>
+CalculateThresholdsResults<uint16_t> calculateThresholds(
+  std::vector<BlockType>& blocks, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10);
+}
+
+template <bool>
+struct tag
+{};
+
+template <typename T, typename F>
+auto static_if(tag<true>, T t, F f)
+{
+  (void)f;
+  return t;
+}
+
+template <typename T, typename F>
+auto static_if(tag<false>, T t, F f)
+{
+  (void)t;
+  return f;
+}
+
+template <bool B, typename T, typename F>
+auto static_if(T t, F f)
+{
+  return static_if(tag<B>{}, t, f);
+}
+
+template <bool B, typename T>
+auto static_if(T t)
+{
+  return static_if(tag<B>{}, t, [](auto&&...) {});
 }
 
 #endif /* STEMPY_ELECTRONTHRESHOLDS_H_ */
