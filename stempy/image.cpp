@@ -339,61 +339,13 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
   return frequencies;
 }
 
-void calculateSTEMValuesSparse(const vector<vector<uint32_t>>& data,
-                               uint16_t* mask, STEMImage& image,
-                               int frameOffset)
-{
-  for (unsigned i = 0; i < data.size(); ++i) {
-    uint64_t values = 0;
-    for (auto pos : data[i]) {
-      values += mask[pos];
-    }
-    image.data[i + frameOffset] = values;
-  }
-}
-
-vector<STEMImage> createSTEMImages(
-  const vector<vector<uint32_t>>& sparseData, const vector<int>& innerRadii,
-  const vector<int>& outerRadii, Dimensions2D scanDimensions,
-  Dimensions2D frameDimensions, Coordinates2D center, int frameOffset)
-{
-  if (innerRadii.empty() || outerRadii.empty()) {
-    ostringstream msg;
-    msg << "innerRadii or outerRadii are empty!";
-    throw invalid_argument(msg.str());
-  }
-
-  if (innerRadii.size() != outerRadii.size()) {
-    ostringstream msg;
-    msg << "innerRadii and outerRadii are not the same size!";
-    throw invalid_argument(msg.str());
-  }
-
-  vector<STEMImage> images;
-  vector<uint16_t*> masks;
-  for (size_t i = 0; i < innerRadii.size(); ++i) {
-    images.push_back(STEMImage(scanDimensions));
-    masks.push_back(
-      createAnnularMask(frameDimensions, innerRadii[i], outerRadii[i], center));
-  }
-
-  for (size_t i = 0; i < masks.size(); ++i)
-    calculateSTEMValuesSparse(sparseData, masks[i], images[i], frameOffset);
-
-  for (auto* p : masks)
-    delete[] p;
-
-  return images;
-}
-
 vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
                                    const vector<int>& innerRadii,
                                    const vector<int>& outerRadii,
                                    Coordinates2D center)
 {
   return createSTEMImages(data.data, innerRadii, outerRadii,
-                          data.scanDimensions, data.frameDimensions,
-                          center);
+                          data.scanDimensions, data.frameDimensions, center);
 }
 
 template <typename InputIt>

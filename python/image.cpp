@@ -1,3 +1,4 @@
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <vector>
@@ -137,6 +138,14 @@ ElectronCountedData electronCount(
                        xRayThresholdNSigma, scanDimensions, verbose);
 }
 
+// Explicitly instantiate version for py::array_t
+template std::vector<STEMImage> createSTEMImages(
+  const std::vector<py::array_t<uint32_t>>& sparseData,
+  const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
+  Dimensions2D scanDimensions = { 0, 0 },
+  Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
+  int frameOffset = 0);
+
 } // namespace stempy
 
 PYBIND11_MODULE(_image, m)
@@ -233,12 +242,21 @@ PYBIND11_MODULE(_image, m)
     .def_readonly("frame_dimensions", &ElectronCountedData::frameDimensions);
 
   // Add more template instantiations as we add more types of iterators
-  m.def("create_stem_images", &createSTEMImages<StreamReader::iterator>,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images", &createSTEMImages<SectorStreamReader::iterator>,
-        py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images",
-        (vector<STEMImage>(*)(const vector<vector<uint32_t>>&,
+        (vector<STEMImage>(*)(StreamReader::iterator, StreamReader::iterator,
+                              const vector<int>&, const vector<int>&,
+                              Dimensions2D, Coordinates2D)) &
+          createSTEMImages<StreamReader::iterator>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "create_stem_images",
+    (vector<STEMImage>(*)(SectorStreamReader::iterator,
+                          SectorStreamReader::iterator, const vector<int>&,
+                          const vector<int>&, Dimensions2D, Coordinates2D)) &
+      createSTEMImages<SectorStreamReader::iterator>,
+    py::call_guard<py::gil_scoped_release>());
+  m.def("create_stem_images",
+        (vector<STEMImage>(*)(const std::vector<py::array_t<uint32_t>>&,
                               const vector<int>&, const vector<int>&,
                               Dimensions2D, Dimensions2D, Coordinates2D, int)) &
           createSTEMImages,
@@ -410,7 +428,11 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_histogram", &createSTEMHistogram,
         py::call_guard<py::gil_scoped_release>());
-  m.def("create_stem_images", &createSTEMImages<PyReader::iterator>,
+  m.def("create_stem_images",
+        (vector<STEMImage>(*)(PyReader::iterator, PyReader::iterator,
+                              const vector<int>&, const vector<int>&,
+                              Dimensions2D, Coordinates2D)) &
+          createSTEMImages<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
         (Image<double>(*)(StreamReader::iterator, StreamReader::iterator,
