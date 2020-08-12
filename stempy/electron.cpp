@@ -344,7 +344,7 @@ ElectronCountedData electronCount(
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart =
         data + i * frameDimensions.first * frameDimensions.second;
-      std::vector<uint16_t> frame(frameStart,
+      std::vector<FrameType> frame(frameStart,
                                   frameStart + frameDimensions.first *
                                                  frameDimensions.second);
 
