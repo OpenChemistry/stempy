@@ -7,7 +7,7 @@ RUN apt-get update && \
   apt-get upgrade -y && \
   apt-get install -y \
   libeigen3-dev \
-  libssl1.0-dev \
+  libssl-dev \
   git \
   autoconf \
   automake \
@@ -21,15 +21,14 @@ RUN apt-get update && \
   software-properties-common \
   apt-transport-https \
   ca-certificates \
-  gnupg && \
+  gnupg \
+  libhdf5-dev && \
   apt-get clean all
 
 # Install CMake
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add - && \
-  apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' && \
+  apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
   apt-get update && \
-  apt-get install -y kitware-archive-keyring && \
-  apt-key --keyring /etc/apt/trusted.gpg del C1F34CDD40CD72DA && \
   apt-get install -y cmake && \
   apt-get clean all && \
   rm -rf /var/lib/apt/lists/*
@@ -51,7 +50,7 @@ RUN mkdir -p build/stempy && \
 
 # Install stempy
 RUN pip install source/stempy && \
-    cp build/stempy/lib/stempy/*.so /opt/conda/lib/python3.7/site-packages/stempy
+    cp build/stempy/lib/stempy/*.so /opt/conda/lib/python3.8/site-packages/stempy
 
 RUN rm -rf build
 
