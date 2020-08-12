@@ -7,7 +7,7 @@ RUN apt-get update && \
   apt-get upgrade -y && \
   apt-get install -y \
   libeigen3-dev \
-  libssl1.0-dev \
+  libssl-dev \
   git \
   autoconf \
   automake \
@@ -21,7 +21,8 @@ RUN apt-get update && \
   software-properties-common \
   apt-transport-https \
   ca-certificates \
-  gnupg && \
+  gnupg \
+  libhdf5-dev && \
   apt-get clean all
 
 # Install CMake
