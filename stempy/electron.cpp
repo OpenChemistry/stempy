@@ -60,7 +60,8 @@ struct Threshold : public vtkm::worklet::WorkletMapCellToPoint
 
   using ExecutionSignature = void(_2);
 
-  VTKM_EXEC void operator()(uint16_t& val) const
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val) const
   {
     if (val <= m_lower || val >= m_upper)
       val = 0;
@@ -83,9 +84,10 @@ struct SubtractAndThreshold : public Threshold
 
   using ExecutionSignature = void(_2, _3);
 
-  VTKM_EXEC void operator()(uint16_t& val, double background) const
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, double background) const
   {
-    val -= static_cast<uint16_t>(background);
+    val -= static_cast<FrameType>(background);
 
     Threshold::operator()(val);
   }
@@ -107,10 +109,11 @@ struct ApplyGainSubtractAndThreshold : public Threshold
 
   using ExecutionSignature = void(_2, _3, _4);
 
-  VTKM_EXEC void operator()(uint16_t& val, double background, float gain) const
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, double background, float gain) const
   {
 
-    val = static_cast<uint16_t>(val * gain - static_cast<float>(background));
+    val = static_cast<FrameType>(val * gain - static_cast<float>(background));
 
     Threshold::operator()(val);
   }
@@ -133,10 +136,11 @@ struct ApplyGainAndThreshold : public Threshold
 
   using ExecutionSignature = void(_2, _3);
 
-  VTKM_EXEC void operator()(uint16_t& val, float gain) const
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, float gain) const
   {
 
-    val = static_cast<uint16_t>(val * gain);
+    val = static_cast<FrameType>(val * gain);
 
     Threshold::operator()(val);
   }
@@ -150,7 +154,7 @@ private:
 };
 
 template <typename FrameType, bool dark = true>
-std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
+std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
                                             Dimensions2D frameDimensions,
                                             const double* darkReferenceData,
                                             const float* gain,
