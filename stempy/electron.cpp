@@ -251,8 +251,8 @@ std::vector<uint32_t> maximalPoints(const std::vector<FrameType>& frame,
   for (uint32_t i = 0; i < numberOfPixels; ++i) {
     auto row = i / width;
     auto column = i % width;
-    auto rightNeighbourColumn = mod((i + 1), width);
-    auto leftNeighbourColumn = mod((i - 1), width);
+    auto rightNeighbourColumn = mod((column + 1), width);
+    auto leftNeighbourColumn = mod((column - 1), width);
     auto topNeighbourRow = mod((row - 1), height);
     auto bottomNeighbourRow = mod((row + 1), height);
     auto pixelValue = frame[i];
