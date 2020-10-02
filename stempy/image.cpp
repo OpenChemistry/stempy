@@ -589,7 +589,7 @@ RadialSum<uint64_t> radialSum(InputIt first, InputIt last,
 
 template <typename InputIt>
 Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
-                                        const Image<double>& darkreference)
+                                        const Image<float>& darkreference)
 {
   auto frameDimensions = first->header.frameDimensions;
   auto numDetectorPixels = frameDimensions.first * frameDimensions.second;
@@ -627,7 +627,7 @@ template <typename InputIt>
 Image<double> maximumDiffractionPattern(InputIt first, InputIt last)
 {
   // Create empty dark reference
-  Image<double> dark;
+  Image<float> dark;
 
   return maximumDiffractionPattern(first, last, dark);
 }
@@ -681,16 +681,16 @@ template RadialSum<uint64_t> radialSum(PyReader::iterator first,
 
 template Image<double> maximumDiffractionPattern(
   StreamReader::iterator first, StreamReader::iterator last,
-  const Image<double>& darkreference);
+  const Image<float>& darkreference);
 template Image<double> maximumDiffractionPattern(
   vector<Block>::iterator first, vector<Block>::iterator last,
-  const Image<double>& darkreference);
+  const Image<float>& darkreference);
 template Image<double> maximumDiffractionPattern(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last,
-  const Image<double>& darkreference);
+  const Image<float>& darkreference);
 template Image<double> maximumDiffractionPattern(
   PyReader::iterator first, PyReader::iterator last,
-  const Image<double>& darkreference);
+  const Image<float>& darkreference);
 template Image<double> maximumDiffractionPattern(StreamReader::iterator first,
                                                  StreamReader::iterator last);
 template Image<double> maximumDiffractionPattern(vector<Block>::iterator first,

@@ -134,7 +134,7 @@ namespace stempy {
 
   template <typename InputIt>
   Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
-                                          const Image<double>& darkreference);
+                                          const Image<float>& darkreference);
 
   template <typename InputIt>
   Image<double> maximumDiffractionPattern(InputIt first, InputIt last);

@@ -20,7 +20,7 @@ namespace stempy {
 
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<BlockType>& blocks, py::array_t<double> darkReference,
+  std::vector<BlockType>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma)
 {
@@ -30,7 +30,7 @@ CalculateThresholdsResults<uint16_t> calculateThresholds(
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, py::array_t<double> darkReference,
+  std::vector<BlockType>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, py::array_t<float> gain)
 {
@@ -41,7 +41,7 @@ CalculateThresholdsResults<float> calculateThresholds(
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, Image<double>& darkReference,
+  std::vector<BlockType>& blocks, Image<float>& darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, py::array_t<float> gain)
 {
@@ -65,27 +65,27 @@ CalculateThresholdsResults<float> calculateThresholds(
 
 // Only dark reference
 template CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<Block>& blocks, py::array_t<double> darkReference,
+  std::vector<Block>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma);
 template CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<PyBlock>& blocks, py::array_t<double> darkReference,
+  std::vector<PyBlock>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma);
 
 // Gain and darkreference
 template CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<Block>& blocks, py::array_t<double> darkReference,
+  std::vector<Block>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, py::array_t<float> gain);
 template CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<PyBlock>& blocks, py::array_t<double> darkReference,
+  std::vector<PyBlock>& blocks, py::array_t<float> darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, py::array_t<float> gain);
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  py::array_t<double> darkReference,
+                                  py::array_t<float> darkReference,
                                   double backgroundThreshold,
                                   double xRayThreshold, py::array_t<float> gain,
                                   Dimensions2D scanDimensions = { 0, 0 })
@@ -96,7 +96,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkReference,
+                                  Image<float>& darkReference,
                                   double backgroundThreshold,
                                   double xRayThreshold, py::array_t<float> gain,
                                   Dimensions2D scanDimensions = { 0, 0 })
@@ -107,7 +107,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  py::array_t<double> darkReference,
+                                  py::array_t<float> darkReference,
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions = { 0, 0 })
@@ -127,7 +127,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 }
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, py::array_t<double> darkReference,
+  SectorStreamThreadedReader* reader, py::array_t<float> darkReference,
   int thresholdNumberOfBlocks, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   py::array_t<float> gain, Dimensions2D scanDimensions, bool verbose)
@@ -139,7 +139,7 @@ ElectronCountedData electronCount(
 }
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, Image<double>& darkReference,
+  SectorStreamThreadedReader* reader, Image<float>& darkReference,
   int thresholdNumberOfBlocks, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   py::array_t<float> gain, Dimensions2D scanDimensions, bool verbose)
@@ -164,7 +164,7 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 }
 
 ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  py::array_t<double> darkReference,
+                                  py::array_t<float> darkReference,
                                   int thresholdNumberOfBlocks,
                                   int numberOfSamples,
                                   double backgroundThresholdNSigma,
@@ -364,50 +364,50 @@ PYBIND11_MODULE(_image, m)
   // Electron counting with gain and dark reference
   m.def("electron_count",
         (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                Image<double>&, double, double,
+                                Image<float>&, double, double,
                                 py::array_t<float>, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(
           SectorStreamReader::iterator, SectorStreamReader::iterator,
-          Image<double>&, double, double, py::array_t<float>, Dimensions2D)) &
+          Image<float>&, double, double, py::array_t<float>, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                Image<double>&, double, double,
+                                Image<float>&, double, double,
                                 py::array_t<float>, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                py::array_t<double>, double, double,
+                                py::array_t<float>, double, double,
                                 py::array_t<float>, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def(
     "electron_count",
     (ElectronCountedData(*)(SectorStreamReader::iterator,
-                            SectorStreamReader::iterator, py::array_t<double>,
+                            SectorStreamReader::iterator, py::array_t<float>,
                             double, double, py::array_t<float>, Dimensions2D)) &
       electronCount,
     py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                py::array_t<double>, double, double,
+                                py::array_t<float>, double, double,
                                 py::array_t<float>, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<double>&,
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&,
                                 int, int, double, double, py::array_t<float>,
                                 Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(SectorStreamThreadedReader*,
-                                py::array_t<double>, int, int, double, double,
+                                py::array_t<float>, int, int, double, double,
                                 py::array_t<float>, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
@@ -420,40 +420,40 @@ PYBIND11_MODULE(_image, m)
   // Electron counting, without gain
   m.def("electron_count",
         (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                Image<double>&, double, double, Dimensions2D)) &
+                                Image<float>&, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(SectorStreamReader::iterator,
-                                SectorStreamReader::iterator, Image<double>&,
+                                SectorStreamReader::iterator, Image<float>&,
                                 double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                Image<double>&, double, double, Dimensions2D)) &
+                                Image<float>&, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                py::array_t<double>, double, double,
+                                py::array_t<float>, double, double,
                                 Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(
           SectorStreamReader::iterator, SectorStreamReader::iterator,
-          py::array_t<double>, double, double, Dimensions2D)) &
+          py::array_t<float>, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                py::array_t<double>, double, double,
+                                py::array_t<float>, double, double,
                                 Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<double>&,
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&,
                                 int, int, double, double, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
@@ -464,7 +464,7 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def(
     "electron_count",
-    (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<double>,
+    (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<float>,
                             int, int, double, double, Dimensions2D, bool)) &
       electronCount,
     py::call_guard<py::gil_scoped_release>());
@@ -490,48 +490,48 @@ PYBIND11_MODULE(_image, m)
   // Calculate thresholds, with gain
   m.def(
     "calculate_thresholds",
-    (CalculateThresholdsResults<float>(*)(vector<Block>&, Image<double>&, int,
+    (CalculateThresholdsResults<float>(*)(vector<Block>&, Image<float>&, int,
                                           double, double, py::array_t<float>)) &
       calculateThresholds,
     py::call_guard<py::gil_scoped_release>());
   m.def(
     "calculate_thresholds",
-    (CalculateThresholdsResults<float>(*)(vector<PyBlock>&, Image<double>&, int,
+    (CalculateThresholdsResults<float>(*)(vector<PyBlock>&, Image<float>&, int,
                                           double, double, py::array_t<float>)) &
       calculateThresholds,
     py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults<float>(*)(vector<Block>&,
-                                              py::array_t<double>, int, double,
+                                              py::array_t<float>, int, double,
                                               double, py::array_t<float>)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults<float>(*)(vector<PyBlock>&,
-                                              py::array_t<double>, int, double,
+                                              py::array_t<float>, int, double,
                                               double, py::array_t<float>)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
 
   // Calculate thresholds, without gain
   m.def("calculate_thresholds",
-        (CalculateThresholdsResults<uint16_t>(*)(vector<Block>&, Image<double>&,
+        (CalculateThresholdsResults<uint16_t>(*)(vector<Block>&, Image<float>&,
                                                  int, double, double)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults<uint16_t>(*)(
-          vector<PyBlock>&, Image<double>&, int, double, double)) &
+          vector<PyBlock>&, Image<float>&, int, double, double)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults<uint16_t>(*)(
-          vector<Block>&, py::array_t<double>, int, double, double)) &
+          vector<Block>&, py::array_t<float>, int, double, double)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
   m.def("calculate_thresholds",
         (CalculateThresholdsResults<uint16_t>(*)(
-          vector<PyBlock>&, py::array_t<double>, int, double, double)) &
+          vector<PyBlock>&, py::array_t<float>, int, double, double)) &
           calculateThresholds,
         py::call_guard<py::gil_scoped_release>());
 
@@ -587,7 +587,7 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
         (Image<double>(*)(StreamReader::iterator, StreamReader::iterator,
-                          const Image<double>&)) &
+                          const Image<float>&)) &
           maximumDiffractionPattern<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
@@ -596,7 +596,7 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
         (Image<double>(*)(SectorStreamReader::iterator,
-                          SectorStreamReader::iterator, const Image<double>&)) &
+                          SectorStreamReader::iterator, const Image<float>&)) &
           maximumDiffractionPattern<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",

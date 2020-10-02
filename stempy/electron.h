@@ -17,28 +17,28 @@ struct ElectronCountedData
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkreference,
+                                  Image<float>& darkreference,
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions = { 0, 0 });
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const double darkreference[],
+                                  const float darkreference[],
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions = { 0, 0 });
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkreference,
+                                  Image<float>& darkreference,
                                   double backgroundThreshold,
                                   double xRayThreshold, const float gain[],
                                   Dimensions2D scanDimensions = { 0, 0 });
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const double darkreference[],
+                                  const float darkreference[],
                                   double backgroundThreshold,
                                   double xRayThreshold, const float gain[],
                                   Dimensions2D scanDimensions = { 0, 0 });
@@ -56,26 +56,26 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   Dimensions2D scanDimensions = { 0, 0 });
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, Image<double>& darkreference,
+  SectorStreamThreadedReader* reader, Image<float>& darkreference,
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const double darkreference[],
+  SectorStreamThreadedReader* reader, const float darkreference[],
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, Image<double>& darkreference,
+  SectorStreamThreadedReader* reader, Image<float>& darkreference,
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
   bool verbose = false);
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const double darkreference[],
+  SectorStreamThreadedReader* reader, const float darkreference[],
   int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
   double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
   const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
