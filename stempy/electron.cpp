@@ -575,7 +575,7 @@ ElectronCountedData electronCount(
 
   auto done = reader->readAll(counter);
 
-  // Wait for enought blocks to come in to calculate the threadhold.
+  // Wait for enought blocks to come in to calculate the threshold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
     return sampleBlocks.size() ==

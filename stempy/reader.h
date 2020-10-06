@@ -335,9 +335,10 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 
         for (unsigned j = 0; j < header.imagesInBlock; j++) {
           auto pos = header.imageNumbers[j];
+          auto frameNumber = header.frameNumber;
 
           std::unique_lock<std::mutex> mutexLock(m_cacheMutex);
-          auto& frame = m_frameCache[pos];
+          auto& frame = m_frameCache[frameNumber];
           mutexLock.unlock();
 
           // Do we need to allocate the frame, use a double check lock
@@ -350,6 +351,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
               frame.block.header.scanDimensions = header.scanDimensions;
               frame.block.header.imagesInBlock = 1;
               frame.block.header.imageNumbers.push_back(pos);
+              frame.block.header.frameNumber = frameNumber;
               frame.block.header.frameDimensions = FRAME_DIMENSIONS;
               std::shared_ptr<uint16_t> data;
 
@@ -375,7 +377,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
             auto b = frame.block;
             {
               std::unique_lock<std::mutex> lock(m_cacheMutex);
-              m_frameCache.erase(pos);
+              m_frameCache.erase(frameNumber);
             }
 
             // Call the function todo the processing
