@@ -400,15 +400,15 @@ PYBIND11_MODULE(_image, m)
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&,
-                                int, int, double, double, py::array_t<float>,
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&, int,
+                                int, double, double, py::array_t<float>,
                                 Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedData(*)(SectorStreamThreadedReader*,
-                                py::array_t<float>, int, int, double, double,
-                                py::array_t<float>, Dimensions2D, bool)) &
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<float>,
+                                int, int, double, double, py::array_t<float>,
+                                Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
@@ -434,27 +434,27 @@ PYBIND11_MODULE(_image, m)
                                 Image<float>&, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
-                                py::array_t<float>, double, double,
-                                Dimensions2D)) &
-          electronCount,
-        py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "electron_count",
+    (ElectronCountedData(*)(StreamReader::iterator, StreamReader::iterator,
+                            py::array_t<float>, double, double, Dimensions2D)) &
+      electronCount,
+    py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedData(*)(
           SectorStreamReader::iterator, SectorStreamReader::iterator,
           py::array_t<float>, double, double, Dimensions2D)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
+  m.def(
+    "electron_count",
+    (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
+                            py::array_t<float>, double, double, Dimensions2D)) &
+      electronCount,
+    py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedData(*)(PyReader::iterator, PyReader::iterator,
-                                py::array_t<float>, double, double,
-                                Dimensions2D)) &
-          electronCount,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&,
-                                int, int, double, double, Dimensions2D, bool)) &
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, Image<float>&, int,
+                                int, double, double, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
@@ -462,12 +462,11 @@ PYBIND11_MODULE(_image, m)
                                 double, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
-  m.def(
-    "electron_count",
-    (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<float>,
-                            int, int, double, double, Dimensions2D, bool)) &
-      electronCount,
-    py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedData(*)(SectorStreamThreadedReader*, py::array_t<float>,
+                                int, int, double, double, Dimensions2D, bool)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
 
   // Electron counting without dark reference or gain
   m.def("electron_count",
@@ -605,8 +604,7 @@ PYBIND11_MODULE(_image, m)
           maximumDiffractionPattern<SectorStreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",
-        (Image<double>(*)(PyReader::iterator,
-                          PyReader::iterator)) &
+        (Image<double>(*)(PyReader::iterator, PyReader::iterator)) &
           maximumDiffractionPattern<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
 }
