@@ -514,6 +514,9 @@ ElectronCountedData electronCount(
 {
   // This is where we will save the electron events as the calculated
   std::vector<std::vector<uint32_t>> events;
+  // We need an array of mutexes to protect updates for each event vector for a
+  // given position, as we may have muliple frames per location.
+  std::unique_ptr<std::mutex[]> positionMutexes;
 
   // Used to signal that we have moved into the electron counting phase after
   // collecting samples to calculate threshold.
@@ -532,8 +535,8 @@ ElectronCountedData electronCount(
 
   auto counter = [&events, &electronCounting, &backgroundThreshold,
                   &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
-                  thresholdNumberOfBlocks, numberOfSamples, darkReference,
-                  gain](Block& b) {
+                  thresholdNumberOfBlocks, numberOfSamples, darkReference, gain,
+                  &positionMutexes](Block& b) {
     // If we are still collecting sample block for calculating the threshold
     if (!electronCounting) {
       std::unique_lock<std::mutex> sampleLock(sampleMutex);
@@ -568,14 +571,22 @@ ElectronCountedData electronCount(
         auto frameEvents = electronCount<FrameType, dark>(
           frame, frameDimensions, darkReference, backgroundThreshold,
           xRayThreshold, gain);
-        events[b.header.imageNumbers[i]] = frameEvents;
+
+        auto position = b.header.imageNumbers[i];
+        auto& eventsForPosition = events[position];
+        // Find the mutex for this position and lock it
+        auto& mutex = positionMutexes[position];
+        std::unique_lock<std::mutex> positionLock(mutex);
+        // Append the events
+        eventsForPosition.insert(eventsForPosition.end(), frameEvents.begin(),
+                                frameEvents.end());
       }
     }
   };
 
   auto done = reader->readAll(counter);
 
-  // Wait for enought blocks to come in to calculate the threadhold.
+  // Wait for enought blocks to come in to calculate the threshold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
     return sampleBlocks.size() ==
@@ -616,7 +627,10 @@ ElectronCountedData electronCount(
     scanDimensions = sampleBlocks[0].header.scanDimensions;
   }
 
-  events.resize(scanDimensions.first * scanDimensions.second);
+  auto numberOfScanPositions = scanDimensions.first * scanDimensions.second;
+  events.resize(numberOfScanPositions);
+  // Allocate mutexes to protect the event vector at each scan position
+  positionMutexes.reset(new std::mutex[numberOfScanPositions]);
 
   // Now tell our workers to proceed
   electronCounting = true;
