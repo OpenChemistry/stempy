@@ -317,8 +317,13 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
             'scan_dimensions', and 'frame_dimensions')
     """
     if gain is not None:
-        # Invert as we will multiple in C++
-        gain = np.power(gain, -1)
+        # Invert, as we will multiply in C++
+        # It also must be a float32
+        gain = np.power(gain, -1).astype(np.float32)
+
+    if isinstance(darkreference, np.ndarray):
+        # Must be float32 for correct conversions
+        darkreference = darkreference.astype(np.float32)
 
     # Special case for threaded reader
     if isinstance(reader, SectorThreadedReader):
