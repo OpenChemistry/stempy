@@ -317,8 +317,14 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
             'scan_dimensions', and 'frame_dimensions')
     """
     if gain is not None:
-        # Invert as we will multiple in C++
+        # Invert, as we will multiply in C++
+        # It also must be a float32
         gain = np.power(gain, -1)
+        gain = _safe_cast(gain, np.float32, 'gain')
+
+    if isinstance(darkreference, np.ndarray):
+        # Must be float32 for correct conversions
+        darkreference = _safe_cast(darkreference, np.float32, 'dark reference')
 
     # Special case for threaded reader
     if isinstance(reader, SectorThreadedReader):
@@ -562,3 +568,16 @@ def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
     r_sum = r_sum.reshape((scan_dimensions[0], scan_dimensions[1], num_bins))
 
     return r_sum
+
+
+def _safe_cast(array, dtype, name=None):
+    # Cast the array to a different dtype, ensuring no loss of
+    # precision. Otherwise, an exception will be raised.
+    if name is None:
+        name = 'array'
+
+    new_array = array.astype(dtype)
+    if np.any(new_array.astype(array.dtype) != array):
+        msg = f'Cannot cast {name} to {dtype} without loss of precision'
+        raise ValueError(msg)
+    return new_array

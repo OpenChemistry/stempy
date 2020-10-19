@@ -156,7 +156,7 @@ private:
 template <typename FrameType, bool dark = true>
 std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
                                             Dimensions2D frameDimensions,
-                                            const double* darkReferenceData,
+                                            const float* darkReferenceData,
                                             const float* gain,
                                             double backgroundThreshold,
                                             double xRayThreshold)
@@ -314,7 +314,7 @@ std::vector<uint32_t> maximalPoints(const std::vector<FrameType>& frame,
 
 template <typename InputIt, typename FrameType, bool dark = true>
 ElectronCountedData electronCount(
-  InputIt first, InputIt last, const double darkReference[], const float gain[],
+  InputIt first, InputIt last, const float darkReference[], const float gain[],
   double backgroundThreshold, double xRayThreshold, Dimensions2D scanDimensions)
 {
   if (first == last) {
@@ -388,7 +388,7 @@ ElectronCountedData electronCount(
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const double darkReference[],
+                                  const float darkReference[],
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions)
@@ -400,7 +400,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const double darkReference[],
+                                  const float darkReference[],
                                   double backgroundThreshold,
                                   double xRayThreshold, const float gain[],
                                   Dimensions2D scanDimensions)
@@ -412,7 +412,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkReference,
+                                  Image<float>& darkReference,
                                   double backgroundThreshold,
                                   double xRayThreshold, const float gain[],
                                   Dimensions2D scanDimensions)
@@ -424,7 +424,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkReference,
+                                  Image<float>& darkReference,
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions)
@@ -459,7 +459,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 template <typename FrameType, bool dark = true>
 std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
                                     Dimensions2D frameDimensions,
-                                    const double darkReference[],
+                                    const float darkReference[],
                                     double backgroundThreshold,
                                     double xRayThreshold, const float gain[])
 {
@@ -487,7 +487,7 @@ std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
 
 std::vector<uint32_t> electronCount(std::vector<uint16_t>& frame,
                                     Dimensions2D frameDimensions,
-                                    const double darkReference[],
+                                    const float darkReference[],
                                     double backgroundThreshold,
                                     double xRayThreshold)
 {
@@ -497,7 +497,7 @@ std::vector<uint32_t> electronCount(std::vector<uint16_t>& frame,
 
 std::vector<uint32_t> electronCount(std::vector<float>& frame,
                                     Dimensions2D frameDimensions,
-                                    const double darkReference[],
+                                    const float darkReference[],
                                     double backgroundThreshold,
                                     double xRayThreshold, const float gain[])
 {
@@ -507,7 +507,7 @@ std::vector<uint32_t> electronCount(std::vector<float>& frame,
 
 template <typename FrameType, bool dark = true>
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const double darkReference[],
+  SectorStreamThreadedReader* reader, const float darkReference[],
   int thresholdNumberOfBlocks, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   const float gain[], Dimensions2D scanDimensions, bool verbose)
@@ -668,7 +668,7 @@ ElectronCountedData electronCount(
 }
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const double darkReference[],
+  SectorStreamThreadedReader* reader, const float darkReference[],
   int thresholdNumberOfBlocks, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   const float gain[], Dimensions2D scanDimensions, bool verbose)
@@ -680,7 +680,7 @@ ElectronCountedData electronCount(
 }
 
 ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, Image<double>& darkReference,
+  SectorStreamThreadedReader* reader, Image<float>& darkReference,
   int thresholdNumberOfBlocks, int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   const float gain[], Dimensions2D scanDimensions, bool verbose)
@@ -692,7 +692,7 @@ ElectronCountedData electronCount(
 }
 
 ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  const double darkReference[],
+                                  const float darkReference[],
                                   int thresholdNumberOfBlocks,
                                   int numberOfSamples,
                                   double backgroundThresholdNSigma,
@@ -706,7 +706,7 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 }
 
 ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  Image<double>& darkReference,
+                                  Image<float>& darkReference,
                                   int thresholdNumberOfBlocks,
                                   int numberOfSamples,
                                   double backgroundThresholdNSigma,
@@ -751,63 +751,63 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 // With gain and dark reference
 template ElectronCountedData electronCount(
   StreamReader::iterator first, StreamReader::iterator last,
-  Image<double>& darkReference, double backgroundThreshold,
+  Image<float>& darkReference, double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(
   StreamReader::iterator first, StreamReader::iterator last,
-  const double darkReference[], double backgroundThreshold,
+  const float darkReference[], double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last,
-  Image<double>& darkReference, double backgroundThreshold,
+  Image<float>& darkReference, double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(
   SectorStreamReader::iterator first, SectorStreamReader::iterator last,
-  const double darkReference[], double backgroundThreshold,
+  const float darkReference[], double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(
   PyReader::iterator first, PyReader::iterator last,
-  Image<double>& darkReference, double backgroundThreshold,
+  Image<float>& darkReference, double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(
   PyReader::iterator first, PyReader::iterator last,
-  const double darkReference[], double backgroundThreshold,
+  const float darkReference[], double backgroundThreshold,
   double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
 
 // Without gain and with dark reference
 template ElectronCountedData electronCount(StreamReader::iterator first,
                                            StreamReader::iterator last,
-                                           Image<double>& darkReference,
+                                           Image<float>& darkReference,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(StreamReader::iterator first,
                                            StreamReader::iterator last,
-                                           const double darkReference[],
+                                           const float darkReference[],
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(SectorStreamReader::iterator first,
                                            SectorStreamReader::iterator last,
-                                           Image<double>& darkReference,
+                                           Image<float>& darkReference,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(SectorStreamReader::iterator first,
                                            SectorStreamReader::iterator last,
-                                           const double darkReference[],
+                                           const float darkReference[],
                                            const double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(PyReader::iterator first,
                                            PyReader::iterator last,
-                                           Image<double>& darkReference,
+                                           Image<float>& darkReference,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(PyReader::iterator first,
                                            PyReader::iterator last,
-                                           const double darkReference[],
+                                           const float darkReference[],
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);

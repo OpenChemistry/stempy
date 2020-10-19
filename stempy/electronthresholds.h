@@ -31,45 +31,45 @@ struct CalculateThresholdsResults
 
 template <typename BlockType, typename FrameType, bool dark = true>
 CalculateThresholdsResults<FrameType> calculateThresholds(
-  std::vector<BlockType>& blocks, const double darkreference[],
+  std::vector<BlockType>& blocks, const float darkreference[],
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[]);
 
 // Without gain
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<BlockType>& blocks, Image<double>& darkreference,
+  std::vector<BlockType>& blocks, Image<float>& darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<BlockType>& blocks, const double darkreference[],
+  std::vector<BlockType>& blocks, const float darkreference[],
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
-  std::vector<BlockType>& blocks, py::array_t<double> darkreference,
+  std::vector<BlockType>& blocks, py::array_t<float> darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
 // With gain
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, Image<double>& darkreference,
+  std::vector<BlockType>& blocks, Image<float>& darkreference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[]);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, const double darkreference[],
+  std::vector<BlockType>& blocks, const float darkreference[],
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[]);
 
 template <typename BlockType>
 CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, py::array_t<double> darkreference,
+  std::vector<BlockType>& blocks, py::array_t<float> darkreference,
   int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
   double xRayThresholdNSigma = 10);
 
