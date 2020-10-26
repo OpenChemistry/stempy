@@ -9,20 +9,43 @@ Build instructions may be found [here](https://stempy.readthedocs.io/en/latest/B
 Example usage
 -------------
 
+```python
+# Example of electron counting raw 4d Camera data
+# See stempy/example/electron_count.py for a full version
+>>> from pathlib import Path
+>>> import stempy.io as stio
+>>> import stempy.image as stim
+>>> import matplotlib.pyplot as plt
+>>> data_path = Path('/mnt/hdd1/')
+>>> files = sorted(data_path.glob('data_scan0*016_*.data'))  # raw data files
+>>> sReader = stio.reader(files, stio.FileVersion.VERSION4)
+>>> events = stim.electron_count(sReader, np.zeros((576,576)))
+>>> stio.save_electron_counts('/mnt/hdd1/data_scan16_electrons.h5', events)
+# Now create a bright field STEM image from the data by summing pixels 
+# 0 to 110 radially
+>>> bf = stim.create_stem_images(events, 0, 110)
+# Create a summed diffraction pattern of the entire dataset
+>>> dp = stim.calculate_sum_sparse(events.data,
+                                   events.frame_dimensions)
+>>> fg, ax = plt.subplots(1,2)
+>>> ax[0].imshow(bf)
+>>> ax[1].imshow(dp)
+```
+![Brightfield and diffraction pattern](https:/url.to.image/image.jpg)
+
+Advanced usage
+--------------
 Build repo and set PYTHONPATH:
 
 ```bash
 export PYTHONPATH=<build dir>/lib/
 ```
 
+Interact with raw data
 
 ```python
-
-Python 3.6.7 (default, Oct 22 2018, 11:32:17)
-[GCC 8.2.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> from stempy import io
->>> r = io.reader('/data/4dstem/smallScanningDiffraction/data0000.dat')
+>>> import stempy.io as stio
+>>> r = stio.reader('/data/4dstem/smallScanningDiffraction/data0000.dat')
 >>> b = r.read()
 >>> b.header.images_in_block
 32
@@ -39,35 +62,3 @@ array([[   0,    0,    0, ...,    0,    0,    0],
 >>>
 
 ```
-
-```python
-# Example of electron counting raw 4d Camera data
->>> from pathlib import Path
->>> import stempy.io as stio
->>> import stempy.image as stim
->>> import numpy as np
->>> import matplotlib.pyplot as plt
->>> data_path = Path('/mnt/hdd1/')
->>> files = sorted(data_path.glob('data_scan16*.data'))  # raw data files
->>> sReader = stio.reader(files, stio.FileVersion.VERSION4)
->>> events = stim.electron_count(sReader, np.zeros((576,576)))
->>> stio.save_electron_counts('/mnt/hdd1/data_scan16_electrons.h5',
-                          events,
-                          events.scan_dimensions,
-                          frame_dimensions=(576,576))
-# Now create a bright field STEM image from the data
->>> bf = stim.create_stem_images(events, 0, 110)
->>> plt.imshow(bf)
-
-# Create a summed diffraction pattern
->>> dp = np.zeros((576,576), dtype='<u4')
->>> for ev in events:
->>>     try:
->>>         xx, yy = np.unravel_index(ev, (576,576))
->>>     except:  # needed for empty frames
->>>         pass
->>>     dp[xx,yy] += 1
->>> plt.imshow(dp)
-```
-![Brightfield STEM image](https:/url.to.image/image.jpg)
-![Brightfield STEM image](https:/url.to.pattern/pattern.jpg)
