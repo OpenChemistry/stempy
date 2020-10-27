@@ -13,10 +13,6 @@ Install Singularity (Ubuntu)
 
 ``sudo apt-get install singularity-container``
 
-<<<<<<< HEAD
-*Note:* Version 3.61 or higher of Singularity is required to avoid an issue with `squashfs`.
-You may need to build the newest version if the apt repositories version does not work.
-=======
 Note
 ####
 
@@ -25,7 +21,6 @@ has been tested to work. Follow installation instructions here:
 https://github.com/hpcng/singularity/blob/master/INSTALL.md
 
 Then you will run ``/usr/local/bin/singularity``
->>>>>>> upstream-master
 
 Pulling the latest image
 ------------------------
