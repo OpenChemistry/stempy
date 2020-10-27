@@ -1,0 +1,6 @@
+FROM openchemistry/stempy:latest
+
+# Note these are the specfic versions needed to work with the jupyterlab
+# deployment at NERSC, update with care!
+RUN pip3 install -U ipykernel==5.1.2 ipympl==0.5.6 matplotlib==3.1.1
+

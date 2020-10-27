@@ -52,7 +52,30 @@ struct IsMaximalPixel : public vtkm::worklet::WorkletPointNeighborhood
 
 // The types in here, "uint16_t" and "double", are specific for our use case
 // We may want to generalize it in the future
-struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
+struct Threshold : public vtkm::worklet::WorkletMapCellToPoint
+{
+  using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
+
+  using ControlSignature = void(CellSetIn, FieldInOutPoint value);
+
+  using ExecutionSignature = void(_2);
+
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val) const
+  {
+    if (val <= m_lower || val >= m_upper)
+      val = 0;
+  }
+
+  VTKM_CONT
+  Threshold(double lower, double upper) : m_lower(lower), m_upper(upper){};
+
+private:
+  double m_lower;
+  double m_upper;
+};
+
+struct SubtractAndThreshold : public Threshold
 {
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
@@ -61,25 +84,80 @@ struct SubtractAndThreshold : public vtkm::worklet::WorkletMapCellToPoint
 
   using ExecutionSignature = void(_2, _3);
 
-  VTKM_EXEC void operator()(uint16_t& val, double background) const
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, double background) const
   {
-    val -= static_cast<uint16_t>(background);
-    if (val <= m_lower || val >= m_upper)
-      val = 0;
+    val -= static_cast<FrameType>(background);
+
+    Threshold::operator()(val);
   }
 
   VTKM_CONT
-  SubtractAndThreshold(double lower, double upper)
-    : m_lower(lower), m_upper(upper){};
+  SubtractAndThreshold(double lower, double upper) : Threshold(lower, upper){};
 
 private:
   double m_lower;
   double m_upper;
 };
 
-std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
+struct ApplyGainSubtractAndThreshold : public Threshold
+{
+  using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
+
+  using ControlSignature = void(CellSetIn, FieldInOutPoint value,
+                                FieldInPoint background, FieldInPoint gain);
+
+  using ExecutionSignature = void(_2, _3, _4);
+
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, double background, float gain) const
+  {
+
+    val = static_cast<FrameType>(val * gain - static_cast<float>(background));
+
+    Threshold::operator()(val);
+  }
+
+  VTKM_CONT
+  ApplyGainSubtractAndThreshold(double lower, double upper)
+    : Threshold(lower, upper){};
+
+private:
+  double m_lower;
+  double m_upper;
+};
+
+struct ApplyGainAndThreshold : public Threshold
+{
+  using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
+
+  using ControlSignature = void(CellSetIn, FieldInOutPoint value,
+                                FieldInPoint background);
+
+  using ExecutionSignature = void(_2, _3);
+
+  template <typename FrameType>
+  VTKM_EXEC void operator()(FrameType& val, float gain) const
+  {
+
+    val = static_cast<FrameType>(val * gain);
+
+    Threshold::operator()(val);
+  }
+
+  VTKM_CONT
+  ApplyGainAndThreshold(double lower, double upper) : Threshold(lower, upper){};
+
+private:
+  double m_lower;
+  double m_upper;
+};
+
+template <typename FrameType, bool dark = true>
+std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
                                             Dimensions2D frameDimensions,
-                                            const double* darkReferenceData,
+                                            const float* darkReferenceData,
+                                            const float* gain,
                                             double backgroundThreshold,
                                             double xRayThreshold)
 {
@@ -92,30 +170,66 @@ std::vector<uint32_t> maximalPointsParallel(std::vector<uint16_t>& frame,
 
   // Input handles
   auto frameHandle = vtkm::cont::make_ArrayHandle(frame);
-  auto darkRefHandle = vtkm::cont::make_ArrayHandle(
-    darkReferenceData, frameDimensions.first * frameDimensions.second);
 
   // Output
   vtkm::cont::ArrayHandle<bool> maximalPixels;
 
   vtkm::cont::Invoker invoke;
-  // Background subtraction and thresholding
-  invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold }, cellSet,
-         frameHandle, darkRefHandle);
-  // Find maximal pixels
-  invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
 
-  // Convert to std::vector<uint32_t>
-  auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
-  std::vector<uint32_t> outputVec;
-  for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
-    if (maximalPixelsPortal.Get(i))
-      outputVec.push_back(i);
+  // Call the correct worklet based on whether we are applying a gain, which in
+  // term determines the type, so can be evaluated a compile time.
+  // First no gain
+  if (std::is_integral<FrameType>::value) {
+    // Background subtraction and thresholding
+
+    // static if to determine if we are going to subtract dark reference
+    static_if<dark>(
+      [&]() {
+        auto darkRefHandle = vtkm::cont::make_ArrayHandle(
+          darkReferenceData, frameDimensions.first * frameDimensions.second);
+
+        invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold },
+               cellSet, frameHandle, darkRefHandle);
+      },
+      [&] {
+        invoke(Threshold{ backgroundThreshold, xRayThreshold }, cellSet,
+               frameHandle);
+      })();
   }
+  // We are applying a gain
+  else {
+    auto gainRefHandle = vtkm::cont::make_ArrayHandle(
+      gain, frameDimensions.first * frameDimensions.second);
+    // Apply gain, background subtraction and thresholding
+    // static if to determine if we are going to subtract dark reference
+    static_if<dark>(
+      [&]() {
+        auto darkRefHandle = vtkm::cont::make_ArrayHandle(
+          darkReferenceData, frameDimensions.first * frameDimensions.second);
 
-  // Done
-  return outputVec;
-}
+        invoke(
+          ApplyGainSubtractAndThreshold{ backgroundThreshold, xRayThreshold },
+          cellSet, frameHandle, darkRefHandle, gainRefHandle);
+      },
+      [&] {
+        invoke(ApplyGainAndThreshold{ backgroundThreshold, xRayThreshold },
+               cellSet, frameHandle, gainRefHandle);
+      })();
+  }
+    // Find maximal pixels
+    invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
+
+    // Convert to std::vector<uint32_t>
+    auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
+    std::vector<uint32_t> outputVec;
+    for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
+      if (maximalPixelsPortal.Get(i))
+        outputVec.push_back(i);
+    }
+
+    // Done
+    return outputVec;
+  }
 } // end namespace
 #endif
 
@@ -129,7 +243,8 @@ inline uint16_t mod(uint16_t x, uint16_t y)
 
 // Return the points in the frame with values larger than all 8 of their nearest
 // neighbors
-std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
+template <typename FrameType>
+std::vector<uint32_t> maximalPoints(const std::vector<FrameType>& frame,
                                     Dimensions2D frameDimensions)
 {
   auto width = frameDimensions.first;
@@ -140,8 +255,8 @@ std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
   for (uint32_t i = 0; i < numberOfPixels; ++i) {
     auto row = i / width;
     auto column = i % width;
-    auto rightNeighbourColumn = mod((i + 1), width);
-    auto leftNeighbourColumn = mod((i - 1), width);
+    auto rightNeighbourColumn = mod((column + 1), width);
+    auto leftNeighbourColumn = mod((column - 1), width);
     auto topNeighbourRow = mod((row - 1), height);
     auto bottomNeighbourRow = mod((row + 1), height);
     auto pixelValue = frame[i];
@@ -197,12 +312,10 @@ std::vector<uint32_t> maximalPoints(const std::vector<uint16_t>& frame,
   return events;
 }
 
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const double darkReference[],
-                                  double backgroundThreshold,
-                                  double xRayThreshold,
-                                  Dimensions2D scanDimensions)
+template <typename InputIt, typename FrameType, bool dark = true>
+ElectronCountedData electronCount(
+  InputIt first, InputIt last, const float darkReference[], const float gain[],
+  double backgroundThreshold, double xRayThreshold, Dimensions2D scanDimensions)
 {
   if (first == last) {
     std::ostringstream msg;
@@ -235,18 +348,24 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
     for (unsigned i = 0; i < block.header.imagesInBlock; i++) {
       auto frameStart =
         data + i * frameDimensions.first * frameDimensions.second;
-      std::vector<uint16_t> frame(frameStart,
+      std::vector<FrameType> frame(frameStart,
                                   frameStart + frameDimensions.first *
                                                  frameDimensions.second);
 
 #ifdef VTKm
       events[block.header.imageNumbers[i]] =
-        maximalPointsParallel(frame, frameDimensions, darkReference,
-                              backgroundThreshold, xRayThreshold);
+        maximalPointsParallel<FrameType, dark>(
+          frame, frameDimensions, darkReference, gain, backgroundThreshold,
+          xRayThreshold);
 #else
       for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
-        // Subtract darkfield reference
-        frame[j] -= darkReference[j];
+        // Subtract darkfield reference and apply gain if we have one, this will
+        // be based on our template type, it can be evaluated a compile time.
+        if (std::is_integral<FrameType>::value) {
+          frame[j] -= darkReference[j];
+        } else {
+          frame[j] = frame[i] * gain[i] - darkReference[j];
+        }
         // Threshold the electron events
         if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
           frame[j] = 0;
@@ -254,7 +373,7 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
       }
       // Now find the maximal events
       events[block.header.imageNumbers[i]] =
-        maximalPoints(frame, frameDimensions);
+        maximalPoints<FrameType>(frame, frameDimensions);
 #endif
     }
   }
@@ -269,57 +388,135 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<double>& darkReference,
+                                  const float darkReference[],
                                   double backgroundThreshold,
                                   double xRayThreshold,
                                   Dimensions2D scanDimensions)
 {
-  return electronCount(first, last, darkReference.data.get(),
-                       backgroundThreshold, xRayThreshold, scanDimensions);
+  return electronCount<InputIt, uint16_t>(first, last, darkReference, nullptr,
+                                          backgroundThreshold, xRayThreshold,
+                                          scanDimensions);
 }
 
-std::vector<uint32_t> electronCount(std::vector<uint16_t>& frame,
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  const float darkReference[],
+                                  double backgroundThreshold,
+                                  double xRayThreshold, const float gain[],
+                                  Dimensions2D scanDimensions)
+{
+  return electronCount<InputIt, float>(first, last, darkReference, gain,
+                                       backgroundThreshold, xRayThreshold,
+                                       scanDimensions);
+}
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  Image<float>& darkReference,
+                                  double backgroundThreshold,
+                                  double xRayThreshold, const float gain[],
+                                  Dimensions2D scanDimensions)
+{
+  return electronCount<InputIt, float>(first, last, darkReference.data.get(),
+                                       gain, backgroundThreshold, xRayThreshold,
+                                       scanDimensions);
+}
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  Image<float>& darkReference,
+                                  double backgroundThreshold,
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions)
+{
+  return electronCount<InputIt, uint16_t>(first, last, darkReference.data.get(),
+                                          nullptr, backgroundThreshold,
+                                          xRayThreshold, scanDimensions);
+}
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  double backgroundThreshold,
+                                  double xRayThreshold,
+                                  Dimensions2D scanDimensions)
+{
+  return electronCount<InputIt, uint16_t, false>(first, last, nullptr, nullptr,
+                                                 backgroundThreshold,
+                                                 xRayThreshold, scanDimensions);
+}
+
+template <typename InputIt>
+ElectronCountedData electronCount(InputIt first, InputIt last,
+                                  double backgroundThreshold,
+                                  double xRayThreshold, const float gain[],
+                                  Dimensions2D scanDimensions)
+{
+  return electronCount<InputIt, float, false>(first, last, nullptr, gain,
+                                              backgroundThreshold,
+                                              xRayThreshold, scanDimensions);
+}
+
+template <typename FrameType, bool dark = true>
+std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
                                     Dimensions2D frameDimensions,
-                                    const double darkReference[],
+                                    const float darkReference[],
                                     double backgroundThreshold,
-                                    double xRayThreshold)
+                                    double xRayThreshold, const float gain[])
 {
 
-  for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
-    // Subtract darkfield reference
-    frame[j] -= darkReference[j];
+  for (unsigned j = 0; j < frameDimensions.first * frameDimensions.second;
+       j++) {
+    // Subtract darkfield reference and apply gain if we have one, this will
+    // be based on our template type, it can be evaluated a compile time.
+    if (std::is_integral<FrameType>::value) {
+      static_if<dark>(
+        [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
+    } else {
+      frame[j] = frame[j] * gain[j];
+      static_if<dark>(
+        [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
+    }
     // Threshold the electron events
     if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
       frame[j] = 0;
     }
   }
   // Now find the maximal events
-  return maximalPoints(frame, frameDimensions);
+  return maximalPoints<FrameType>(frame, frameDimensions);
 }
 
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  Image<double>& darkReference,
-                                  int thresholdNumberOfBlocks,
-                                  int numberOfSamples,
-                                  double backgroundThresholdNSigma,
-                                  double xRayThresholdNSigma,
-                                  Dimensions2D scanDimensions, bool verbose)
+std::vector<uint32_t> electronCount(std::vector<uint16_t>& frame,
+                                    Dimensions2D frameDimensions,
+                                    const float darkReference[],
+                                    double backgroundThreshold,
+                                    double xRayThreshold)
 {
-  return electronCount(
-    reader, darkReference.data.get(), thresholdNumberOfBlocks, numberOfSamples,
-    backgroundThresholdNSigma, xRayThresholdNSigma, scanDimensions, verbose);
+  return electronCount<uint16_t>(frame, frameDimensions, darkReference,
+                                 backgroundThreshold, xRayThreshold, nullptr);
 }
 
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  const double darkReference[],
-                                  int thresholdNumberOfBlocks,
-                                  int numberOfSamples,
-                                  double backgroundThresholdNSigma,
-                                  double xRayThresholdNSigma,
-                                  Dimensions2D scanDimensions, bool verbose)
+std::vector<uint32_t> electronCount(std::vector<float>& frame,
+                                    Dimensions2D frameDimensions,
+                                    const float darkReference[],
+                                    double backgroundThreshold,
+                                    double xRayThreshold, const float gain[])
+{
+  return electronCount<float>(frame, frameDimensions, darkReference,
+                              backgroundThreshold, xRayThreshold, gain);
+}
+
+template <typename FrameType, bool dark = true>
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, const float darkReference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose)
 {
   // This is where we will save the electron events as the calculated
   std::vector<std::vector<uint32_t>> events;
+  // We need an array of mutexes to protect updates for each event vector for a
+  // given position, as we may have muliple frames per location.
+  std::unique_ptr<std::mutex[]> positionMutexes;
 
   // Used to signal that we have moved into the electron counting phase after
   // collecting samples to calculate threshold.
@@ -338,14 +535,16 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 
   auto counter = [&events, &electronCounting, &backgroundThreshold,
                   &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
-                  thresholdNumberOfBlocks, numberOfSamples,
-                  darkReference](Block& b) {
+                  thresholdNumberOfBlocks, numberOfSamples, darkReference, gain,
+                  &positionMutexes](Block& b) {
     // If we are still collecting sample block for calculating the threshold
     if (!electronCounting) {
       std::unique_lock<std::mutex> sampleLock(sampleMutex);
-      if (sampleBlocks.size() < thresholdNumberOfBlocks) {
+      if (sampleBlocks.size() <
+          static_cast<unsigned>(thresholdNumberOfBlocks)) {
         sampleBlocks.push_back(std::move(b));
-        if (sampleBlocks.size() == thresholdNumberOfBlocks) {
+        if (sampleBlocks.size() ==
+            static_cast<unsigned>(thresholdNumberOfBlocks)) {
           sampleLock.unlock();
           sampleCondition.notify_all();
         }
@@ -365,29 +564,39 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
       for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
         auto frameStart =
           data + i * frameDimensions.first * frameDimensions.second;
-        std::vector<uint16_t> frame(frameStart,
-                                    frameStart + frameDimensions.first *
-                                                   frameDimensions.second);
+        std::vector<FrameType> frame(frameStart,
+                                     frameStart + frameDimensions.first *
+                                                    frameDimensions.second);
 
-        auto frameEvents = electronCount(frame, frameDimensions, darkReference,
-                                         backgroundThreshold, xRayThreshold);
-        events[b.header.imageNumbers[i]] = frameEvents;
+        auto frameEvents = electronCount<FrameType, dark>(
+          frame, frameDimensions, darkReference, backgroundThreshold,
+          xRayThreshold, gain);
+
+        auto position = b.header.imageNumbers[i];
+        auto& eventsForPosition = events[position];
+        // Find the mutex for this position and lock it
+        auto& mutex = positionMutexes[position];
+        std::unique_lock<std::mutex> positionLock(mutex);
+        // Append the events
+        eventsForPosition.insert(eventsForPosition.end(), frameEvents.begin(),
+                                frameEvents.end());
       }
     }
   };
 
   auto done = reader->readAll(counter);
 
-  // Wait for enought blocks to come in to calculate the threadhold.
+  // Wait for enought blocks to come in to calculate the threshold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
-    return sampleBlocks.size() == thresholdNumberOfBlocks;
+    return sampleBlocks.size() ==
+           static_cast<unsigned>(thresholdNumberOfBlocks);
   });
 
   // Now calculate the threshold
-  auto threshold =
-    calculateThresholds(sampleBlocks, darkReference, numberOfSamples,
-                        backgroundThresholdNSigma, xRayThresholdNSigma);
+  auto threshold = calculateThresholds<Block, FrameType, dark>(
+    sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
+    xRayThresholdNSigma, gain);
 
   if (verbose) {
     std::cout << "****Statistics for calculating electron thresholds****"
@@ -411,9 +620,17 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
   }
 
   // Now setup  electron count output
-  auto scanSize = sampleBlocks[0].header.scanDimensions;
   auto frameSize = sampleBlocks[0].header.frameDimensions;
-  events.resize(scanSize.first * scanSize.second);
+
+  // If we haven't been provided with width and height, try the header.
+  if (scanDimensions.first == 0 || scanDimensions.second == 0) {
+    scanDimensions = sampleBlocks[0].header.scanDimensions;
+  }
+
+  auto numberOfScanPositions = scanDimensions.first * scanDimensions.second;
+  events.resize(numberOfScanPositions);
+  // Allocate mutexes to protect the event vector at each scan position
+  positionMutexes.reset(new std::mutex[numberOfScanPositions]);
 
   // Now tell our workers to proceed
   electronCounting = true;
@@ -429,11 +646,12 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
     for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
       auto frameStart =
         data + i * frameDimensions.first * frameDimensions.second;
-      std::vector<uint16_t> frame(frameStart,
-                                  frameStart + frameDimensions.first *
-                                                 frameDimensions.second);
-      auto frameEvents = electronCount(frame, frameDimensions, darkReference,
-                                       backgroundThreshold, xRayThreshold);
+      std::vector<FrameType> frame(frameStart,
+                                   frameStart + frameDimensions.first *
+                                                  frameDimensions.second);
+      auto frameEvents = electronCount<FrameType, dark>(
+        frame, frameDimensions, darkReference, backgroundThreshold,
+        xRayThreshold, gain);
       events[b.header.imageNumbers[i]] = frameEvents;
     }
   }
@@ -443,28 +661,187 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 
   ElectronCountedData ret;
   ret.data = events;
-  ret.scanDimensions = scanSize;
+  ret.scanDimensions = scanDimensions;
   ret.frameDimensions = frameSize;
 
   return ret;
 }
 
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, const float darkReference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<float>(reader, darkReference, thresholdNumberOfBlocks,
+                              numberOfSamples, backgroundThresholdNSigma,
+                              xRayThresholdNSigma, gain, scanDimensions,
+                              verbose);
+}
+
+ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, Image<float>& darkReference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<float>(reader, darkReference.data.get(),
+                              thresholdNumberOfBlocks, numberOfSamples,
+                              backgroundThresholdNSigma, xRayThresholdNSigma,
+                              gain, scanDimensions, verbose);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  const float darkReference[],
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<uint16_t>(reader, darkReference, thresholdNumberOfBlocks,
+                                 numberOfSamples, backgroundThresholdNSigma,
+                                 xRayThresholdNSigma, nullptr, scanDimensions,
+                                 verbose);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  Image<float>& darkReference,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<uint16_t>(reader, darkReference.data.get(),
+                                 thresholdNumberOfBlocks, numberOfSamples,
+                                 backgroundThresholdNSigma, xRayThresholdNSigma,
+                                 nullptr, scanDimensions, verbose);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  const float gain[],
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<float, false>(reader, nullptr, thresholdNumberOfBlocks,
+                                     numberOfSamples, backgroundThresholdNSigma,
+                                     xRayThresholdNSigma, gain, scanDimensions,
+                                     verbose);
+}
+
+ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<uint16_t, false>(
+    reader, nullptr, thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, nullptr, scanDimensions,
+    verbose);
+}
+
 // Instantiate the ones that can be used
+
+// With gain and dark reference
+template ElectronCountedData electronCount(
+  StreamReader::iterator first, StreamReader::iterator last,
+  Image<float>& darkReference, double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  StreamReader::iterator first, StreamReader::iterator last,
+  const float darkReference[], double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last,
+  Image<float>& darkReference, double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last,
+  const float darkReference[], double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  PyReader::iterator first, PyReader::iterator last,
+  Image<float>& darkReference, double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  PyReader::iterator first, PyReader::iterator last,
+  const float darkReference[], double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+
+// Without gain and with dark reference
 template ElectronCountedData electronCount(StreamReader::iterator first,
                                            StreamReader::iterator last,
-                                           Image<double>& darkReference,
+                                           Image<float>& darkReference,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(StreamReader::iterator first,
+                                           StreamReader::iterator last,
+                                           const float darkReference[],
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(SectorStreamReader::iterator first,
                                            SectorStreamReader::iterator last,
-                                           Image<double>& darkReference,
+                                           Image<float>& darkReference,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(SectorStreamReader::iterator first,
+                                           SectorStreamReader::iterator last,
+                                           const float darkReference[],
+                                           const double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(PyReader::iterator first,
+                                           PyReader::iterator last,
+                                           Image<float>& darkReference,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
 template ElectronCountedData electronCount(PyReader::iterator first,
                                            PyReader::iterator last,
-                                           Image<double>& darkReference,
+                                           const float darkReference[],
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+
+// With gain and without dark reference
+template ElectronCountedData electronCount(StreamReader::iterator first,
+                                           StreamReader::iterator last,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           const float gain[],
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(SectorStreamReader::iterator first,
+                                           SectorStreamReader::iterator last,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           const float gain[],
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(
+  PyReader::iterator first, PyReader::iterator last, double backgroundThreshold,
+  double xRayThreshold, const float gain[], Dimensions2D scanDimensions);
+
+// Without gain and without dark reference
+template ElectronCountedData electronCount(StreamReader::iterator first,
+                                           StreamReader::iterator last,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(SectorStreamReader::iterator first,
+                                           SectorStreamReader::iterator last,
+                                           double backgroundThreshold,
+                                           double xRayThreshold,
+                                           Dimensions2D scanDimensions);
+template ElectronCountedData electronCount(PyReader::iterator first,
+                                           PyReader::iterator last,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);

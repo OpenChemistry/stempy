@@ -1,10 +1,17 @@
 #ifndef stempyimages_h
 #define stempyimages_h
 
+#include "mask.h"
 #include "reader.h"
 
 #include <memory>
 #include <vector>
+
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
 
 namespace stempy {
 
@@ -47,12 +54,58 @@ namespace stempy {
     Coordinates2D center = { -1, -1 });
 
   // Create STEM Images from sparse data
+  template <typename T>
+  void calculateSTEMValuesSparse(const std::vector<T>& sparseData,
+                                 uint16_t* mask, STEMImage& image,
+                                 int frameOffset)
+  {
+    for (unsigned i = 0; i < sparseData.size(); ++i) {
+      uint64_t values = 0;
+      for (unsigned j = 0; j < sparseData[i].size(); ++j) {
+        // This access is a little ugly, but its needed to be compatibly with
+        // both vector<uint32_t> and py:array_t<uint32_t>
+        auto pos = sparseData[i].data()[j];
+        values += mask[pos];
+      }
+      image.data[i + frameOffset] = values;
+    }
+  }
+
+  template <typename T>
   std::vector<STEMImage> createSTEMImages(
-    const std::vector<std::vector<uint32_t>>& sparseData,
-    const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
-    Dimensions2D scanDimensions = { 0, 0 },
+    const std::vector<T>& sparseData, const std::vector<int>& innerRadii,
+    const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
     Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
-    int frameOffset = 0);
+    int frameOffset = 0)
+  {
+    if (innerRadii.empty() || outerRadii.empty()) {
+      std::ostringstream msg;
+      msg << "innerRadii or outerRadii are empty!";
+      throw std::invalid_argument(msg.str());
+    }
+
+    if (innerRadii.size() != outerRadii.size()) {
+      std::ostringstream msg;
+      msg << "innerRadii and outerRadii are not the same size!";
+      throw std::invalid_argument(msg.str());
+    }
+
+    std::vector<STEMImage> images;
+    std::vector<uint16_t*> masks;
+    for (size_t i = 0; i < innerRadii.size(); ++i) {
+      images.push_back(STEMImage(scanDimensions));
+      masks.push_back(createAnnularMask(frameDimensions, innerRadii[i],
+                                        outerRadii[i], center));
+    }
+
+    for (size_t i = 0; i < masks.size(); ++i)
+      calculateSTEMValuesSparse(sparseData, masks[i], images[i], frameOffset);
+
+    for (auto* p : masks)
+      delete[] p;
+
+    return images;
+  }
 
   // Create STEM Images from electron counted sparse data
   struct ElectronCountedData;
@@ -81,7 +134,7 @@ namespace stempy {
 
   template <typename InputIt>
   Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
-                                          const Image<double>& darkreference);
+                                          const Image<float>& darkreference);
 
   template <typename InputIt>
   Image<double> maximumDiffractionPattern(InputIt first, InputIt last);

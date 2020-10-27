@@ -60,6 +60,7 @@ _io_mock = sys.modules['stempy._io']
 
 # We have to override these so we get don't get conflicting metaclasses
 _io_mock._sector_reader = MockReader
+_io_mock._threaded_reader = object
 _io_mock._reader = object
 _io_mock._pyreader = object
 

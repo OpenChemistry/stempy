@@ -19,7 +19,8 @@ RUN apt-get update && \
   ca-certificates \
   gnupg \
   software-properties-common \
-  libhdf5-dev && \
+  libhdf5-dev \
+  libsqlite3-dev && \
   apt-get clean all
 
 # Install CMake
@@ -36,7 +37,7 @@ RUN mkdir /build/ && mkdir /source/
 # Build Python
 RUN cd /build && wget https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tgz && \
   tar xvzf Python-3.7.3.tgz && cd /build/Python-3.7.3 && \
-  ./configure && make -j4 && make install && make clean && rm /build/Python-3.7.3.tgz
+  ./configure --enable-loadable-sqlite-extensions && make -j4 && make install && make clean && rm /build/Python-3.7.3.tgz
 
 # Build mpich
 RUN cd /build && wget https://www.mpich.org/static/downloads/3.3/mpich-3.3.tar.gz && \
@@ -79,7 +80,7 @@ RUN mkdir -p /build/stempy && \
 # Install stempy
 RUN pip3 install /source/stempy && \
   cp /build/stempy/lib/stempy/*.so /usr/local/lib/python3.7/site-packages/stempy/ && \
-  pip3 install ipykernel matplotlib click imageio
+  pip3 install matplotlib click imageio
 
 RUN rm -rf /build
 

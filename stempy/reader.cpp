@@ -278,9 +278,22 @@ int extractSector(const std::string& fileName)
   return -1;
 }
 
-SectorStreamReader::SectorStreamReader(const vector<string>& files)
-  : m_files(files)
+SectorStreamReader::SectorStreamReader(const vector<string>& files,
+                                       uint8_t version)
+  : m_files(files), m_version(version)
 {
+  // Validate version
+  switch (m_version) {
+    case 4:
+    case 5:
+      break;
+    default:
+      std::ostringstream ss;
+      ss << "Unsupported version: ";
+      ss << m_version;
+      throw invalid_argument(ss.str());
+  }
+
   // If there are no files, throw an exception
   if (m_files.empty()) {
     ostringstream msg;
@@ -311,8 +324,12 @@ Header SectorStreamReader::readHeader(std::ifstream& stream)
   Header header;
 
   header.imagesInBlock = 1;
-  header.frameDimensions = SECTOR_DIMENSIONS;
-  header.version = 4;
+  if (m_version == 4) {
+    header.frameDimensions = SECTOR_DIMENSIONS_VERSION_4;
+  } else {
+    header.frameDimensions = SECTOR_DIMENSIONS_VERSION_5;
+  }
+  header.version = m_version;
 
   // Read scan and frame number
   uint32_t headerNumbers[2];
@@ -411,7 +428,7 @@ Block SectorStreamReader::read()
 
         // Do we need to allocate the frame
         if (frame.block.header.version == 0) {
-          frame.block.header.version = 4;
+          frame.block.header.version = m_version;
           frame.block.header.scanNumber = header.scanNumber;
           frame.block.header.scanDimensions = header.scanDimensions;
           frame.block.header.imagesInBlock = 1;
@@ -428,12 +445,7 @@ Block SectorStreamReader::read()
                     0);
         }
 
-        auto frameX = sector * SECTOR_DIMENSIONS.first;
-        for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second; frameY++) {
-          auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
-          read(frame.block.data.get() + offset,
-               SECTOR_DIMENSIONS.first * sizeof(uint16_t));
-        }
+        readSectorData(frame.block, sector);
         frame.sectorCount++;
 
         if (frame.sectorCount == 4) {
@@ -464,6 +476,46 @@ Block SectorStreamReader::read()
   }
 
   return Block();
+}
+
+void SectorStreamReader::readSectorData(std::ifstream& stream, Block& block,
+                                        int sector)
+{
+  if (version() == 4) {
+    readSectorDataVersion4(stream, block, sector);
+  } else {
+    readSectorDataVersion5(stream, block, sector);
+  }
+}
+
+void SectorStreamReader::readSectorData(Block& block, int sector)
+{
+  auto& sectorStream = *m_streamsIterator;
+  auto& stream = sectorStream.stream;
+
+  readSectorData(*stream.get(), block, sector);
+}
+
+void SectorStreamReader::readSectorDataVersion4(std::ifstream& stream,
+                                                Block& block, int sector)
+{
+  auto frameX = sector * SECTOR_DIMENSIONS_VERSION_4.first;
+  for (unsigned frameY = 0; frameY < FRAME_DIMENSIONS.second; frameY++) {
+    auto offset = FRAME_DIMENSIONS.first * frameY + frameX;
+    read(stream, block.data.get() + offset,
+         SECTOR_DIMENSIONS_VERSION_4.first * sizeof(uint16_t));
+  }
+}
+
+void SectorStreamReader::readSectorDataVersion5(std::ifstream& stream,
+                                                Block& block, int sector)
+{
+  auto frameY = sector * SECTOR_DIMENSIONS_VERSION_5.second;
+  auto offset = frameY * FRAME_DIMENSIONS.first;
+
+  read(stream, block.data.get() + offset,
+       SECTOR_DIMENSIONS_VERSION_5.first * SECTOR_DIMENSIONS_VERSION_5.second *
+         sizeof(uint16_t));
 }
 
 void SectorStreamReader::openFiles()
@@ -675,29 +727,31 @@ bool operator==(const SectorStreamReader::SectorStream& lhs,
   return lhs.stream.get() == rhs.stream.get();
 }
 
-SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path)
-  : SectorStreamReader(path)
+SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path,
+                                                       uint8_t version)
+  : SectorStreamReader(path, version)
 {
   initNumberOfThreads();
 }
 
 SectorStreamThreadedReader::SectorStreamThreadedReader(
-  const std::vector<std::string>& files)
-  : SectorStreamReader(files)
+  const std::vector<std::string>& files, uint8_t version)
+  : SectorStreamReader(files, version)
 {
   initNumberOfThreads();
 }
 
 SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path,
+                                                       uint8_t version,
                                                        int threads)
-  : SectorStreamReader(path), m_threads(threads)
+  : SectorStreamReader(path, version), m_threads(threads)
 {
   initNumberOfThreads();
 }
 
 SectorStreamThreadedReader::SectorStreamThreadedReader(
-  const std::vector<std::string>& files, int threads)
-  : SectorStreamReader(files), m_threads(threads)
+  const std::vector<std::string>& files, uint8_t version, int threads)
+  : SectorStreamReader(files, version), m_threads(threads)
 {
   initNumberOfThreads();
 }
@@ -729,7 +783,6 @@ bool SectorStreamThreadedReader::nextSectorStreamPair(
   }
 
   auto& stream = sectorStreamPair.first;
-  auto sector = sectorStreamPair.second;
 
   auto c = stream->peek();
   // If we have reached the end close the stream and remove if from

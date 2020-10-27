@@ -280,10 +280,10 @@ def calculate_average(reader):
     return img
 
 
-def electron_count(reader, darkreference, number_of_samples=40,
+def electron_count(reader, darkreference=None, number_of_samples=40,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
                    threshold_num_blocks=1, scan_dimensions=(0, 0),
-                   verbose=False):
+                   verbose=False, gain=None):
     """Generate a list of coordinates of electron hits.
 
     :param reader: the file reader that has already opened the data.
@@ -309,28 +309,60 @@ def electron_count(reader, darkreference, number_of_samples=40,
     :type scan_dimensions: tuple of ints of length 2
     :param verbose: whether or not to print out verbose output.
     :type verbose: bool
+    :param gain: the gain mask to apply. Must match the frame dimensions
+    :type gain: numpy.ndarray (2D)
 
     :return: the coordinates of the electron hits for each frame.
     :rtype: ElectronCountedData (named tuple with fields 'data',
             'scan_dimensions', and 'frame_dimensions')
     """
+    if gain is not None:
+        # Invert, as we will multiply in C++
+        # It also must be a float32
+        gain = np.power(gain, -1)
+        gain = _safe_cast(gain, np.float32, 'gain')
+
+    if isinstance(darkreference, np.ndarray):
+        # Must be float32 for correct conversions
+        darkreference = _safe_cast(darkreference, np.float32, 'dark reference')
 
     # Special case for threaded reader
     if isinstance(reader, SectorThreadedReader):
-        data = _image.electron_count(reader, darkreference, threshold_num_blocks,
-                                     number_of_samples, background_threshold_n_sigma,
-                                  xray_threshold_n_sigma, scan_dimensions, verbose)
+        args = [reader]
+
+        if darkreference is not None:
+            args = args + [darkreference]
+
+        # Now add the other args
+        args = args + [threshold_num_blocks, number_of_samples,
+                       background_threshold_n_sigma, xray_threshold_n_sigma]
+
+        # add the gain arg if we have been given one.
+        if gain is not None:
+            args.append(gain)
+
+        args = args + [scan_dimensions, verbose]
+
+        data = _image.electron_count(*args)
     else:
         blocks = []
         for i in range(threshold_num_blocks):
             blocks.append(next(reader))
 
-        if hasattr(darkreference, '_image'):
+
+        if darkreference is not None and hasattr(darkreference, '_image'):
             darkreference = darkreference._image
 
-        res = _image.calculate_thresholds(
-            [b._block for b in blocks], darkreference, number_of_samples,
-            background_threshold_n_sigma, xray_threshold_n_sigma)
+        args = [[b._block for b in blocks]]
+        if darkreference is not None:
+            args.append(darkreference)
+
+        args = args + [number_of_samples, background_threshold_n_sigma, xray_threshold_n_sigma]
+
+        if gain is not None:
+            args.append(gain)
+
+        res = _image.calculate_thresholds(*args)
 
         background_threshold = res.background_threshold
         xray_threshold = res.xray_threshold
@@ -355,16 +387,26 @@ def electron_count(reader, darkreference, number_of_samples=40,
         # Reset the reader
         reader.reset()
 
-        data = _image.electron_count(reader.begin(), reader.end(),
-                                    darkreference, background_threshold,
-                                    xray_threshold, scan_dimensions)
+        args = [reader.begin(), reader.end()]
+
+        if darkreference is not None:
+            args.append(darkreference)
+
+        args = args + [background_threshold, xray_threshold]
+
+        if gain is not None:
+            args.append(gain)
+
+        args = args + [scan_dimensions]
+
+        data = _image.electron_count(*args)
 
     electron_counted_data = namedtuple('ElectronCountedData',
                                        ['data', 'scan_dimensions',
                                         'frame_dimensions'])
 
     # Convert to numpy array
-    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data])
+    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
     electron_counted_data.scan_dimensions = data.scan_dimensions
     electron_counted_data.frame_dimensions = data.frame_dimensions
 
@@ -451,6 +493,30 @@ def com_sparse(electron_counts, frame_dimensions):
     return com
 
 
+def com_dense(frames):
+    """Compute the center of mass for a set of dense 2D frames.
+
+    :param frames: The frames to calculate the center of mass from
+    :type frames: numpy.ndarray (2D or 3D)
+
+    :return: The center of mass along each axis of set of frames
+    :
+
+    """
+    # Make 3D if its only 2D
+    if frames.ndim == 2:
+        frames = frames[None, :, :]
+
+    YY, XX = np.mgrid[0:frames.shape[1], 0:frames.shape[2]]
+    com = np.zeros((2, frames.shape[0]), dtype=np.float64)
+    for ii, dp in enumerate(frames):
+        mm = dp.sum()
+        com_x = np.sum(XX * dp)
+        com_y = np.sum(YY * dp)
+        com[:, ii] = (com_x / mm, com_y / mm)
+    return com
+
+
 def calculate_sum_sparse(electron_counts, frame_dimensions):
     """Compute a diffraction pattern from sparse electron counted data.
 
@@ -464,11 +530,10 @@ def calculate_sum_sparse(electron_counts, frame_dimensions):
     :return: A summed diffraction pattern.
     :rtype: numpy.ndarray
     """
-    dp = np.zeros(frame_dimensions, '<u8')
+    dp = np.zeros((frame_dimensions[0] * frame_dimensions[1]), '<u8')
     for ii, ev in enumerate(electron_counts):
-        x, y = np.unravel_index(ev, dp.shape)
-        dp[x, y] += 1
-
+        dp[ev] += 1
+    dp = dp.reshape(frame_dimensions)
     return dp
 
 
@@ -503,3 +568,16 @@ def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
     r_sum = r_sum.reshape((scan_dimensions[0], scan_dimensions[1], num_bins))
 
     return r_sum
+
+
+def _safe_cast(array, dtype, name=None):
+    # Cast the array to a different dtype, ensuring no loss of
+    # precision. Otherwise, an exception will be raised.
+    if name is None:
+        name = 'array'
+
+    new_array = array.astype(dtype)
+    if np.any(new_array.astype(array.dtype) != array):
+        msg = f'Cannot cast {name} to {dtype} without loss of precision'
+        raise ValueError(msg)
+    return new_array
