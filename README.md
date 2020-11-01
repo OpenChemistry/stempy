@@ -16,22 +16,23 @@ Example usage
 >>> import stempy.io as stio
 >>> import stempy.image as stim
 >>> import matplotlib.pyplot as plt
->>> data_path = Path('/mnt/hdd1/')
->>> files = sorted(data_path.glob('data_scan0*016_*.data'))  # raw data files
->>> sReader = stio.reader(files, stio.FileVersion.VERSION4)
->>> events = stim.electron_count(sReader, np.zeros((576,576)))
->>> stio.save_electron_counts('/mnt/hdd1/data_scan16_electrons.h5', events)
+>>> import numpy as np
+>>> data_path = Path('/mnt/hdd1/2020.06.03')
+>>> files = sorted(data_path.glob('data_scan0*015_*.data'))  # raw data files
+>>> sReader = stio.reader(files, stio.FileVersion.VERSION5)
+>>> events = stim.electron_count(sReader, np.zeros((576,576),background_threshold_n_sigma=4.0))
+>>> stio.save_electron_counts('/mnt/hdd1/data_scan15_electrons.h5', events)
 # Now create a bright field STEM image from the data by summing pixels 
 # 0 to 110 radially
->>> bf = stim.create_stem_images(events, 0, 110)
+>>> bf = stim.create_stem_images(events, 0, 35)
 # Create a summed diffraction pattern of the entire dataset
 >>> dp = stim.calculate_sum_sparse(events.data,
                                    events.frame_dimensions)
 >>> fg, ax = plt.subplots(1,2)
->>> ax[0].imshow(bf)
+>>> ax[0].imshow(bf[0,:,:])
 >>> ax[1].imshow(dp)
 ```
-![Brightfield and diffraction pattern](https:/url.to.image/image.jpg)
+![Brightfield and diffraction pattern]('../docs/image/Figure 1.png')
 
 Advanced usage
 --------------
