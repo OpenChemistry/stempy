@@ -32,7 +32,7 @@ Example usage
 >>> ax[0].imshow(bf[0,:,:])
 >>> ax[1].imshow(dp)
 ```
-![Brightfield and diffraction pattern]('../docs/image/Figure 1.png')
+![Brightfield and diffraction pattern]('docs/images/Figure 1.png')
 
 Advanced usage
 --------------
