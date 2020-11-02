@@ -34,6 +34,8 @@ Example usage
 ```
 ![Brightfield and diffraction pattern]('https://github.com/ercius/stempy/blob/master/docs/images/Figure_1.png?raw=True')
 
+![Test]('https://raw.githubusercontent.com/ercius/stempy/master/docs/images/Figure_1.png')
+
 Advanced usage
 --------------
 Build repo and set PYTHONPATH:
