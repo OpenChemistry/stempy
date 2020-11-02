@@ -32,9 +32,7 @@ Example usage
 >>> ax[0].imshow(bf[0,:,:])
 >>> ax[1].imshow(dp)
 ```
-![Brightfield and diffraction pattern]('https://github.com/ercius/stempy/blob/master/docs/images/Figure_1.png?raw=True')
-
-![Test]('https://raw.githubusercontent.com/ercius/stempy/master/docs/images/Figure_1.png')
+![Brightfield and diffraction pattern](docs/images/Figure_1.png)
 
 Advanced usage
 --------------
