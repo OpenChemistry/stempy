@@ -333,6 +333,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
         // First read the header
         auto header = readHeader(*stream);
 
+        std::vector<Block> blocks;
         for (unsigned j = 0; j < header.imagesInBlock; j++) {
           auto pos = header.imageNumbers[j];
           auto frameNumber = header.frameNumber;
@@ -370,25 +371,27 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 
           readSectorData(*stream, frame.block, sector);
 
-          frame.sectorCount++;
-
           // Now now have the complete frame
-          if (frame.sectorCount == 4) {
-            auto b = frame.block;
-            {
-              std::unique_lock<std::mutex> lock(m_cacheMutex);
-              m_frameCache.erase(frameNumber);
-            }
-
-            // Call the function todo the processing
-            func(b);
+          if (++frame.sectorCount == 4) {
+            mutexLock.lock();
+            blocks.emplace_back(frame.block);
+            m_frameCache.erase(frameNumber);
+            mutexLock.unlock();
           }
         }
 
         // Return the stream to the queue so other threads can read from it.
+        // It is important that we do this before doing the processing to prevent
+        // starvation of one of the streams, we need to make sure they are all
+        // read evenly.
         {
           std::unique_lock<std::mutex> queueLock(m_queueMutex);
           m_streamQueue.push(sectorStreamPair);
+        }
+
+        // Finally call the function on any completed frames
+        for (auto& b : blocks) {
+          func(b);
         }
       }
     }));
