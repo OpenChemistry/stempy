@@ -2,12 +2,13 @@
 Running in singularity
 ======================
 
-Singularity containers can encapulate the entire stempy environment so that
+Singularity or Docker containers can encapsulate the entire stempy environment so that
 you don't have to build it. We provide a container that has a Python 3.7 environment
-with stempy pre-installed.
+with stempy pre-installed. This container will work in Docker, Singularity,
+and NERSC's Shifter.
 
 
-Install singularity (Ubuntu)
+Install Singularity (Ubuntu)
 ----------------------------
 
 ``sudo apt-get install singularity-container``
@@ -24,7 +25,11 @@ Then you will run ``/usr/local/bin/singularity``
 Pulling the latest image
 ------------------------
 
+Use `singularity` or `docker` interchangeably below.
+
 ``singularity pull docker://openchemistry/stempy``
+
+``singularity pull docker://openchemistry/stempy-scipy-notebook``
 
 
 Running a script inside the container
@@ -35,6 +40,11 @@ for example if you have a script called ``test.py`` in your home directory you
 can execute it in the container with the following command:
 
 ``singularity exec stempy/stempy.simg python3 ~/test.py``
+
+Running a Jupyter Lab instance inside the container. The -B option mounts directories
+on the host to directories inside the notebook.
+
+``singularity exec -B /tmp:/home/jovyan,/mnt:/mnt stempy-scipy-notebook_latest.sif jupyter lab``
 
 Mounting other directories into the container
 ---------------------------------------------
