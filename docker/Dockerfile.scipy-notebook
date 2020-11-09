@@ -56,4 +56,7 @@ RUN rm -rf build
 
 RUN fix-permissions /home/$NB_USER
 
+# Install ncempy
+RUN pip install ncempy
+
 USER $NB_UID

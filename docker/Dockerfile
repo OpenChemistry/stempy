@@ -80,7 +80,7 @@ RUN mkdir -p /build/stempy && \
 # Install stempy
 RUN pip3 install /source/stempy && \
   cp /build/stempy/lib/stempy/*.so /usr/local/lib/python3.7/site-packages/stempy/ && \
-  pip3 install matplotlib click imageio
+  pip3 install matplotlib click imageio ncempy
 
 RUN rm -rf /build
 
