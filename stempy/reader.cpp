@@ -770,25 +770,25 @@ void SectorStreamThreadedReader::initNumberOfThreads()
   }
 }
 
-bool SectorStreamThreadedReader::nextSectorStreamPair(
-  SectorStreamPair& sectorStreamPair)
+bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
 {
   {
     std::unique_lock<std::mutex> queueLock(m_queueMutex);
     if (m_streamQueue.empty()) {
       return false;
     }
-    sectorStreamPair = m_streamQueue.front();
+    streamQueueEntry = m_streamQueue.top();
     m_streamQueue.pop();
   }
 
-  auto& stream = sectorStreamPair.first;
+  auto stream = streamQueueEntry.stream;
 
   auto c = stream->peek();
   // If we have reached the end close the stream and remove if from
   // the list.
   if (c == EOF) {
     stream->close();
+    std::unique_lock<std::mutex> streamsLock(m_streamsMutex);
     auto iter = m_streams.begin();
     while (iter != m_streams.end()) {
       if ((*iter).stream.get() == stream) {
