@@ -255,7 +255,40 @@ class ElectronCountedData;
 template <typename T>
 class Image;
 
-using SectorStreamPair = std::pair<std::ifstream*, int>;
+// struct to store a stream in the queue along with the appropriate metadata.
+struct StreamQueueEntry
+{
+  StreamQueueEntry() = default;
+  StreamQueueEntry(std::ifstream* str, int sec)
+  {
+    stream = str;
+    sector = sec;
+  }
+
+  std::ifstream* stream = nullptr;
+  int sector = -1;
+  // Used for queue priority
+  uint32_t readCount = 0;
+};
+
+// Compare type to encore order in the stream queue using the number of reads.
+struct StreamQueueComparison
+{
+  bool reverse;
+
+public:
+  StreamQueueComparison(const bool& revparam = false) { reverse = revparam; }
+  bool operator()(const StreamQueueEntry& lhs,
+                  const StreamQueueEntry& rhs) const
+  {
+    if (reverse) {
+      return (lhs.readCount < rhs.readCount);
+    }
+    else {
+      return (lhs.readCount > rhs.readCount);
+    }
+  }
+};
 
 class SectorStreamThreadedReader : public SectorStreamReader
 {
@@ -296,12 +329,15 @@ private:
   // The samples to use for calculating the thresholds
   std::vector<Block> m_sampleBlocks;
 
-  // Queue of sector streams to be read by threads
+  // Queue of sector streams to be read by threads. We use a priority queue
+  // based on the number of reads to ensure that we read all the files at the
+  // same ratio. Using a round-robin approach didn't work on some platforms.
   std::mutex m_queueMutex;
-  std::queue<SectorStreamPair> m_streamQueue;
+  std::priority_queue<StreamQueueEntry, std::vector<StreamQueueEntry>,
+                      StreamQueueComparison> m_streamQueue;
 
   void initNumberOfThreads();
-  bool nextSectorStreamPair(SectorStreamPair& pair);
+  bool nextStream(StreamQueueEntry& entry);
 };
 
 template <typename Functor>
@@ -313,7 +349,7 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 
   while (streamsIterator != m_streams.end()) {
     auto& s = *streamsIterator;
-    m_streamQueue.push(std::make_pair(s.stream.get(), s.sector));
+    m_streamQueue.push(StreamQueueEntry(s.stream.get(), s.sector));
     streamsIterator++;
   }
 
@@ -323,23 +359,25 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 
       while (!m_streams.empty()) {
         // Get the next stream to read from
-        SectorStreamPair sectorStreamPair;
-        if (!nextSectorStreamPair(sectorStreamPair)) {
+        StreamQueueEntry streamQueueEntry;
+
+        if (!nextStream(streamQueueEntry)) {
           continue;
         }
-        auto& stream = sectorStreamPair.first;
-        auto sector = sectorStreamPair.second;
+        auto& stream = streamQueueEntry.stream;
+        auto sector = streamQueueEntry.sector;
 
         // First read the header
         auto header = readHeader(*stream);
 
+        std::vector<Block> blocks;
         for (unsigned j = 0; j < header.imagesInBlock; j++) {
           auto pos = header.imageNumbers[j];
           auto frameNumber = header.frameNumber;
 
-          std::unique_lock<std::mutex> mutexLock(m_cacheMutex);
+          std::unique_lock<std::mutex> cacheLock(m_cacheMutex);
           auto& frame = m_frameCache[frameNumber];
-          mutexLock.unlock();
+          cacheLock.unlock();
 
           // Do we need to allocate the frame, use a double check lock
           if (std::atomic_load(&frame.block.data) == nullptr) {
@@ -370,25 +408,28 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 
           readSectorData(*stream, frame.block, sector);
 
-          frame.sectorCount++;
-
           // Now now have the complete frame
-          if (frame.sectorCount == 4) {
-            auto b = frame.block;
-            {
-              std::unique_lock<std::mutex> lock(m_cacheMutex);
-              m_frameCache.erase(frameNumber);
-            }
-
-            // Call the function todo the processing
-            func(b);
+          if (++frame.sectorCount == 4) {
+            cacheLock.lock();
+            blocks.emplace_back(frame.block);
+            m_frameCache.erase(frameNumber);
+            cacheLock.unlock();
           }
         }
 
         // Return the stream to the queue so other threads can read from it.
+        // It is important that we do this before doing the processing to prevent
+        // starvation of one of the streams, we need to make sure they are all
+        // read evenly.
         {
           std::unique_lock<std::mutex> queueLock(m_queueMutex);
-          m_streamQueue.push(sectorStreamPair);
+          streamQueueEntry.readCount++;
+          m_streamQueue.push(streamQueueEntry);
+        }
+
+        // Finally call the function on any completed frames
+        for (auto& b : blocks) {
+          func(b);
         }
       }
     }));
