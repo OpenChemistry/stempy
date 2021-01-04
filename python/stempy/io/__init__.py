@@ -2,8 +2,10 @@ from collections import namedtuple
 import numpy as np
 import h5py
 
-from stempy._io import _reader, _sector_reader, _pyreader, _threaded_reader
-
+from stempy._io import (
+    _reader, _sector_reader, _pyreader, _threaded_reader,
+    _threaded_multi_pass_reader
+)
 
 class FileVersion(object):
     VERSION1 = 1
@@ -55,6 +57,9 @@ class PyReader(ReaderMixin, _pyreader):
 class SectorThreadedReader(ReaderMixin, _threaded_reader):
     pass
 
+class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
+    pass
+
 def get_hdf5_reader(h5file):
     # the initialization is at the io.cpp
     dset_frame=h5file['frames']
@@ -95,6 +100,11 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
     elif version in [FileVersion.VERSION4, FileVersion.VERSION5]:
         if backend == 'thread':
             reader = SectorThreadedReader(path, version, **options)
+        elif backend == 'multi-pass':
+            if version != FileVersion.VERSION5:
+                raise Exception('The multi pass threaded reader only support file verison 5')
+
+            reader = SectorThreadedMultiPassReader(path, **options)
         else:
             reader = SectorReader(path, version)
     else:

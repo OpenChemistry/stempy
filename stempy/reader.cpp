@@ -804,4 +804,58 @@ bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
 
   return true;
 }
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(const std::string& path)
+  : SectorStreamThreadedReader(path, 5, -1)
+{
+
+}
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
+  const std::vector<std::string>& files)
+  : SectorStreamThreadedReader(files, 5, -1)
+{
+
+}
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(const std::string& path,
+                                                       int threads)
+  : SectorStreamThreadedReader(path, 5, threads)
+{
+
+}
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
+  const std::vector<std::string>& files, int threads)
+  : SectorStreamThreadedReader(files, 5, threads)
+{
+
+}
+
+// Read the headers and save the locations of the blocks to form the "frame maps"
+void  SectorStreamMultiPassThreadedReader::readHeaders() {
+  while (m_processed < m_streams.size()) {
+    auto &sectorStream = m_streams[m_processed++];
+    auto &stream = sectorStream.stream;
+    auto sector = sectorStream.sector;
+
+    while(stream->peek() != EOF) {
+      // First read the header
+      auto header = readHeader(*stream);
+      auto dataSize = header.frameDimensions.first *
+            header.frameDimensions.second * header.imagesInBlock;
+
+      auto imageNumber = header.imageNumbers[0];
+      auto &frameMap = m_scanMap[imageNumber];
+      auto &sectorLocation = frameMap[sector];
+
+      sectorLocation.sector = sector;
+      sectorLocation.sectorStream = &sectorStream;
+      sectorLocation.offset = stream->tellg();
+      stream->seekg(dataSize * sizeof(uint16_t), stream->cur);
+    }
+  }
+}
+
+
 }
