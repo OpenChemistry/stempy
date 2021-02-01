@@ -105,8 +105,11 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
                 raise Exception('The multi pass threaded reader only support file verison 5')
 
             reader = SectorThreadedMultiPassReader(path, **options)
-        else:
+        elif backend is None:
             reader = SectorReader(path, version)
+        # Unrecognized backend
+        else:
+            raise ValueError(f'Unrecongnized backend: "{backend}"')
     else:
         reader = Reader(path, version)
 
