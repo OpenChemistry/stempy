@@ -561,8 +561,10 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   // Resize the vector to hold the frame sector locations for the scan
   auto scanSize = header.scanDimensions.first * header.scanDimensions.second;
+  m_scanMap.clear();
   m_scanMap.resize(scanSize);
   // Allocate the mutexes
+  m_scanPositionMutexes.clear();
   for (auto i = 0; i < scanSize; i++) {
     m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
   }
