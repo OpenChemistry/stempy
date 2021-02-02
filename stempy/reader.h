@@ -459,7 +459,10 @@ struct SectorLocation {
 //   SectorLocation locations[4];
 // };
 
-using ScanMap = std::vector<std::array<SectorLocation,4>>;
+// This type holds the locations of the sectors for each frame at a give scan
+// position. Note: That there can be multiple frames at a give position, we key
+// the map of the frame number.
+using ScanMap = std::vector<std::map<uint32_t, std::array<SectorLocation,4>>>;
 
 // SectorStreamMultiPassThreadedReader uses a two pass approach to frame
 // reconstruction. First is reads the header from all sectors and uses them
@@ -484,6 +487,9 @@ private:
   // atomic to keep track of the header or frame being processed
   std::atomic<uint32_t> m_processed = {0};
 
+  // Mutex to lock the map of frames at each scan position
+  std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
+
   void readHeaders();
   template <typename Functor>
   void processFrames(Functor& func, Header header);
@@ -495,42 +501,48 @@ private:
 template <typename Functor>
 void SectorStreamMultiPassThreadedReader::processFrames(Functor& func, Header header) {
   while(m_processed< m_scanMap.size()) {
-     uint32_t imageNumber = m_processed++;
-     auto &frameMap = m_scanMap[imageNumber];
+    uint32_t imageNumber = m_processed++;
+    auto &frameMaps = m_scanMap[imageNumber];
 
+    // Iterate over frame maps for this scan position
+    for(const auto& f : frameMaps) {
+      auto frameNumber = f.first;
+      auto &frameMap = f.second;
 
-    Block b;
-    b.header.version = version();
-    b.header.scanNumber = header.scanNumber;
-    b.header.scanDimensions = header.scanDimensions;
-    b.header.imagesInBlock = 1;
-    b.header.imageNumbers.push_back(imageNumber);
+      Block b;
+      b.header.version = version();
+      b.header.scanNumber = header.scanNumber;
+      b.header.scanDimensions = header.scanDimensions;
+      b.header.imagesInBlock = 1;
+      b.header.frameNumber = frameNumber;
+      b.header.imageNumbers.push_back(imageNumber);
 
-    b.header.frameDimensions = FRAME_DIMENSIONS;
+      b.header.frameDimensions = FRAME_DIMENSIONS;
 
-    b.data.reset(
-            new uint16_t[b.header.frameDimensions.first *
-                          b.header.frameDimensions.second],
-            std::default_delete<uint16_t[]>());
-    std::fill(b.data.get(),
-              b.data.get() +
-                b.header.frameDimensions.first *
-                  b.header.frameDimensions.second,
-              0);
+      b.data.reset(
+              new uint16_t[b.header.frameDimensions.first *
+                            b.header.frameDimensions.second],
+              std::default_delete<uint16_t[]>());
+      std::fill(b.data.get(),
+                b.data.get() +
+                  b.header.frameDimensions.first *
+                    b.header.frameDimensions.second,
+                0);
 
-    for (int j=0; j< 4; j++) {
-      auto &sectorLocation = frameMap[j];
+      for (int j=0; j< 4; j++) {
+        auto &sectorLocation = frameMap[j];
 
-      if (sectorLocation.sectorStream != nullptr) {
-        auto sectorStream = sectorLocation.sectorStream;
-        std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
-        sectorStream->stream->seekg(sectorLocation.offset);
-        readSectorData(*sectorStream->stream, b, j);
+        if (sectorLocation.sectorStream != nullptr) {
+          auto sectorStream = sectorLocation.sectorStream;
+          std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
+          sectorStream->stream->seekg(sectorLocation.offset);
+          readSectorData(*sectorStream->stream, b, j);
+        }
       }
-    }
 
-    // Finally process the frame
-    func(b);
+      // Finally process the frame
+      func(b);
+    }
   }
 }
 
@@ -547,7 +559,12 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   stream->seekg(0);
 
   // Resize the vector to hold the frame sector locations for the scan
-  m_scanMap.resize(header.scanDimensions.first*header.scanDimensions.second);
+  auto scanSize = header.scanDimensions.first*header.scanDimensions.second;
+  m_scanMap.resize(scanSize);
+  // Allocate the mutexes
+  for(auto i=0; i<scanSize; i++) {
+    m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
+  }
 
   // Reset counter
   m_processed = {0};

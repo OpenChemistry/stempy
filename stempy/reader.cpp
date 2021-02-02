@@ -846,7 +846,12 @@ void  SectorStreamMultiPassThreadedReader::readHeaders() {
             header.frameDimensions.second * header.imagesInBlock;
 
       auto imageNumber = header.imageNumbers[0];
-      auto &frameMap = m_scanMap[imageNumber];
+      auto &frameMaps = m_scanMap[imageNumber];
+
+      // Protect initialization of the map with the correct mutex
+      std::unique_lock<std::mutex> lock(*m_scanPositionMutexes[imageNumber].get());
+      auto &frameMap = frameMaps[header.frameNumber];
+      lock.unlock();
       auto &sectorLocation = frameMap[sector];
 
       sectorLocation.sector = sector;
