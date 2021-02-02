@@ -203,7 +203,8 @@ public:
     int sector = -1;
     // Mutex to guard access to the ifstream
     std::unique_ptr<std::mutex> mutex;
-    SectorStream(std::ifstream* str, int sec) : stream(str), sector(sec), mutex(std::make_unique<std::mutex>()){};
+    SectorStream(std::ifstream* str, int sec)
+      : stream(str), sector(sec), mutex(std::make_unique<std::mutex>()){};
   };
 
 protected:
@@ -449,7 +450,8 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 }
 
 // struct to hold the location of a sector: sector, stream and offset
-struct SectorLocation {
+struct SectorLocation
+{
   uint64_t sector = -1;
   SectorStreamReader::SectorStream* sectorStream = nullptr;
   std::streampos offset;
@@ -462,14 +464,14 @@ struct SectorLocation {
 // This type holds the locations of the sectors for each frame at a give scan
 // position. Note: That there can be multiple frames at a give position, we key
 // the map of the frame number.
-using ScanMap = std::vector<std::map<uint32_t, std::array<SectorLocation,4>>>;
+using ScanMap = std::vector<std::map<uint32_t, std::array<SectorLocation, 4>>>;
 
 // SectorStreamMultiPassThreadedReader uses a two pass approach to frame
 // reconstruction. First is reads the header from all sectors and uses them
-// to build up "frame maps" detailing the streams and offsets for all the sectors
-// in a frame. The second pass is used reconstruct the frames using this map.
-// This avoids the need to cache partial frames so used less memory. Depending
-// on the seek performance of the disks it also performs well.
+// to build up "frame maps" detailing the streams and offsets for all the
+// sectors in a frame. The second pass is used reconstruct the frames using this
+// map. This avoids the need to cache partial frames so used less memory.
+// Depending on the seek performance of the disks it also performs well.
 class SectorStreamMultiPassThreadedReader : public SectorStreamThreadedReader
 {
 public:
@@ -485,7 +487,7 @@ public:
 private:
   ScanMap m_scanMap;
   // atomic to keep track of the header or frame being processed
-  std::atomic<uint32_t> m_processed = {0};
+  std::atomic<uint32_t> m_processed = { 0 };
 
   // Mutex to lock the map of frames at each scan position
   std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
@@ -495,19 +497,20 @@ private:
   void processFrames(Functor& func, Header header);
 };
 
-
 // Read the FrameMaps for scan and reconstruct the frame before performing the
 // processing
 template <typename Functor>
-void SectorStreamMultiPassThreadedReader::processFrames(Functor& func, Header header) {
-  while(m_processed< m_scanMap.size()) {
+void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
+                                                        Header header)
+{
+  while (m_processed < m_scanMap.size()) {
     uint32_t imageNumber = m_processed++;
-    auto &frameMaps = m_scanMap[imageNumber];
+    auto& frameMaps = m_scanMap[imageNumber];
 
     // Iterate over frame maps for this scan position
-    for(const auto& f : frameMaps) {
+    for (const auto& f : frameMaps) {
       auto frameNumber = f.first;
-      auto &frameMap = f.second;
+      auto& frameMap = f.second;
 
       Block b;
       b.header.version = version();
@@ -519,18 +522,16 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func, Header he
 
       b.header.frameDimensions = FRAME_DIMENSIONS;
 
-      b.data.reset(
-              new uint16_t[b.header.frameDimensions.first *
-                            b.header.frameDimensions.second],
-              std::default_delete<uint16_t[]>());
+      b.data.reset(new uint16_t[b.header.frameDimensions.first *
+                                b.header.frameDimensions.second],
+                   std::default_delete<uint16_t[]>());
       std::fill(b.data.get(),
-                b.data.get() +
-                  b.header.frameDimensions.first *
-                    b.header.frameDimensions.second,
+                b.data.get() + b.header.frameDimensions.first *
+                                 b.header.frameDimensions.second,
                 0);
 
-      for (int j=0; j< 4; j++) {
-        auto &sectorLocation = frameMap[j];
+      for (int j = 0; j < 4; j++) {
+        auto& sectorLocation = frameMap[j];
 
         if (sectorLocation.sectorStream != nullptr) {
           auto sectorStream = sectorLocation.sectorStream;
@@ -559,21 +560,19 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   stream->seekg(0);
 
   // Resize the vector to hold the frame sector locations for the scan
-  auto scanSize = header.scanDimensions.first*header.scanDimensions.second;
+  auto scanSize = header.scanDimensions.first * header.scanDimensions.second;
   m_scanMap.resize(scanSize);
   // Allocate the mutexes
-  for(auto i=0; i<scanSize; i++) {
+  for (auto i = 0; i < scanSize; i++) {
     m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
   }
 
   // Reset counter
-  m_processed = {0};
+  m_processed = { 0 };
 
   // Enqueue lambda's to read headers to build up the locations of the sectors
   for (int i = 0; i < m_threads; i++) {
-    m_futures.emplace_back(m_pool->enqueue([this]() {
-      readHeaders();
-    }));
+    m_futures.emplace_back(m_pool->enqueue([this]() { readHeaders(); }));
   }
 
   // Wait for all files to be processed
@@ -589,13 +588,12 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   m_futures.clear();
 
   // Reset counter
-  m_processed = {0};
+  m_processed = { 0 };
 
   // Now enqueue lambda's to read the frames and run processing
   for (int i = 0; i < m_threads; i++) {
-    m_futures.emplace_back(m_pool->enqueue([this, &func, header]() {
-      processFrames(func, header);
-    }));
+    m_futures.emplace_back(m_pool->enqueue(
+      [this, &func, header]() { processFrames(func, header); }));
   }
 
   // Return a future that is resolved once the processing is complete
@@ -607,7 +605,6 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   return complete;
 }
-
 }
 
 #endif

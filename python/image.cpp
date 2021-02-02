@@ -461,9 +461,9 @@ PYBIND11_MODULE(_image, m)
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        (ElectronCountedDataPyArray(*)(SectorStreamMultiPassThreadedReader*, int, int,
-                                       double, double, py::array_t<float>,
-                                       Dimensions2D, bool)) &
+        (ElectronCountedDataPyArray(*)(
+          SectorStreamMultiPassThreadedReader*, int, int, double, double,
+          py::array_t<float>, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
 
@@ -523,19 +523,19 @@ PYBIND11_MODULE(_image, m)
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedDataPyArray(*)(
-          SectorStreamMultiPassThreadedReader*, Image<float>&, int, int, double, double,
-          py::array_t<float>, Dimensions2D, bool)) &
-          electronCount,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        (ElectronCountedDataPyArray(*)(
-          SectorStreamMultiPassThreadedReader*, py::array_t<float>, int, int, double,
+          SectorStreamMultiPassThreadedReader*, Image<float>&, int, int, double,
           double, py::array_t<float>, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double, double,
-                        Dimensions2D, bool>,
+        (ElectronCountedDataPyArray(*)(
+          SectorStreamMultiPassThreadedReader*, py::array_t<float>, int, int,
+          double, double, py::array_t<float>, Dimensions2D, bool)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double,
+                        double, Dimensions2D, bool>,
         py::call_guard<py::gil_scoped_release>());
 
   // Electron counting, without gain
@@ -599,28 +599,13 @@ PYBIND11_MODULE(_image, m)
           electronCount,
         py::call_guard<py::gil_scoped_release>());
 
-
   m.def("electron_count",
-        electronCountPy<SectorStreamMultiPassThreadedReader*, Image<float>&, int, int,
-                        double, double, Dimensions2D, bool>,
+        electronCountPy<SectorStreamMultiPassThreadedReader*, Image<float>&,
+                        int, int, double, double, Dimensions2D, bool>,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
-        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double, double,
-                        Dimensions2D, bool>,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        (ElectronCountedDataPyArray(*)(SectorStreamMultiPassThreadedReader*,
-                                       py::array_t<float>, int, int, double,
-                                       double, Dimensions2D, bool)) &
-          electronCount,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        electronCountPy<SectorStreamMultiPassThreadedReader*, Image<float>&, int, int,
-                        double, double, Dimensions2D, bool>,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("electron_count",
-        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double, double,
-                        Dimensions2D, bool>,
+        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double,
+                        double, Dimensions2D, bool>,
         py::call_guard<py::gil_scoped_release>());
   m.def("electron_count",
         (ElectronCountedDataPyArray(*)(SectorStreamMultiPassThreadedReader*,
@@ -628,7 +613,20 @@ PYBIND11_MODULE(_image, m)
                                        double, Dimensions2D, bool)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
-
+  m.def("electron_count",
+        electronCountPy<SectorStreamMultiPassThreadedReader*, Image<float>&,
+                        int, int, double, double, Dimensions2D, bool>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        electronCountPy<SectorStreamMultiPassThreadedReader*, int, int, double,
+                        double, Dimensions2D, bool>,
+        py::call_guard<py::gil_scoped_release>());
+  m.def("electron_count",
+        (ElectronCountedDataPyArray(*)(SectorStreamMultiPassThreadedReader*,
+                                       py::array_t<float>, int, int, double,
+                                       double, Dimensions2D, bool)) &
+          electronCount,
+        py::call_guard<py::gil_scoped_release>());
 
   // Electron counting without dark reference or gain
   m.def("electron_count",

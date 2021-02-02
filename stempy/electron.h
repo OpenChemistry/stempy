@@ -56,50 +56,49 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   Dimensions2D scanDimensions = { 0, 0 });
 
 template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(Reader* reader,
+ElectronCountedData electronCount(Reader* reader, Image<float>& darkreference,
                                   int thresholdNumberOfBlocks = 1,
                                   int numberOfSamples = 20,
                                   double backgroundThresholdNSigma = 4,
                                   double xRayThresholdNSigma = 10,
                                   Dimensions2D scanDimensions = { 0, 0 },
                                   bool verbose = false);
+
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, const float darkreference[],
+                                  int thresholdNumberOfBlocks = 1,
+                                  int numberOfSamples = 20,
+                                  double backgroundThresholdNSigma = 4,
+                                  double xRayThresholdNSigma = 10,
+                                  Dimensions2D scanDimensions = { 0, 0 },
+                                  bool verbose = false);
+
+template <typename Reader>
+ElectronCountedData electronCount(
+  Reader* reader, Image<float>& darkreference, int thresholdNumberOfBlocks = 1,
+  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
+  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+
+template <typename Reader>
+ElectronCountedData electronCount(
+  Reader* reader, const float darkreference[], int thresholdNumberOfBlocks = 1,
+  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
+  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+
+template <typename Reader>
+ElectronCountedData electronCount(
+  Reader* reader, int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
+  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
+  bool verbose = false);
+
+template <typename Reader>
+ElectronCountedData electronCount(
+  Reader* reader, int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
+  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
+  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
 }
 
 #endif /* STEMPY_ELECTRON_H_ */
