@@ -475,11 +475,10 @@ using ScanMap = std::vector<std::map<uint32_t, std::array<SectorLocation, 4>>>;
 class SectorStreamMultiPassThreadedReader : public SectorStreamThreadedReader
 {
 public:
-  SectorStreamMultiPassThreadedReader(const std::string& path);
-  SectorStreamMultiPassThreadedReader(const std::vector<std::string>& files);
-  SectorStreamMultiPassThreadedReader(const std::string& path, int threads = 0);
+  SectorStreamMultiPassThreadedReader(const std::string& path,
+                                      int threads = -1);
   SectorStreamMultiPassThreadedReader(const std::vector<std::string>& files,
-                                      int threads = 0);
+                                      int threads = -1);
 
   template <typename Functor>
   std::future<void> readAll(Functor& f);

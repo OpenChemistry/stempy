@@ -806,16 +806,6 @@ bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
 }
 
 SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
-  const std::string& path)
-  : SectorStreamThreadedReader(path, 5, -1)
-{}
-
-SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
-  const std::vector<std::string>& files)
-  : SectorStreamThreadedReader(files, 5, -1)
-{}
-
-SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
   const std::string& path, int threads)
   : SectorStreamThreadedReader(path, 5, threads)
 {}
