@@ -1,8 +1,10 @@
 #ifndef stempyreader_h
 #define stempyreader_h
 
+#include "config.h"
 #include <ThreadPool.h>
 #include <atomic>
+
 #include <condition_variable>
 #include <fstream>
 #include <future>
@@ -45,6 +47,11 @@ struct Header {
   uint32_t frameNumber = 0, scanNumber = 0;
   std::vector<uint32_t> imageNumbers;
 
+#ifdef USE_MPI
+  template <class Archive>
+  void serialize(Archive& archive);
+#endif
+
   Header() = default;
   Header(const Header& header) = default;
   Header(Header&& header) noexcept = default;
@@ -56,6 +63,15 @@ struct Header {
 struct Block {
   Header header;
   std::shared_ptr<uint16_t> data;
+
+#ifdef USE_MPI
+  // Serialization methods for cereal
+  template <class Archive>
+  void save(Archive& ar) const;
+
+  template <class Archive>
+  void load(Archive& ar);
+#endif
 
   Block() = default;
   Block(const Block&) = default;
@@ -145,7 +161,7 @@ private:
   std::vector<std::string> m_files;
   size_t m_curFileIndex = 0;
   int m_version;
-  int m_sector = -1;
+  short m_sector = -1;
 
   bool openNextFile();
 
@@ -161,7 +177,7 @@ private:
   template<typename T>
   std::istream & read(T* value, std::streamsize size);
   std::istream& skip(std::streamoff pos);
-  int sector() { return m_sector; };
+  short sector() { return m_sector; };
 };
 
 inline StreamReader::StreamReader(const std::string& path, uint8_t version)
@@ -452,14 +468,16 @@ std::future<void> SectorStreamThreadedReader::readAll(Functor& func)
 // struct to hold the location of a sector: sector, stream and offset
 struct SectorLocation
 {
-  uint64_t sector = -1;
+  short sector = -1;
+#ifdef USE_MPI
+  int streamIndex = -1;
+  // Serialization method for cereal
+  template <class Archive>
+  void serialize(Archive& archive);
+#endif
   SectorStreamReader::SectorStream* sectorStream = nullptr;
   std::streampos offset;
 };
-
-// struct FrameMap {
-//   SectorLocation locations[4];
-// };
 
 // This type holds the locations of the sectors for each frame at a give scan
 // position. Note: That there can be multiple frames at a give position, we key
@@ -485,8 +503,13 @@ public:
 
 private:
   ScanMap m_scanMap;
+  uint32_t m_scanMapOffset = 0;
+  uint32_t m_scanMapSize = 0;
+  uint32_t m_streamsOffset = 0;
+  uint32_t m_streamsSize = 0;
   // atomic to keep track of the header or frame being processed
   std::atomic<uint32_t> m_processed = { 0 };
+  std::atomic<uint32_t> m_missingSectors = { 0 };
 
   // Mutex to lock the map of frames at each scan position
   std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
@@ -494,6 +517,19 @@ private:
   void readHeaders();
   template <typename Functor>
   void processFrames(Functor& func, Header header);
+
+#ifdef USE_MPI
+  int m_rank;
+  int m_worldSize;
+
+  void initMPI();
+  void serializeScanMap(std::ostream* stream);
+  void partitionScanMap();
+  void gatherScanMap();
+  // void missingStreams();
+  // void missingPartStreams(SparseScanMap &sparse);
+
+#endif
 };
 
 // Read the FrameMaps for scan and reconstruct the frame before performing the
@@ -502,8 +538,14 @@ template <typename Functor>
 void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
                                                         Header header)
 {
-  while (m_processed < m_scanMap.size()) {
-    uint32_t imageNumber = m_processed++;
+  while (m_processed < m_scanMapOffset + m_scanMapSize) {
+    auto imageNumber = m_processed++;
+
+    // Need to check we haven't over run
+    if (imageNumber >= m_scanMapOffset + m_scanMapSize) {
+      break;
+    }
+
     auto& frameMaps = m_scanMap[imageNumber];
 
     // Iterate over frame maps for this scan position
@@ -553,23 +595,23 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   // Read one header to get scan size
   auto stream = m_streams[0].stream.get();
-  auto sector = m_streams[0].sector;
   auto header = readHeader(*stream);
   // Reset the stream
   stream->seekg(0);
 
   // Resize the vector to hold the frame sector locations for the scan
-  auto scanSize = header.scanDimensions.first * header.scanDimensions.second;
+  m_scanMapSize = header.scanDimensions.first * header.scanDimensions.second;
   m_scanMap.clear();
-  m_scanMap.resize(scanSize);
+  m_scanMap.resize(m_scanMapSize);
+
   // Allocate the mutexes
   m_scanPositionMutexes.clear();
-  for (auto i = 0; i < scanSize; i++) {
+  for (unsigned i = 0; i < m_scanMapSize; i++) {
     m_scanPositionMutexes.push_back(std::make_unique<std::mutex>());
   }
 
   // Reset counter
-  m_processed = { 0 };
+  m_processed = { m_streamsOffset };
 
   // Enqueue lambda's to read headers to build up the locations of the sectors
   for (int i = 0; i < m_threads; i++) {
@@ -581,6 +623,19 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
     future.get();
   }
 
+  // missingStreams();
+
+#ifdef USE_MPI
+  gatherScanMap();
+
+  // std::cout << "after gather\n";
+
+  // missingStreams();
+
+  // Partion scan map
+  partitionScanMap();
+#endif
+
   // Reset the streams
   for (auto& sectorStream : this->m_streams) {
     sectorStream.stream->seekg(0);
@@ -589,7 +644,7 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   m_futures.clear();
 
   // Reset counter
-  m_processed = { 0 };
+  m_processed = { m_scanMapOffset };
 
   // Now enqueue lambda's to read the frames and run processing
   for (int i = 0; i < m_threads; i++) {

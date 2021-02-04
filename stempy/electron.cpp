@@ -515,7 +515,7 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
                                   Dimensions2D scanDimensions, bool verbose)
 {
   // This is where we will save the electron events as the calculated
-  std::vector<std::vector<uint32_t>> events;
+  Events events;
   // We need an array of mutexes to protect updates for each event vector for a
   // given position, as we may have muliple frames per location.
   std::unique_ptr<std::mutex[]> positionMutexes;
@@ -534,6 +534,15 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
 
   // The sample blocks that will be used to calculate the thresholds
   std::vector<Block> sampleBlocks;
+
+#ifdef USE_MPI
+  int rank, worldSize;
+  initMpiWorldRank(worldSize, rank);
+
+  // Calculate sample to take from each node
+  thresholdNumberOfBlocks =
+    getSampleBlocksPerRank(worldSize, rank, thresholdNumberOfBlocks);
+#endif
 
   auto counter = [&events, &electronCounting, &backgroundThreshold,
                   &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
@@ -588,38 +597,59 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
 
   auto done = reader->readAll(counter);
 
-  // Wait for enought blocks to come in to calculate the threshold.
+  // Wait for enough blocks to come in to calculate the threshold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
     return sampleBlocks.size() ==
            static_cast<unsigned>(thresholdNumberOfBlocks);
   });
 
-  // Now calculate the threshold
-  auto threshold = calculateThresholds<Block, FrameType, dark>(
-    sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
-    xRayThresholdNSigma, gain);
+  auto calculateThreshold = true;
 
-  if (verbose) {
-    std::cout << "****Statistics for calculating electron thresholds****"
-              << std::endl;
-    std::cout << "number of samples:" << threshold.numberOfSamples << std::endl;
-    std::cout << "min sample:" << threshold.minSample << std::endl;
-    std::cout << "max sample:" << threshold.maxSample << std::endl;
-    std::cout << "mean:" << threshold.mean << std::endl;
-    std::cout << "variance:" << threshold.variance << std::endl;
-    std::cout << "std dev:" << threshold.stdDev << std::endl;
-    std::cout << "number of bins:" << threshold.numberOfBins << std::endl;
-    std::cout << "x-ray threshold n sigma:" << threshold.xRayThresholdNSigma
-              << std::endl;
-    std::cout << "background threshold n sigma:"
-              << threshold.backgroundThresholdNSigma << std::endl;
-    std::cout << "optimized mean:" << threshold.optimizedMean << std::endl;
-    std::cout << "optimized std dev:" << threshold.optimizedStdDev << std::endl;
-    std::cout << "background threshold:" << threshold.backgroundThreshold
-              << std::endl;
-    std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+#ifdef USE_MPI
+  gatherBlocks(worldSize, rank, sampleBlocks);
+  // Only calculate threshold on rank 0
+  calculateThreshold = rank == 0;
+#endif
+
+  CalculateThresholdsResults<FrameType> threshold;
+
+  if (calculateThreshold) {
+    // Now calculate the threshold
+    threshold = calculateThresholds<Block, FrameType, dark>(
+      sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
+      xRayThresholdNSigma, gain);
+
+    if (verbose) {
+      std::cout << "****Statistics for calculating electron thresholds****"
+                << std::endl;
+      std::cout << "number of samples:" << threshold.numberOfSamples
+                << std::endl;
+      std::cout << "min sample:" << threshold.minSample << std::endl;
+      std::cout << "max sample:" << threshold.maxSample << std::endl;
+      std::cout << "mean:" << threshold.mean << std::endl;
+      std::cout << "variance:" << threshold.variance << std::endl;
+      std::cout << "std dev:" << threshold.stdDev << std::endl;
+      std::cout << "number of bins:" << threshold.numberOfBins << std::endl;
+      std::cout << "x-ray threshold n sigma:" << threshold.xRayThresholdNSigma
+                << std::endl;
+      std::cout << "background threshold n sigma:"
+                << threshold.backgroundThresholdNSigma << std::endl;
+      std::cout << "optimized mean:" << threshold.optimizedMean << std::endl;
+      std::cout << "optimized std dev:" << threshold.optimizedStdDev
+                << std::endl;
+      std::cout << "background threshold:" << threshold.backgroundThreshold
+                << std::endl;
+      std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+    }
   }
+
+  backgroundThreshold = threshold.backgroundThreshold;
+  xRayThreshold = threshold.xRayThreshold;
+
+#ifdef USE_MPI
+  broadcastThresholds(backgroundThreshold, xRayThreshold);
+#endif
 
   // Now setup  electron count output
   auto frameSize = sampleBlocks[0].header.frameDimensions;
@@ -636,30 +666,33 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
 
   // Now tell our workers to proceed
   electronCounting = true;
-  backgroundThreshold = threshold.backgroundThreshold;
-  xRayThreshold = threshold.xRayThreshold;
   lock.unlock();
   sampleCondition.notify_all();
 
   // Count the sample blocks
-  for (auto& b : sampleBlocks) {
+  for (auto i = 0; i < thresholdNumberOfBlocks; i++) {
+    auto& b = sampleBlocks[i];
     auto data = b.data.get();
     auto frameDimensions = b.header.frameDimensions;
-    for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+    for (unsigned j = 0; j < b.header.imagesInBlock; j++) {
       auto frameStart =
-        data + i * frameDimensions.first * frameDimensions.second;
+        data + j * frameDimensions.first * frameDimensions.second;
       std::vector<FrameType> frame(frameStart,
                                    frameStart + frameDimensions.first *
                                                   frameDimensions.second);
       auto frameEvents = electronCount<FrameType, dark>(
         frame, frameDimensions, darkReference, backgroundThreshold,
         xRayThreshold, gain);
-      events[b.header.imageNumbers[i]] = frameEvents;
+      events[b.header.imageNumbers[j]] = frameEvents;
     }
   }
 
   // Make sure all threads are finished before returning the result
   done.wait();
+
+#ifdef USE_MPI
+  gatherEvents(worldSize, rank, events);
+#endif
 
   ElectronCountedData ret;
   ret.data = events;

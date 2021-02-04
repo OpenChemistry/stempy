@@ -2,5 +2,6 @@
 #define CONFIG_H_
 
 #cmakedefine VTKm
+#cmakedefine USE_MPI
 
 #endif /* CONFIG_H_ */

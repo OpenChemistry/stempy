@@ -44,6 +44,25 @@ include_directories(${HDF5_INCLUDE_DIRS})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
+set(_libs Threads::Threads)
+
+option(stempy_ENABLE_MPI "Build with MPI" OFF)
+if (stempy_ENABLE_MPI)
+  find_package(MPI REQUIRED)
+  list(APPEND _libs MPI::MPI_C)
+
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+
+  include_directories(
+    SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cereal/include
+  )
+
+  include_directories(
+    SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Empirical/include
+  )
+endif()
+set(USE_MPI ${MPI_FOUND})
+
 set(_vtkm_src
   stempy/image.cpp
   stempy/electron.cpp
@@ -55,7 +74,15 @@ set(_src
   stempy/electronthresholds.cpp
   h5cpp/h5readwrite.cpp)
 
-set(_libs Threads::Threads)
+if (stempy_ENABLE_MPI)
+  list(APPEND _vtkm_src
+    stempy/electron_mpi.cpp
+  )
+  list(APPEND _src
+    stempy/reader_mpi.cpp
+  )
+endif()
+
 list(APPEND _libs "${HDF5_LIBRARIES}")
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
