@@ -116,4 +116,10 @@ PYBIND11_MODULE(_io, m)
          py::arg("version") = 5, py::arg("threads") = 0)
     .def(py::init<const std::vector<std::string>&, uint8_t, int>(),
          py::arg("files"), py::arg("version") = 5, py::arg("threads") = 0);
+  py::class_<SectorStreamMultiPassThreadedReader>(m,
+                                                  "_threaded_multi_pass_reader")
+    .def(py::init<const std::string&, int>(), py::arg("path"),
+         py::arg("threads") = 0)
+    .def(py::init<const std::vector<std::string>&, int>(), py::arg("files"),
+         py::arg("threads") = 0);
 }
