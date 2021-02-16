@@ -342,10 +342,9 @@ class SparseArray:
                 self.frame_shape)
             valid_flat_frame_indices = frame_indices[frame_slices].ravel()
             new_frame_indices_map = np.full(self.frame_shape_flat, -1)
-            current = 0
-            for i in valid_flat_frame_indices:
-                new_frame_indices_map[i] = current
-                current += 1
+
+            new_indices = np.arange(len(valid_flat_frame_indices))
+            new_frame_indices_map[valid_flat_frame_indices] = new_indices
 
             # Allocate the new data
             new_data = np.empty(new_flat_scan_shape, dtype=object)
