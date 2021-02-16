@@ -174,6 +174,33 @@ class SparseArray:
             summed[:] /= mean_length
             return summed
 
+    def bin_frames(self, bin_factor, in_place=False):
+        if not all(x % bin_factor == 0 for x in self.frame_shape):
+            raise ValueError(f'frame_shape must be equally divisible by '
+                             f'bin_factor {bin_factor}')
+
+        rows = self.data // self.frame_shape[0] // bin_factor
+        cols = self.data % self.frame_shape[1] // bin_factor
+
+        rows *= (self.frame_shape[0] // bin_factor)
+        rows += cols
+
+        new_frame_shape = tuple(x // bin_factor for x in self.frame_shape)
+        if in_place:
+            self.data = rows
+            self.frame_shape = new_frame_shape
+            return self
+
+        kwargs = {
+            'data': rows,
+            'scan_shape': self.scan_shape,
+            'frame_shape': new_frame_shape,
+            'dtype': self.dtype,
+            'sparse_slicing': self.sparse_slicing,
+            'allow_full_expand': self.allow_full_expand,
+        }
+        return SparseArray(**kwargs)
+
     def sparse_frame(self, indices):
         if not isinstance(indices, (list, tuple)):
             indices = (indices,)
