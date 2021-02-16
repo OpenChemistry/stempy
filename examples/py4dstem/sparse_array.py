@@ -1,5 +1,5 @@
 import copy
-from functools import reduce, wraps
+from functools import wraps
 import inspect
 
 import numpy as np
@@ -119,24 +119,36 @@ class SparseArray:
 
     def is_scan_axes(self, axis):
         shape = self.shape
-        if len(shape) == 3 and axis == (0,):
+        if len(shape) == 3 and tuple(axis) == (0,):
             return True
 
         return len(shape) == 4 and tuple(sorted(axis)) == (0, 1)
 
     @arithmethic_decorators
-    def max(self, axis=None, **kwargs):
+    def max(self, axis=None, dtype=None, **kwargs):
+        if dtype is None:
+            dtype = self.dtype
+
         if self.is_scan_axes(axis):
-            ret = np.zeros(self.frame_shape_flat, dtype=self.dtype)
+            ret = np.zeros(self.frame_shape_flat, dtype=dtype)
             for sparse_frame in self.data:
-                ret[sparse_frame] = 1
+                unique, counts = np.unique(sparse_frame, return_counts=True)
+                ret[unique] = np.maximum(ret[unique], counts)
             return ret.reshape(self.frame_shape)
 
     @arithmethic_decorators
-    def min(self, axis=None, **kwargs):
+    def min(self, axis=None, dtype=None, **kwargs):
+        if dtype is None:
+            dtype = self.dtype
+
         if self.is_scan_axes(axis):
-            ret = np.zeros(self.frame_shape_flat, dtype=self.dtype)
-            ret[reduce(np.intersect1d, self.data)] = 1
+            ret = np.full(self.frame_shape_flat, np.iinfo(dtype).max, dtype)
+            expanded = np.empty(self.frame_shape_flat, dtype)
+            for sparse_frame in self.data:
+                expanded[:] = 0
+                unique, counts = np.unique(sparse_frame, return_counts=True)
+                expanded[unique] = counts
+                ret[:] = np.minimum(ret, expanded)
             return ret.reshape(self.frame_shape)
 
     @arithmethic_decorators
@@ -147,7 +159,8 @@ class SparseArray:
         if self.is_scan_axes(axis):
             ret = np.zeros(self.frame_shape_flat, dtype=dtype)
             for sparse_frame in self.data:
-                ret[sparse_frame] += 1
+                unique, counts = np.unique(sparse_frame, return_counts=True)
+                ret[unique] += counts.astype(dtype)
             return ret.reshape(self.frame_shape)
 
     @arithmethic_decorators
@@ -166,7 +179,8 @@ class SparseArray:
             indices = (indices,)
 
         if len(indices) != len(self.scan_shape):
-            msg = '{indices} shape does not match scan shape {self.scan_shape}'
+            msg = (f'{indices} shape does not match scan shape'
+                   f'{self.scan_shape}')
             raise ValueError(msg)
 
         if len(indices) == 1:
@@ -345,7 +359,8 @@ class SparseArray:
         elif len(indices) == len(self.scan_shape):
             # Expand the frame this represents
             dp = np.zeros(self.frame_shape_flat, dtype=self.dtype)
-            dp[sparse_frame] = 1
+            unique, counts = np.unique(sparse_frame, return_counts=True)
+            dp[unique] += counts.astype(self.dtype)
             return dp.reshape(self.frame_shape)
         elif len(indices) == len(self.scan_shape) + 1:
             # The last index is a frame index
@@ -356,14 +371,16 @@ class SparseArray:
             in_range = np.logical_and(sparse_frame >= start,
                                       sparse_frame <= end)
             clipped_adjusted_sparse_frame = sparse_frame[in_range] - start
-            dp[clipped_adjusted_sparse_frame] = 1
+            unique, counts = np.unique(clipped_adjusted_sparse_frame,
+                                       return_counts=True)
+            dp[unique] += counts.astype(self.dtype)
             return dp
         elif len(indices) == len(self.scan_shape) + 2:
             # The last two indices are frame indices
             frame_indices = indices[-2:]
             flat_frame_index = (frame_indices[0] * self.frame_shape[1] +
                                 frame_indices[1])
-            return 1 if flat_frame_index in sparse_frame else 0
+            return np.count_nonzero(sparse_frame == flat_frame_index)
 
         max_length = len(self.shape) + 1
         raise ValueError(f'0 < len(indices) < {max_length} is required')
