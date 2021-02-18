@@ -1,5 +1,16 @@
 import os
-from setuptools import setup
+
+from skbuild import setup
+
+
+def extra_cmake_args():
+    # FIXME: this doesn't seem to work if we supply more than one argument.
+    # I really am not sure why.
+    env = os.getenv('EXTRA_CMAKE_ARGS')
+    return env.split(';') if env else []
+
+
+cmake_args = [] + extra_cmake_args()
 
 setup(
     name='stempy',
@@ -22,5 +33,6 @@ setup(
         'numpy',
         'h5py',
         'deprecation'
-    ]
+    ],
+    cmake_args=cmake_args,
 )

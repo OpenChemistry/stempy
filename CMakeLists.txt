@@ -91,6 +91,8 @@ set_target_properties(stem
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
 
+install(TARGETS stem LIBRARY DESTINATION "${INSTALL_LIBRARY_DIR}/stempy/")
+
 set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
