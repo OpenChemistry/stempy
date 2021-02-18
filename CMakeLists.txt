@@ -29,13 +29,12 @@ find_package(Eigen3 REQUIRED)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
 set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
 include_directories(SYSTEM
-  ${PYTHON_INCLUDE_PATH}
+  ${Python3_INCLUDE_DIRS}
   ${PYBIND11_INCLUDE_DIR}
 )
 
@@ -95,5 +94,9 @@ set_target_properties(stem
 set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
+
+if(WIN32)
+  target_link_libraries(stem PRIVATE ${Python3_LIBRARIES})
+endif()
 
 add_subdirectory(python)
