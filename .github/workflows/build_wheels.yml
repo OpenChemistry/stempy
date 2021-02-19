@@ -13,12 +13,12 @@ env:
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
 
   # Specify eigen location for windows
-  CIBW_ENVIRONMENT_WINDOWS: "EXTRA_CMAKE_ARGS=-DEIGEN3_INCLUDE_DIR:PATH=/c/eigen"
+  # CIBW_ENVIRONMENT_WINDOWS: "EXTRA_CMAKE_ARGS=-DEIGEN3_INCLUDE_DIR:PATH=/c/eigen"
 
-  # CIBW_TEST_REQUIRES: pytest
+  CIBW_TEST_REQUIRES: pytest
 
   # Run a very simple test to make sure the wheels are working
-  # CIBW_TEST_COMMAND: pytest {project}/scripts/github-actions/simple_test.py
+  CIBW_TEST_COMMAND: pytest {project}/scripts/github-actions/simple_test.py
 
 
 # Use bash by default for the run command
