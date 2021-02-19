@@ -3,8 +3,8 @@ name: Build Wheels
 on: [push, pull_request]
 
 env:
-  # Don't build python 2.7, pypy, or 32-bit wheels
-  CIBW_SKIP: "cp27-* pp* *-manylinux_i686 *-win32"
+  # Only support 64-bit CPython >= 3.6
+  CIBW_SKIP: "cp27-* cp35-* pp* *-manylinux_i686 *-win32"
 
   # This has some of the software we need pre-installed on it
   CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
