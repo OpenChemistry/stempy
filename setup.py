@@ -27,8 +27,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='',
-    packages=['stempy', 'stempy.io', 'stempy.image', 'stempy.pipeline'],
-    package_dir={'':'python'},
+    packages=['stempy'],
     install_requires=[
         'numpy',
         'h5py',
