@@ -38,8 +38,7 @@ include_directories(SYSTEM
   ${PYBIND11_INCLUDE_DIR}
 )
 
-find_package(HDF5 REQUIRED)
-include_directories(${HDF5_INCLUDE_DIRS})
+find_package(HDF5 REQUIRED COMPONENTS C)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
@@ -55,7 +54,7 @@ set(_src
   h5cpp/h5readwrite.cpp)
 
 set(_libs Threads::Threads)
-list(APPEND _libs "${HDF5_LIBRARIES}")
+list(APPEND _libs hdf5::hdf5)
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
@@ -91,7 +90,24 @@ set_target_properties(stem
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
 
-install(TARGETS stem LIBRARY DESTINATION "${INSTALL_LIBRARY_DIR}/stempy/")
+# Set the RPATH so the dependent libraries can be found in the wheel.
+if(APPLE)
+  set(_rpath_value "@loader_path")
+elseif(UNIX)
+  set(_rpath_value "$ORIGIN")
+endif()
+
+if (NOT WIN32)
+  set_target_properties(stem PROPERTIES
+                        INSTALL_RPATH ${_rpath_value})
+endif()
+
+set(_python_module_install_dir "stempy")
+# SKBUILD is set for binary wheel
+if (NOT SKBUILD)
+  set(_python_module_install_dir "${INSTALL_LIBRARY_DIR}/stempy")
+endif()
+install(TARGETS stem LIBRARY DESTINATION "${_python_module_install_dir}")
 
 set(VTKm ${VTKm_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
