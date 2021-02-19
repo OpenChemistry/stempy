@@ -5,7 +5,7 @@ set -ev
 # to provide them to auditwheel again? It would be ideal if we could
 # avoid this script entirely.
 
-# We have to include the avogadro library in Linux's LD_LIBRARY_PATH,
+# We have to include the stempy library in Linux's LD_LIBRARY_PATH,
 # or auditwheel won't work. These libraries are already in the wheel.
 WHEEL_DIR=/tmp/cibuildwheel/built_wheel
 WHEEL_PATH=$(find $WHEEL_DIR -name "*.whl" | xargs readlink -f)
