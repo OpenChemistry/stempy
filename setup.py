@@ -15,7 +15,6 @@ cmake_args = [] + extra_cmake_args()
 setup(
     name='stempy',
     use_scm_version=True,
-    setup_requires=['setuptools_scm'],
     description='A package for the ingestion of 4D STEM data.',
     long_description='A package for the ingestion of 4D STEM data.',
     url='https://github.com/OpenChemistry/stempy',
