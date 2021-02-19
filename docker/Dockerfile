@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+ARG MPI=OFF
+
 # Install deps
 RUN apt-get update && \
   apt-get install -y \
@@ -74,7 +76,7 @@ RUN mkdir -p /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
-  -Dstempy_ENABLE_MPI:BOOL=ON \
+  -Dstempy_ENABLE_MPI:BOOL=${MPI} \
   /source/stempy . && \
   make -j4
 
