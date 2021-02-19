@@ -7,7 +7,7 @@ env:
   CIBW_SKIP: "cp27-* pp* *-manylinux_i686 *-win32"
 
   # This has some of the software we need pre-installed on it
-  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_manylinux2010_x86_64
+  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
 
   # Need to do some setup before repairing the wheel on linux...
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
