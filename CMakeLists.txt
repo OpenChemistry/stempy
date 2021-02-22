@@ -28,8 +28,8 @@ include_directories(
 find_package(Eigen3 REQUIRED)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
 set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
