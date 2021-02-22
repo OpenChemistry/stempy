@@ -35,7 +35,6 @@ set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
 include_directories(SYSTEM
   ${Python3_INCLUDE_DIRS}
-  ${PYBIND11_INCLUDE_DIR}
 )
 
 find_package(HDF5 REQUIRED COMPONENTS C)
@@ -55,6 +54,8 @@ set(_src
 
 set(_libs Threads::Threads)
 list(APPEND _libs hdf5::hdf5)
+list(APPEND _libs pybind11::headers)
+list(APPEND _libs pybind11::python_link_helper)
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
