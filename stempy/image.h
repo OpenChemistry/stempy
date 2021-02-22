@@ -19,7 +19,7 @@ namespace stempy {
   struct Image
   {
     Dimensions2D dimensions = { 0, 0 };
-    std::shared_ptr<T[]> data;
+    std::shared_ptr<T> data;
 
     Image() = default;
     Image(Dimensions2D dimensions);
@@ -36,7 +36,7 @@ namespace stempy {
   struct RadialSum {
     Dimensions2D dimensions = { 0, 0 };
     uint32_t radii = 0;
-    std::shared_ptr<T[]> data;
+    std::shared_ptr<T> data;
 
     RadialSum() = default;
     RadialSum(Dimensions2D dimensions, uint32_t radii);
@@ -67,7 +67,7 @@ namespace stempy {
         auto pos = sparseData[i].data()[j];
         values += mask[pos];
       }
-      image.data[i + frameOffset] = values;
+      image.data.get()[i + frameOffset] = values;
     }
   }
 

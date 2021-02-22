@@ -2,6 +2,7 @@
 #define stempyreader_h
 
 #include <ThreadPool.h>
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <fstream>
@@ -569,7 +570,7 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   }
 
   // Reset counter
-  m_processed = { 0 };
+  m_processed = 0;
 
   // Enqueue lambda's to read headers to build up the locations of the sectors
   for (int i = 0; i < m_threads; i++) {
@@ -589,7 +590,7 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   m_futures.clear();
 
   // Reset counter
-  m_processed = { 0 };
+  m_processed = 0;
 
   // Now enqueue lambda's to read the frames and run processing
   for (int i = 0; i < m_threads; i++) {
