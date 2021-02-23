@@ -27,6 +27,14 @@ namespace stempy {
     Image& operator=(Image&& i) noexcept = default;
   };
 
+  template <typename T>
+  Image<T>::Image(Dimensions2D dims)
+    : dimensions(dims),
+      data(new T[dims.first * dims.second], std::default_delete<T[]>())
+  {
+    std::fill(this->data.get(), this->data.get() + dims.first * dims.second, 0);
+  }
+
   struct STEMValues {
     uint64_t data = 0;
     uint32_t imageNumber = -1;

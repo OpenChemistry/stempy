@@ -36,14 +36,6 @@ using std::vector;
 
 namespace stempy {
 
-template <typename T>
-Image<T>::Image(Dimensions2D dims)
-  : dimensions(dims),
-    data(new T[dims.first * dims.second], std::default_delete<T[]>())
-{
-  std::fill(this->data.get(), this->data.get() + dims.first * dims.second, 0);
-}
-
 STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
                                uint32_t numberOfPixels, uint16_t mask[],
                                uint32_t imageNumber)
