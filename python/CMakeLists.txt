@@ -22,14 +22,18 @@ set_target_properties(_io _image
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
 
-if (NOT WIN32)
+if(NOT WIN32)
   set_target_properties(_io _image PROPERTIES
                         INSTALL_RPATH ${_rpath_value})
 endif()
 
-install(FILES stempy/io/__init__.py  COMPONENT python DESTINATION "${_python_module_install_dir}/io")
-install(FILES stempy/image/__init__.py  COMPONENT python DESTINATION "${_python_module_install_dir}/image")
+install(FILES stempy/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}")
+install(FILES stempy/io/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
+install(FILES stempy/image/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/image")
+install(FILES stempy/pipeline/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/pipeline")
 
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy/")
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/io" "${CMAKE_BINARY_DIR}/lib/stempy/io")
-execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/image" "${CMAKE_BINARY_DIR}/lib/stempy/image")
+if(NOT SKBUILD)
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy/")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/io" "${CMAKE_BINARY_DIR}/lib/stempy/io")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/image" "${CMAKE_BINARY_DIR}/lib/stempy/image")
+endif()
