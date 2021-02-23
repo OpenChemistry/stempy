@@ -19,6 +19,12 @@ env:
   # Specify eigen location for windows
   # CIBW_ENVIRONMENT_WINDOWS: "EXTRA_CMAKE_ARGS=-DEIGEN3_INCLUDE_DIR:PATH=/c/eigen"
 
+  # If cibuildwheel decides to change the path to the python executable, then this
+  # method might be fragile. If that happens, let's try to find a better way,
+  # such as one that adds "-DPython3_EXECUTABLE=$(which python)" as a cmake argument,
+  # where the $(which python) gets evaluated each time for each python version.
+  CIBW_ENVIRONMENT_MACOS: EXTRA_CMAKE_ARGS=-DPython3_EXECUTABLE=/tmp/cibw_bin/python
+
   CIBW_TEST_REQUIRES: pytest
 
   # Run a very simple test to make sure the wheels are working
