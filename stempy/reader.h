@@ -1,6 +1,8 @@
 #ifndef stempyreader_h
 #define stempyreader_h
 
+#include "config.h"
+
 #include <ThreadPool.h>
 #include <array>
 #include <atomic>
@@ -15,9 +17,11 @@
 #include <utility>
 #include <vector>
 
+#ifdef ENABLE_HDF5
 namespace h5 {
 class H5ReadWrite;
 }
+#endif // ENABLE_HDF5
 
 namespace stempy {
 
@@ -172,12 +176,6 @@ inline StreamReader::StreamReader(const std::string& path, uint8_t version)
 class SectorStreamReader
 {
 public:
-  enum class H5Format : int8_t
-  {
-    Frame,
-    DataCube
-  };
-
   SectorStreamReader(const std::string& path, uint8_t version = 5);
   SectorStreamReader(const std::vector<std::string>& files,
                      uint8_t version = 5);
@@ -195,7 +193,17 @@ public:
   typedef BlockIterator<SectorStreamReader> iterator;
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
+
+#ifdef ENABLE_HDF5
+  enum class H5Format : int8_t
+  {
+    Frame,
+    DataCube
+  };
+
   void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
+#endif // ENABLE_HDF5
+
   uint8_t version() const { return m_version; };
 
   struct SectorStream
@@ -244,8 +252,12 @@ private:
   std::istream& read(std::ifstream& stream, T* value, std::streamsize size);
 
   void openFiles();
+
+#ifdef ENABLE_HDF5
   void toHdf5FrameFormat(h5::H5ReadWrite& writer);
   void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
+#endif // ENABLE_HDF5
+
   void readSectorDataVersion4(std::ifstream& stream, Block& block, int sector);
   void readSectorDataVersion5(std::ifstream& stream, Block& block, int sector);
 };

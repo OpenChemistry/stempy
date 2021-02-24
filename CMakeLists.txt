@@ -33,8 +33,6 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
 set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
 set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
-find_package(HDF5 REQUIRED COMPONENTS C)
-
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 set(_vtkm_src
@@ -45,15 +43,20 @@ set(_src
   stempy/reader.cpp
   python/pyreader.cpp
   stempy/mask.cpp
-  stempy/electronthresholds.cpp
-  h5cpp/h5readwrite.cpp)
+  stempy/electronthresholds.cpp)
 
 set(_libs Threads::Threads)
-list(APPEND _libs hdf5::hdf5)
 list(APPEND _libs pybind11::headers)
 # We have to link to Python3::Module since "pyreader.cpp" includes
 # pybind11 and python header files.
 list(APPEND _libs Python3::Module)
+
+option(stempy_ENABLE_HDF5 "Build with HDF5" ON)
+if (stempy_ENABLE_HDF5)
+  find_package(HDF5 REQUIRED COMPONENTS C)
+  list(APPEND _src h5cpp/h5readwrite.cpp)
+  list(APPEND _libs hdf5::hdf5)
+endif()
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
@@ -109,6 +112,7 @@ endif()
 install(TARGETS stem LIBRARY DESTINATION "${_python_module_install_dir}")
 
 set(VTKm ${VTKm_FOUND})
+set(ENABLE_HDF5 ${HDF5_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 

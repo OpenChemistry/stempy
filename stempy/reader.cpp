@@ -1,9 +1,11 @@
 #include "reader.h"
-#include "config.h"
 #include "electron.h"
-#include "h5cpp/h5readwrite.h"
 #include "image.h"
 #include "mask.h"
+
+#ifdef ENABLE_HDF5
+#include "h5cpp/h5readwrite.h"
+#endif // ENABLE_HDF5
 
 #include <fstream>
 #include <future>
@@ -615,6 +617,7 @@ float SectorStreamReader::dataCaptured()
   return static_cast<float>(numberOfSectors) / expectedNumberOfSectors;
 }
 
+#ifdef ENABLE_HDF5
 void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
@@ -720,6 +723,7 @@ void SectorStreamReader::toHdf5(const std::string& path,
     toHdf5DataCubeFormat(writer);
   }
 }
+#endif // ENABLE_HDF5
 
 bool operator==(const SectorStreamReader::SectorStream& lhs,
                 const SectorStreamReader::SectorStream& rhs)
