@@ -1,6 +1,7 @@
 #include "image.h"
 #include "python/pyreader.h"
 
+#include "atomic_primitives.h"
 #include "config.h"
 #include "electron.h"
 #include "mask.h"
@@ -389,7 +390,7 @@ void radialSumFrame(Coordinates2D center, const uint16_t data[],
       radialSum.data.get() +
       radius * radialSum.dimensions.first * radialSum.dimensions.second +
       imageNumber;
-    __sync_fetch_and_add(address, data[offset + i]);
+    sync_fetch_and_add(address, data[offset + i]);
   }
 }
 
