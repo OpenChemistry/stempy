@@ -4,8 +4,9 @@ from skbuild import setup
 
 
 def extra_cmake_args():
-    # FIXME: this doesn't seem to work if we supply more than one argument.
-    # I really am not sure why.
+    # FIXME: on windows, if you use more than one argument, it doesn't
+    # seem to resolve paths correctly, unless you do "C:\" style instead of
+    # "/c/" style.
     env = os.getenv('EXTRA_CMAKE_ARGS')
     return env.split(';') if env else []
 
