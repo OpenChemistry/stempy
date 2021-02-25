@@ -17,7 +17,9 @@ env:
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
 
   # Specify eigen location for windows, and force it to use python in the path...
-  CIBW_ENVIRONMENT_WINDOWS: EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF" USE_PYTHON_IN_PATH=1
+  CIBW_ENVIRONMENT_WINDOWS: >
+    EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF"
+    USE_PYTHON_IN_PATH=1
 
   # Get cmake to use python in the path...
   CIBW_ENVIRONMENT_MACOS: USE_PYTHON_IN_PATH=1
