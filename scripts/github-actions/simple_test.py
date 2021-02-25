@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import h5py
@@ -21,14 +22,20 @@ def test_simple():
     fake_scan_name = 'stem/images'
     fake_scan = np.zeros((4, 8, 1))
 
-    with tempfile.NamedTemporaryFile('w') as temp:
-        with h5py.File(temp.name, 'w') as wf:
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    file_name = temp.name
+    try:
+        with h5py.File(file_name, 'w') as wf:
             wf.create_dataset(dataset_name, data=data)
             wf.create_dataset(fake_scan_name, data=fake_scan)
 
-        with h5py.File(temp.name, 'r') as rf:
+        with h5py.File(file_name, 'r') as rf:
             reader = io.get_hdf5_reader(rf)
             average = image.calculate_average(reader)
+    finally:
+        del temp
+        if os.path.exists(file_name):
+            os.remove(file_name)
 
     # These should be equal...
     assert np.array_equal(average, mean)
