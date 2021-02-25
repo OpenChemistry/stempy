@@ -24,6 +24,7 @@ set_target_properties(_io _image
 
 if(NOT WIN32)
   set_target_properties(_io _image PROPERTIES
+                        BUILD_RPATH ${_rpath_value}
                         INSTALL_RPATH ${_rpath_value})
 endif()
 
