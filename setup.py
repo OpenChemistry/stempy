@@ -4,9 +4,8 @@ from skbuild import setup
 
 
 def extra_cmake_args():
-    # FIXME: on windows, if you use more than one argument, it doesn't
-    # seem to resolve paths correctly, unless you do "C:\" style instead of
-    # "/c/" style.
+    # Warning: if you use paths on Windows, you should use "\\"
+    # for the path delimiter to work on CI.
     env = os.getenv('EXTRA_CMAKE_ARGS')
     return env.split(';') if env else []
 
