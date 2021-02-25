@@ -226,17 +226,6 @@ CalculateThresholdsResults<float> calculateThresholds(
     backgroundThresholdNSigma, xRayThresholdNSigma, gain);
 }
 
-template <typename BlockType>
-CalculateThresholdsResults<float> calculateThresholds(
-  std::vector<BlockType>& blocks, const float darkreference[],
-  int numberOfSamples, double backgroundThresholdNSigma,
-  double xRayThresholdNSigma, const float gain[])
-{
-  return calculateThresholds<BlockType, float>(
-    blocks, darkreference, numberOfSamples, backgroundThresholdNSigma,
-    xRayThresholdNSigma, gain);
-}
-
 // Without gain, without darkreference
 template <typename BlockType>
 CalculateThresholdsResults<uint16_t> calculateThresholds(
