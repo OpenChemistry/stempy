@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from skbuild import setup
 
@@ -15,6 +16,14 @@ cmake_args = [] + extra_cmake_args()
 if os.name == 'nt':
     # Need to export all headers on windows...
     cmake_args.append('-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE')
+
+
+if os.getenv('USE_PYTHON_IN_PATH'):
+    python_exe = shutil.which('python')
+    if python_exe:
+        # For this program, we use find_package(Python3 ...)
+        cmake_args.append(f'-DPython3_EXECUTABLE={python_exe}')
+
 
 setup(
     name='stempy',

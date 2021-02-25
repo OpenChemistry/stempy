@@ -16,14 +16,11 @@ env:
   # Need to do some setup before repairing the wheel on linux...
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
 
-  # Specify eigen location for windows
-  CIBW_ENVIRONMENT_WINDOWS: EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF"
+  # Specify eigen location for windows, and force it to use python in the path...
+  CIBW_ENVIRONMENT_WINDOWS: EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF" USE_PYTHON_IN_PATH=1
 
-  # If cibuildwheel decides to change the path to the python executable, then this
-  # method might be fragile. If that happens, let's try to find a better way,
-  # such as one that adds "-DPython3_EXECUTABLE=$(which python)" as a cmake argument,
-  # where the $(which python) gets evaluated each time for each python version.
-  CIBW_ENVIRONMENT_MACOS: EXTRA_CMAKE_ARGS=-DPython3_EXECUTABLE=/tmp/cibw_bin/python
+  # Get cmake to use python in the path...
+  CIBW_ENVIRONMENT_MACOS: USE_PYTHON_IN_PATH=1
 
   CIBW_TEST_REQUIRES: pytest
 
