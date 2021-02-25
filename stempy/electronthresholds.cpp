@@ -246,7 +246,7 @@ template CalculateThresholdsResults<float> calculateThresholds<PyBlock>(
   std::vector<PyBlock>& blocks, Image<float>& darkReference,
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[]);
-template CalculateThresholdsResults<float> calculateThresholds<Block>(
+template CalculateThresholdsResults<float> calculateThresholds<Block, float, true>(
   std::vector<Block>& blocks, const float darkReference[], int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   const float gain[]);
@@ -254,7 +254,7 @@ template CalculateThresholdsResults<uint16_t> calculateThresholds<Block>(
   std::vector<Block>& blocks, const float darkReference[], int numberOfSamples,
   double backgroundThresholdNSigma, double xRayThresholdNSigma,
   const float gain[]);
-template CalculateThresholdsResults<float> calculateThresholds<PyBlock>(
+template CalculateThresholdsResults<float> calculateThresholds<PyBlock, float, true>(
   std::vector<PyBlock>& blocks, const float darkReference[],
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[]);

@@ -67,7 +67,7 @@ CalculateThresholdsResults<float> calculateThresholds(
   int numberOfSamples, double backgroundThresholdNSigma,
   double xRayThresholdNSigma, const float gain[])
 {
-  return calculateThresholds<BlockType, float>(
+  return calculateThresholds<BlockType, float, true>(
     blocks, darkreference, numberOfSamples, backgroundThresholdNSigma,
     xRayThresholdNSigma, gain);
 }
