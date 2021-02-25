@@ -13,6 +13,10 @@ def extra_cmake_args():
 
 cmake_args = [] + extra_cmake_args()
 
+if os.name == 'nt':
+    # Need to export all headers on windows...
+    cmake_args.append('-DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE')
+
 setup(
     name='stempy',
     use_scm_version=True,
