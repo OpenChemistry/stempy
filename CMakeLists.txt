@@ -10,6 +10,12 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS False)
 
+if(WIN32 AND SKBUILD)
+  # For building with setup.py, we want everything in stempy
+  set(CMAKE_INSTALL_BINDIR "stempy")
+  set(CMAKE_INSTALL_LIBDIR "stempy")
+endif()
+
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
