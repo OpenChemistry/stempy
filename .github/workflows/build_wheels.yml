@@ -17,7 +17,7 @@ env:
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
 
   # Specify eigen location for windows
-  CIBW_ENVIRONMENT_WINDOWS: EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\eigen;-Dstempy_ENABLE_HDF5=OFF"
+  CIBW_ENVIRONMENT_WINDOWS: EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF"
 
   # If cibuildwheel decides to change the path to the python executable, then this
   # method might be fragile. If that happens, let's try to find a better way,
