@@ -1,6 +1,7 @@
 #include "image.h"
 #include "python/pyreader.h"
 
+#include "atomic_primitives.h"
 #include "config.h"
 #include "electron.h"
 #include "mask.h"
@@ -35,14 +36,6 @@ using std::ostringstream;
 using std::vector;
 
 namespace stempy {
-
-template <typename T>
-Image<T>::Image(Dimensions2D dims)
-  : dimensions(dims),
-    data(new T[dims.first * dims.second], std::default_delete<T[]>())
-{
-  std::fill(this->data.get(), this->data.get() + dims.first * dims.second, 0);
-}
 
 STEMValues calculateSTEMValues(const uint16_t data[], uint64_t offset,
                                uint32_t numberOfPixels, uint16_t mask[],
@@ -161,7 +154,7 @@ void _runCalculateSTEMValues(const uint16_t data[],
       calculateSTEMValues(data, offset,
                           numberOfPixels, mask, imageNumbers[i]);
 #endif
-    image.data[imageNumbers[i]] = stemValues.data;
+    image.data.get()[imageNumbers[i]] = stemValues.data;
   }
 }
 } // end namespace
@@ -319,7 +312,7 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
 
   // STEMImage info
   auto scanDimensions = inImage.dimensions;
-  auto curData = inImage.data;
+  auto curData = inImage.data.get();
 
   // get a histrogram
   for (uint32_t i = 0; i < scanDimensions.first * scanDimensions.second; ++i) {
@@ -365,14 +358,14 @@ Image<double> calculateAverage(InputIt first, InputIt last)
       auto numberOfPixels = block.header.frameDimensions.first *
                             block.header.frameDimensions.second;
       for (unsigned j = 0; j < numberOfPixels; j++) {
-        image.data[j] += blockData[i*numberOfPixels+j];
+        image.data.get()[j] += blockData[i * numberOfPixels + j];
       }
     }
   }
 
   for (unsigned i = 0; i < frameDimensions.first * frameDimensions.second;
        i++) {
-    image.data[i] /= numberOfImages;
+    image.data.get()[i] /= numberOfImages;
   }
 
   return image;
@@ -397,7 +390,7 @@ void radialSumFrame(Coordinates2D center, const uint16_t data[],
       radialSum.data.get() +
       radius * radialSum.dimensions.first * radialSum.dimensions.second +
       imageNumber;
-    __sync_fetch_and_add(address, data[offset + i]);
+    sync_fetch_and_add(address, data[offset + i]);
   }
 }
 
@@ -606,8 +599,8 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
       auto numberOfPixels = block.header.frameDimensions.first *
                             block.header.frameDimensions.second;
       for (unsigned j = 0; j < numberOfPixels; j++) {
-        if (blockData[i * numberOfPixels + j] > maxDiffPattern.data[j]) {
-          maxDiffPattern.data[j] = blockData[i * numberOfPixels + j];
+        if (blockData[i * numberOfPixels + j] > maxDiffPattern.data.get()[j]) {
+          maxDiffPattern.data.get()[j] = blockData[i * numberOfPixels + j];
         }
       }
     }
@@ -616,7 +609,7 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last,
   // If we have been given a darkreference substract it
   if (darkreference.dimensions.first > 0) {
     for (unsigned i = 0; i < numDetectorPixels; i++) {
-      maxDiffPattern.data[i] -= darkreference.data[i];
+      maxDiffPattern.data.get()[i] -= darkreference.data.get()[i];
     }
   }
 

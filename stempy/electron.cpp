@@ -892,78 +892,72 @@ template ElectronCountedData electronCount(PyReader::iterator first,
 // SectorStreamThreadedReader
 template ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamThreadedReader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[], Dimensions2D scanDimensions,
+  bool verbose);
 
 template ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, Dimensions2D scanDimensions, bool verbose);
 
 // SectorStreamMultiPassThreadedReader
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader, Image<float>& darkreference,
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader, const float darkreference[],
-  int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
 
 template ElectronCountedData electronCount(
-  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[], Dimensions2D scanDimensions,
+  bool verbose);
 
 template ElectronCountedData electronCount(
-  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
+  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, Dimensions2D scanDimensions, bool verbose);
 }

@@ -49,8 +49,8 @@ RUN mkdir -p build/stempy && \
   make -j4
 
 # Install stempy
-RUN pip install source/stempy && \
-    cp build/stempy/lib/stempy/*.so /opt/conda/lib/python3.8/site-packages/stempy
+RUN pip install -r source/stempy/requirements.txt && \
+    cp -r build/stempy/lib/stempy /opt/conda/lib/python3.8/site-packages
 
 RUN rm -rf build
 

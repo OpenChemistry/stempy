@@ -255,9 +255,8 @@ ElectronCountedDataPyArray electronCount(
 template std::vector<STEMImage> createSTEMImages(
   const std::vector<py::array_t<uint32_t>>& sparseData,
   const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
-  Dimensions2D scanDimensions = { 0, 0 },
-  Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
-  int frameOffset = 0);
+  Dimensions2D scanDimensions, Dimensions2D frameDimensions,
+  Coordinates2D center, int frameOffset);
 
 } // namespace stempy
 

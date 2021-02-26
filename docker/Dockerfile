@@ -81,8 +81,8 @@ RUN mkdir -p /build/stempy && \
   make -j4
 
 # Install stempy
-RUN pip3 install /source/stempy && \
-  cp /build/stempy/lib/stempy/*.so /usr/local/lib/python3.7/site-packages/stempy/ && \
+RUN pip3 install -r /source/stempy/requirements.txt && \
+  cp -r /build/stempy/lib/stempy /usr/local/lib/python3.7/site-packages && \
   pip3 install matplotlib click imageio ncempy
 
 RUN rm -rf /build

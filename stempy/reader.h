@@ -2,7 +2,12 @@
 #define stempyreader_h
 
 #include "config.h"
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master
 #include <ThreadPool.h>
+#include <array>
 #include <atomic>
 
 #include <condition_variable>
@@ -16,9 +21,11 @@
 #include <utility>
 #include <vector>
 
+#ifdef ENABLE_HDF5
 namespace h5 {
 class H5ReadWrite;
 }
+#endif // ENABLE_HDF5
 
 namespace stempy {
 
@@ -187,12 +194,6 @@ inline StreamReader::StreamReader(const std::string& path, uint8_t version)
 class SectorStreamReader
 {
 public:
-  enum class H5Format : int8_t
-  {
-    Frame,
-    DataCube
-  };
-
   SectorStreamReader(const std::string& path, uint8_t version = 5);
   SectorStreamReader(const std::vector<std::string>& files,
                      uint8_t version = 5);
@@ -210,7 +211,17 @@ public:
   typedef BlockIterator<SectorStreamReader> iterator;
   iterator begin() { return iterator(this); }
   iterator end() { return iterator(nullptr); }
+
+#ifdef ENABLE_HDF5
+  enum class H5Format : int8_t
+  {
+    Frame,
+    DataCube
+  };
+
   void toHdf5(const std::string& path, H5Format format = H5Format::Frame);
+#endif // ENABLE_HDF5
+
   uint8_t version() const { return m_version; };
 
   struct SectorStream
@@ -259,8 +270,12 @@ private:
   std::istream& read(std::ifstream& stream, T* value, std::streamsize size);
 
   void openFiles();
+
+#ifdef ENABLE_HDF5
   void toHdf5FrameFormat(h5::H5ReadWrite& writer);
   void toHdf5DataCubeFormat(h5::H5ReadWrite& writer);
+#endif // ENABLE_HDF5
+
   void readSectorDataVersion4(std::ifstream& stream, Block& block, int sector);
   void readSectorDataVersion5(std::ifstream& stream, Block& block, int sector);
 };
@@ -611,7 +626,7 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   }
 
   // Reset counter
-  m_processed = { m_streamsOffset };
+  m_processed = m_streamsOffset;
 
   // Enqueue lambda's to read headers to build up the locations of the sectors
   for (int i = 0; i < m_threads; i++) {
@@ -644,7 +659,7 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
   m_futures.clear();
 
   // Reset counter
-  m_processed = { m_scanMapOffset };
+  m_processed = m_scanMapOffset;
 
   // Now enqueue lambda's to read the frames and run processing
   for (int i = 0; i < m_threads; i++) {
