@@ -25,6 +25,9 @@ if os.getenv('USE_PYTHON_IN_PATH'):
         cmake_args.append(f'-DPython3_EXECUTABLE={python_exe}')
 
 
+with open('requirements.txt') as f:
+    install_requires = f.read()
+
 setup(
     name='stempy',
     use_scm_version=True,
@@ -40,10 +43,6 @@ setup(
     ],
     keywords='',
     packages=['stempy'],
-    install_requires=[
-        'numpy',
-        'h5py',
-        'deprecation'
-    ],
+    install_requires=install_requires,
     cmake_args=cmake_args,
 )
