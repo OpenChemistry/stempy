@@ -71,7 +71,7 @@ set(_src
   stempy/electronthresholds.cpp)
 
 if (stempy_ENABLE_MPI)
-  list(APPEND _vtkm_src
+  list(APPEND _src
     stempy/electron_mpi.cpp
   )
   list(APPEND _src
@@ -104,7 +104,10 @@ if (stempy_ENABLE_VTKm)
   if(stempy_ENABLE_OPENMP)
       list(APPEND _components "OpenMP")
   endif()
-  find_package(VTKm COMPONENTS "${_components}" REQUIRED)CMakeLists.txt
+  find_package(VTKm COMPONENTS "${_components}" REQUIRED)
+  list(APPEND _libs vtkm_cont)
+endif()
+
 if(stempy_ENABLE_CUDA AND TARGET vtkm::cuda)
   # Compile with CUDA
   vtkm_compile_as_cuda(cudaSource ${_vtkm_src})

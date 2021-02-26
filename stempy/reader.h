@@ -2,10 +2,7 @@
 #define stempyreader_h
 
 #include "config.h"
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master
 #include <ThreadPool.h>
 #include <array>
 #include <atomic>
