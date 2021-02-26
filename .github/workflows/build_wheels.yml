@@ -14,7 +14,7 @@ env:
   CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
 
   # Need to do some setup before repairing the wheel on linux...
-  CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash scripts/github-actions/repair_command_linux.sh
+  CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash .github/scripts/repair_command_linux.sh
 
   # Specify eigen location for windows, and force it to use python in the path...
   CIBW_ENVIRONMENT_WINDOWS: >
@@ -27,7 +27,7 @@ env:
   CIBW_TEST_REQUIRES: pytest
 
   # Run a very simple test to make sure the wheels are working
-  CIBW_TEST_COMMAND: pytest {project}/scripts/github-actions/simple_test.py
+  CIBW_TEST_COMMAND: pytest {project}/.github/scripts/simple_test.py
 
 
 # Use bash by default for the run command
@@ -59,7 +59,7 @@ jobs:
           python-version: '3.7'
 
       - name: Install dependencies
-        run: . ./scripts/github-actions/install.sh
+        run: . .github/scripts/install.sh
 
       - name: Build wheels
         run:  cibuildwheel --output-dir wheelhouse
