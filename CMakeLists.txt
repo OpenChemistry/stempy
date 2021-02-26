@@ -122,8 +122,4 @@ set(ENABLE_HDF5 ${HDF5_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 
-if(WIN32)
-  target_link_libraries(stem PRIVATE ${Python3_LIBRARIES})
-endif()
-
 add_subdirectory(python)
