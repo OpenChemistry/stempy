@@ -7,6 +7,9 @@ from stempy._io import (
     _threaded_multi_pass_reader
 )
 
+COMPILED_WITH_HDF5 = hasattr(_sector_reader, 'H5Format')
+
+
 class FileVersion(object):
     VERSION1 = 1
     VERSION2 = 2
@@ -228,16 +231,18 @@ def save_stem_images(outputFile, images, names):
         dataset = stem_group.create_dataset('images', data=images)
         dataset.attrs['names'] = names
 
-def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
-    """write_hdf5(path, reader, format=SectorReader.H5Format.Frame)
 
-    Write the data from a SectorReader to an HDF5 file.
+if COMPILED_WITH_HDF5:
+    def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
+        """write_hdf5(path, reader, format=SectorReader.H5Format.Frame)
 
-    :param path: path to the output HDF5 file.
-    :type path: str
-    :param reader: a SectorReader that has opened the data.
-    :type reader: stempy.io.SectorReader
-    :param format: whether to write in frame format or data cube format.
-    :type format: SectorReader.H5Format
-    """
-    reader.to_hdf5(path, format)
+        Write the data from a SectorReader to an HDF5 file.
+
+        :param path: path to the output HDF5 file.
+        :type path: str
+        :param reader: a SectorReader that has opened the data.
+        :type reader: stempy.io.SectorReader
+        :param format: whether to write in frame format or data cube format.
+        :type format: SectorReader.H5Format
+        """
+        reader.to_hdf5(path, format)

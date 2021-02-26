@@ -80,7 +80,7 @@ Stempy may be built using instructions similar to the following
 (this example uses the [ninja build system](https://ninja-build.org/)):
 ```bash
 git clone --recursive https://github.com/openchemistry/stempy
-pip3 install -e stempy
+pip3 install -r stempy/requirements.txt
 mkdir stempy-build
 cd stempy-build
 cmake \
