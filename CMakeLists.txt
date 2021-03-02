@@ -79,7 +79,6 @@ if (stempy_ENABLE_MPI)
   )
 endif()
 
-list(APPEND _libs "${HDF5_LIBRARIES}")
 set(_libs Threads::Threads)
 list(APPEND _libs pybind11::headers)
 # We have to link to Python3::Module since "pyreader.cpp" includes
