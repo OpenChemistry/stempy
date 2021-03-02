@@ -16,7 +16,7 @@ import sys
 import sphinx_rtd_theme
 from unittest import mock
 
-sys.path.insert(0, os.path.abspath('../../python/stempy'))
+sys.path.insert(0, os.path.abspath('../../python'))
 
 
 # -- Project information -----------------------------------------------------
@@ -63,6 +63,7 @@ _io_mock._sector_reader = MockReader
 _io_mock._threaded_reader = object
 _io_mock._reader = object
 _io_mock._pyreader = object
+_io_mock._threaded_multi_pass_reader = object
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -97,7 +98,8 @@ def autodoc_skip_member_handler(app, what, name, obj, skip, options):
         'ReaderMixin',
         'PyReader',
         'SectorReader',
-        'get_hdf5_reader'
+        'get_hdf5_reader',
+        'SectorThreadedMultiPassReader',
     ]
 
     return name in exclude_names
