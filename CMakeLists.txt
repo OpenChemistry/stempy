@@ -77,7 +77,6 @@ if (stempy_ENABLE_MPI)
   )
 endif()
 
-set(_libs Threads::Threads)
 list(APPEND _libs pybind11::headers)
 # We have to link to Python3::Module since "pyreader.cpp" includes
 # pybind11 and python header files.
