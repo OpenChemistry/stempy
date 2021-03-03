@@ -48,8 +48,6 @@ if (stempy_ENABLE_MPI)
   find_package(MPI REQUIRED)
   list(APPEND _libs MPI::MPI_C)
 
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-
   include_directories(
     SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cereal/include
   )
