@@ -16,6 +16,14 @@
 #include <sstream>
 #include <vector>
 
+#ifdef USE_MPI
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/array.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/vector.hpp>
+#include <mpi.h>
+#endif
+
 using std::copy;
 using std::invalid_argument;
 using std::ios;
@@ -522,6 +530,12 @@ void SectorStreamReader::readSectorDataVersion5(std::ifstream& stream,
 
 void SectorStreamReader::openFiles()
 {
+#ifdef USE_MPI
+
+  // We need to ensure consistent iteration order on each node.
+  std::sort(m_files.begin(), m_files.end());
+
+#endif
 
   for (auto& file : m_files) {
     auto stream = new std::ifstream();
@@ -812,19 +826,36 @@ bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
 SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
   const std::string& path, int threads)
   : SectorStreamThreadedReader(path, 5, threads)
-{}
+{
+  m_streamsSize = m_streams.size();
+#ifdef USE_MPI
+  initMPI();
+#endif
+}
 
 SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
   const std::vector<std::string>& files, int threads)
   : SectorStreamThreadedReader(files, 5, threads)
-{}
+{
+  m_streamsSize = m_streams.size();
+#ifdef USE_MPI
+  initMPI();
+#endif
+}
 
 // Read the headers and save the locations of the blocks to form the "frame
 // maps"
 void SectorStreamMultiPassThreadedReader::readHeaders()
 {
-  while (m_processed < m_streams.size()) {
-    auto& sectorStream = m_streams[m_processed++];
+  while (m_processed < m_streamsOffset + m_streamsSize) {
+    auto sectorStreamIndex = m_processed++;
+
+    // Need to check we haven't over run
+    if (sectorStreamIndex >= m_streamsOffset + m_streamsSize) {
+      break;
+    }
+
+    auto& sectorStream = m_streams[sectorStreamIndex];
     auto& stream = sectorStream.stream;
     auto sector = sectorStream.sector;
 
@@ -846,6 +877,9 @@ void SectorStreamMultiPassThreadedReader::readHeaders()
 
       sectorLocation.sector = sector;
       sectorLocation.sectorStream = &sectorStream;
+#ifdef USE_MPI
+      sectorLocation.streamIndex = sectorStreamIndex;
+#endif
       sectorLocation.offset = stream->tellg();
       stream->seekg(dataSize * sizeof(uint16_t), stream->cur);
     }
