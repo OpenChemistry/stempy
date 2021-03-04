@@ -584,3 +584,53 @@ def _safe_cast(array, dtype, name=None):
         msg = f'Cannot cast {name} to {dtype} without loss of precision'
         raise ValueError(msg)
     return new_array
+
+
+def phase_from_com(com, theta=0, flip=False, reg=1e-10):
+    """Integrate 4D-STEM centre of mass (DPC) measurements to calculate
+    object phase. Assumes a three dimensional array com, with the final
+    two dimensions corresponding to the image and the first dimension
+    of the array corresponding to the y and x centre of mass respectively.
+    Note this version of the reconstruction is not quantitative.
+
+    Thanks to the py4DSTEM project and author Hamish Brown.
+
+    :param com: The center of mass for each frame as a 3D array of size [2, M, N]
+    :type com: numpy.ndarray, 3D
+    :param theta: The angle between real space and reciprocal space in radians
+    type theta: float
+    :param flip: Whether to flip the com direction to account for a mirror across the vertical axis.
+    type flip: bool
+    :param reg: A regularization parameter
+    type reg: float
+
+    :return: A 2D ndarray of the DPC phase.
+    :rtype: numpy.ndarray
+
+    """
+    # Perform rotation and flipping if needed (from py4dstem)
+    CoMx = com[0, :, :]
+    CoMy = com[1, :, :]
+    if flip:
+        CoMx_rot = CoMx * np.cos(theta) + CoMy * np.sin(theta)
+        CoMy_rot = CoMx * np.sin(theta) - CoMy * np.cos(theta)
+    else:
+        CoMx_rot = CoMx * np.cos(theta) - CoMy * np.sin(theta)
+        CoMy_rot = CoMx * np.sin(theta) + CoMy * np.cos(theta)
+
+    # Get shape of arrays
+    ny, nx = com.shape[1:]
+
+    # Calculate Fourier coordinates for array
+    ky, kx = [np.fft.fftfreq(x) for x in [ny, nx]]
+
+    # Calculate numerator and denominator expressions for solution of
+    # phase from centre of mass measurements
+    numerator = ky[:, None] * np.fft.fft2(CoMx_rot) + kx[None, :] * np.fft.fft2(CoMy_rot)
+    denominator = 2 * np.pi * 1j * ((kx ** 2)[None, :] + (ky ** 2)[:, None]) + reg
+    # Avoid a divide by zero for the origin of the Fourier coordinates
+    numerator[0, 0] = 0
+    denominator[0, 0] = 1
+
+    # Return real part of the inverse Fourier transform
+    return np.real(np.fft.ifft2(numerator / denominator))
