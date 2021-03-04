@@ -505,15 +505,17 @@ std::vector<uint32_t> electronCount(std::vector<float>& frame,
                               backgroundThreshold, xRayThreshold, gain);
 }
 
-template <typename FrameType, bool dark = true>
-ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const float darkReference[],
-  int thresholdNumberOfBlocks, int numberOfSamples,
-  double backgroundThresholdNSigma, double xRayThresholdNSigma,
-  const float gain[], Dimensions2D scanDimensions, bool verbose)
+template <typename Reader, typename FrameType, bool dark = true>
+ElectronCountedData electronCount(Reader* reader, const float darkReference[],
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  const float gain[],
+                                  Dimensions2D scanDimensions, bool verbose)
 {
   // This is where we will save the electron events as the calculated
-  std::vector<std::vector<uint32_t>> events;
+  Events events;
   // We need an array of mutexes to protect updates for each event vector for a
   // given position, as we may have muliple frames per location.
   std::unique_ptr<std::mutex[]> positionMutexes;
@@ -532,6 +534,15 @@ ElectronCountedData electronCount(
 
   // The sample blocks that will be used to calculate the thresholds
   std::vector<Block> sampleBlocks;
+
+#ifdef USE_MPI
+  int rank, worldSize;
+  initMpiWorldRank(worldSize, rank);
+
+  // Calculate sample to take from each node
+  thresholdNumberOfBlocks =
+    getSampleBlocksPerRank(worldSize, rank, thresholdNumberOfBlocks);
+#endif
 
   auto counter = [&events, &electronCounting, &backgroundThreshold,
                   &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
@@ -586,38 +597,59 @@ ElectronCountedData electronCount(
 
   auto done = reader->readAll(counter);
 
-  // Wait for enought blocks to come in to calculate the threshold.
+  // Wait for enough blocks to come in to calculate the threshold.
   std::unique_lock<std::mutex> lock(sampleMutex);
   sampleCondition.wait(lock, [&sampleBlocks, thresholdNumberOfBlocks]() {
     return sampleBlocks.size() ==
            static_cast<unsigned>(thresholdNumberOfBlocks);
   });
 
-  // Now calculate the threshold
-  auto threshold = calculateThresholds<Block, FrameType, dark>(
-    sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
-    xRayThresholdNSigma, gain);
+  auto calculateThreshold = true;
 
-  if (verbose) {
-    std::cout << "****Statistics for calculating electron thresholds****"
-              << std::endl;
-    std::cout << "number of samples:" << threshold.numberOfSamples << std::endl;
-    std::cout << "min sample:" << threshold.minSample << std::endl;
-    std::cout << "max sample:" << threshold.maxSample << std::endl;
-    std::cout << "mean:" << threshold.mean << std::endl;
-    std::cout << "variance:" << threshold.variance << std::endl;
-    std::cout << "std dev:" << threshold.stdDev << std::endl;
-    std::cout << "number of bins:" << threshold.numberOfBins << std::endl;
-    std::cout << "x-ray threshold n sigma:" << threshold.xRayThresholdNSigma
-              << std::endl;
-    std::cout << "background threshold n sigma:"
-              << threshold.backgroundThresholdNSigma << std::endl;
-    std::cout << "optimized mean:" << threshold.optimizedMean << std::endl;
-    std::cout << "optimized std dev:" << threshold.optimizedStdDev << std::endl;
-    std::cout << "background threshold:" << threshold.backgroundThreshold
-              << std::endl;
-    std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+#ifdef USE_MPI
+  gatherBlocks(worldSize, rank, sampleBlocks);
+  // Only calculate threshold on rank 0
+  calculateThreshold = rank == 0;
+#endif
+
+  CalculateThresholdsResults<FrameType> threshold;
+
+  if (calculateThreshold) {
+    // Now calculate the threshold
+    threshold = calculateThresholds<Block, FrameType, dark>(
+      sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
+      xRayThresholdNSigma, gain);
+
+    if (verbose) {
+      std::cout << "****Statistics for calculating electron thresholds****"
+                << std::endl;
+      std::cout << "number of samples:" << threshold.numberOfSamples
+                << std::endl;
+      std::cout << "min sample:" << threshold.minSample << std::endl;
+      std::cout << "max sample:" << threshold.maxSample << std::endl;
+      std::cout << "mean:" << threshold.mean << std::endl;
+      std::cout << "variance:" << threshold.variance << std::endl;
+      std::cout << "std dev:" << threshold.stdDev << std::endl;
+      std::cout << "number of bins:" << threshold.numberOfBins << std::endl;
+      std::cout << "x-ray threshold n sigma:" << threshold.xRayThresholdNSigma
+                << std::endl;
+      std::cout << "background threshold n sigma:"
+                << threshold.backgroundThresholdNSigma << std::endl;
+      std::cout << "optimized mean:" << threshold.optimizedMean << std::endl;
+      std::cout << "optimized std dev:" << threshold.optimizedStdDev
+                << std::endl;
+      std::cout << "background threshold:" << threshold.backgroundThreshold
+                << std::endl;
+      std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+    }
   }
+
+  backgroundThreshold = threshold.backgroundThreshold;
+  xRayThreshold = threshold.xRayThreshold;
+
+#ifdef USE_MPI
+  broadcastThresholds(backgroundThreshold, xRayThreshold);
+#endif
 
   // Now setup  electron count output
   auto frameSize = sampleBlocks[0].header.frameDimensions;
@@ -634,30 +666,33 @@ ElectronCountedData electronCount(
 
   // Now tell our workers to proceed
   electronCounting = true;
-  backgroundThreshold = threshold.backgroundThreshold;
-  xRayThreshold = threshold.xRayThreshold;
   lock.unlock();
   sampleCondition.notify_all();
 
   // Count the sample blocks
-  for (auto& b : sampleBlocks) {
+  for (auto i = 0; i < thresholdNumberOfBlocks; i++) {
+    auto& b = sampleBlocks[i];
     auto data = b.data.get();
     auto frameDimensions = b.header.frameDimensions;
-    for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+    for (unsigned j = 0; j < b.header.imagesInBlock; j++) {
       auto frameStart =
-        data + i * frameDimensions.first * frameDimensions.second;
+        data + j * frameDimensions.first * frameDimensions.second;
       std::vector<FrameType> frame(frameStart,
                                    frameStart + frameDimensions.first *
                                                   frameDimensions.second);
       auto frameEvents = electronCount<FrameType, dark>(
         frame, frameDimensions, darkReference, backgroundThreshold,
         xRayThreshold, gain);
-      events[b.header.imageNumbers[i]] = frameEvents;
+      events[b.header.imageNumbers[j]] = frameEvents;
     }
   }
 
   // Make sure all threads are finished before returning the result
   done.wait();
+
+#ifdef USE_MPI
+  gatherEvents(worldSize, rank, events);
+#endif
 
   ElectronCountedData ret;
   ret.data = events;
@@ -667,59 +702,8 @@ ElectronCountedData electronCount(
   return ret;
 }
 
-ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, const float darkReference[],
-  int thresholdNumberOfBlocks, int numberOfSamples,
-  double backgroundThresholdNSigma, double xRayThresholdNSigma,
-  const float gain[], Dimensions2D scanDimensions, bool verbose)
-{
-  return electronCount<float>(reader, darkReference, thresholdNumberOfBlocks,
-                              numberOfSamples, backgroundThresholdNSigma,
-                              xRayThresholdNSigma, gain, scanDimensions,
-                              verbose);
-}
-
-ElectronCountedData electronCount(
-  SectorStreamThreadedReader* reader, Image<float>& darkReference,
-  int thresholdNumberOfBlocks, int numberOfSamples,
-  double backgroundThresholdNSigma, double xRayThresholdNSigma,
-  const float gain[], Dimensions2D scanDimensions, bool verbose)
-{
-  return electronCount<float>(reader, darkReference.data.get(),
-                              thresholdNumberOfBlocks, numberOfSamples,
-                              backgroundThresholdNSigma, xRayThresholdNSigma,
-                              gain, scanDimensions, verbose);
-}
-
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  const float darkReference[],
-                                  int thresholdNumberOfBlocks,
-                                  int numberOfSamples,
-                                  double backgroundThresholdNSigma,
-                                  double xRayThresholdNSigma,
-                                  Dimensions2D scanDimensions, bool verbose)
-{
-  return electronCount<uint16_t>(reader, darkReference, thresholdNumberOfBlocks,
-                                 numberOfSamples, backgroundThresholdNSigma,
-                                 xRayThresholdNSigma, nullptr, scanDimensions,
-                                 verbose);
-}
-
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
-                                  Image<float>& darkReference,
-                                  int thresholdNumberOfBlocks,
-                                  int numberOfSamples,
-                                  double backgroundThresholdNSigma,
-                                  double xRayThresholdNSigma,
-                                  Dimensions2D scanDimensions, bool verbose)
-{
-  return electronCount<uint16_t>(reader, darkReference.data.get(),
-                                 thresholdNumberOfBlocks, numberOfSamples,
-                                 backgroundThresholdNSigma, xRayThresholdNSigma,
-                                 nullptr, scanDimensions, verbose);
-}
-
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, const float darkReference[],
                                   int thresholdNumberOfBlocks,
                                   int numberOfSamples,
                                   double backgroundThresholdNSigma,
@@ -727,20 +711,77 @@ ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
                                   const float gain[],
                                   Dimensions2D scanDimensions, bool verbose)
 {
-  return electronCount<float, false>(reader, nullptr, thresholdNumberOfBlocks,
-                                     numberOfSamples, backgroundThresholdNSigma,
-                                     xRayThresholdNSigma, gain, scanDimensions,
-                                     verbose);
+  return electronCount<Reader, float>(
+    reader, darkReference, thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, gain, scanDimensions,
+    verbose);
 }
 
-ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, Image<float>& darkReference,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  const float gain[],
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<Reader, float>(
+    reader, darkReference.data.get(), thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, gain, scanDimensions,
+    verbose);
+}
+
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, const float darkReference[],
                                   int thresholdNumberOfBlocks,
                                   int numberOfSamples,
                                   double backgroundThresholdNSigma,
                                   double xRayThresholdNSigma,
                                   Dimensions2D scanDimensions, bool verbose)
 {
-  return electronCount<uint16_t, false>(
+  return electronCount<Reader, uint16_t>(
+    reader, darkReference, thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, nullptr, scanDimensions,
+    verbose);
+}
+
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, Image<float>& darkReference,
+                                  int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<Reader, uint16_t>(
+    reader, darkReference.data.get(), thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, nullptr, scanDimensions,
+    verbose);
+}
+
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  const float gain[],
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<Reader, float, false>(
+    reader, nullptr, thresholdNumberOfBlocks, numberOfSamples,
+    backgroundThresholdNSigma, xRayThresholdNSigma, gain, scanDimensions,
+    verbose);
+}
+
+template <typename Reader>
+ElectronCountedData electronCount(Reader* reader, int thresholdNumberOfBlocks,
+                                  int numberOfSamples,
+                                  double backgroundThresholdNSigma,
+                                  double xRayThresholdNSigma,
+                                  Dimensions2D scanDimensions, bool verbose)
+{
+  return electronCount<Reader, uint16_t, false>(
     reader, nullptr, thresholdNumberOfBlocks, numberOfSamples,
     backgroundThresholdNSigma, xRayThresholdNSigma, nullptr, scanDimensions,
     verbose);
@@ -845,4 +886,78 @@ template ElectronCountedData electronCount(PyReader::iterator first,
                                            double backgroundThreshold,
                                            double xRayThreshold,
                                            Dimensions2D scanDimensions);
+
+// Instantiate for threaded readers
+
+// SectorStreamThreadedReader
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, Image<float>& darkreference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, const float darkreference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, Image<float>& darkreference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, const float darkreference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[], Dimensions2D scanDimensions,
+  bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, Dimensions2D scanDimensions, bool verbose);
+
+// SectorStreamMultiPassThreadedReader
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, Image<float>& darkreference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, const float darkreference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, Image<float>& darkreference,
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, const float darkreference[],
+  int thresholdNumberOfBlocks, int numberOfSamples,
+  double backgroundThresholdNSigma, double xRayThresholdNSigma,
+  const float gain[], Dimensions2D scanDimensions, bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, const float gain[], Dimensions2D scanDimensions,
+  bool verbose);
+
+template ElectronCountedData electronCount(
+  SectorStreamMultiPassThreadedReader* reader, int thresholdNumberOfBlocks,
+  int numberOfSamples, double backgroundThresholdNSigma,
+  double xRayThresholdNSigma, Dimensions2D scanDimensions, bool verbose);
 }

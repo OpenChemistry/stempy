@@ -1,9 +1,11 @@
 #include "reader.h"
-#include "config.h"
 #include "electron.h"
-#include "h5cpp/h5readwrite.h"
 #include "image.h"
 #include "mask.h"
+
+#ifdef ENABLE_HDF5
+#include "h5cpp/h5readwrite.h"
+#endif // ENABLE_HDF5
 
 #include <fstream>
 #include <future>
@@ -13,6 +15,14 @@
 #include <regex>
 #include <sstream>
 #include <vector>
+
+#ifdef USE_MPI
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/array.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/vector.hpp>
+#include <mpi.h>
+#endif
 
 using std::copy;
 using std::invalid_argument;
@@ -520,6 +530,12 @@ void SectorStreamReader::readSectorDataVersion5(std::ifstream& stream,
 
 void SectorStreamReader::openFiles()
 {
+#ifdef USE_MPI
+
+  // We need to ensure consistent iteration order on each node.
+  std::sort(m_files.begin(), m_files.end());
+
+#endif
 
   for (auto& file : m_files) {
     auto stream = new std::ifstream();
@@ -615,6 +631,7 @@ float SectorStreamReader::dataCaptured()
   return static_cast<float>(numberOfSectors) / expectedNumberOfSectors;
 }
 
+#ifdef ENABLE_HDF5
 void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
 {
   bool created = false;
@@ -720,6 +737,7 @@ void SectorStreamReader::toHdf5(const std::string& path,
     toHdf5DataCubeFormat(writer);
   }
 }
+#endif // ENABLE_HDF5
 
 bool operator==(const SectorStreamReader::SectorStream& lhs,
                 const SectorStreamReader::SectorStream& rhs)
@@ -770,25 +788,25 @@ void SectorStreamThreadedReader::initNumberOfThreads()
   }
 }
 
-bool SectorStreamThreadedReader::nextSectorStreamPair(
-  SectorStreamPair& sectorStreamPair)
+bool SectorStreamThreadedReader::nextStream(StreamQueueEntry& streamQueueEntry)
 {
   {
     std::unique_lock<std::mutex> queueLock(m_queueMutex);
     if (m_streamQueue.empty()) {
       return false;
     }
-    sectorStreamPair = m_streamQueue.front();
+    streamQueueEntry = m_streamQueue.top();
     m_streamQueue.pop();
   }
 
-  auto& stream = sectorStreamPair.first;
+  auto stream = streamQueueEntry.stream;
 
   auto c = stream->peek();
   // If we have reached the end close the stream and remove if from
   // the list.
   if (c == EOF) {
     stream->close();
+    std::unique_lock<std::mutex> streamsLock(m_streamsMutex);
     auto iter = m_streams.begin();
     while (iter != m_streams.end()) {
       if ((*iter).stream.get() == stream) {
@@ -803,5 +821,68 @@ bool SectorStreamThreadedReader::nextSectorStreamPair(
   }
 
   return true;
+}
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
+  const std::string& path, int threads)
+  : SectorStreamThreadedReader(path, 5, threads)
+{
+  m_streamsSize = m_streams.size();
+#ifdef USE_MPI
+  initMPI();
+#endif
+}
+
+SectorStreamMultiPassThreadedReader::SectorStreamMultiPassThreadedReader(
+  const std::vector<std::string>& files, int threads)
+  : SectorStreamThreadedReader(files, 5, threads)
+{
+  m_streamsSize = m_streams.size();
+#ifdef USE_MPI
+  initMPI();
+#endif
+}
+
+// Read the headers and save the locations of the blocks to form the "frame
+// maps"
+void SectorStreamMultiPassThreadedReader::readHeaders()
+{
+  while (m_processed < m_streamsOffset + m_streamsSize) {
+    auto sectorStreamIndex = m_processed++;
+
+    // Need to check we haven't over run
+    if (sectorStreamIndex >= m_streamsOffset + m_streamsSize) {
+      break;
+    }
+
+    auto& sectorStream = m_streams[sectorStreamIndex];
+    auto& stream = sectorStream.stream;
+    auto sector = sectorStream.sector;
+
+    while (stream->peek() != EOF) {
+      // First read the header
+      auto header = readHeader(*stream);
+      auto dataSize = header.frameDimensions.first *
+                      header.frameDimensions.second * header.imagesInBlock;
+
+      auto imageNumber = header.imageNumbers[0];
+      auto& frameMaps = m_scanMap[imageNumber];
+
+      // Protect initialization of the map with the correct mutex
+      std::unique_lock<std::mutex> lock(
+        *m_scanPositionMutexes[imageNumber].get());
+      auto& frameMap = frameMaps[header.frameNumber];
+      lock.unlock();
+      auto& sectorLocation = frameMap[sector];
+
+      sectorLocation.sector = sector;
+      sectorLocation.sectorStream = &sectorStream;
+#ifdef USE_MPI
+      sectorLocation.streamIndex = sectorStreamIndex;
+#endif
+      sectorLocation.offset = stream->tellg();
+      stream->seekg(dataSize * sizeof(uint16_t), stream->cur);
+    }
+  }
 }
 }

@@ -2,5 +2,7 @@
 #define CONFIG_H_
 
 #cmakedefine VTKm
+#cmakedefine USE_MPI
+#cmakedefine ENABLE_HDF5
 
 #endif /* CONFIG_H_ */

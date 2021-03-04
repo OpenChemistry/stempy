@@ -1,6 +1,9 @@
 from stempy import _image
 from stempy import _io
-from stempy.io import get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader
+from stempy.io import (
+    get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader,
+    SectorThreadedMultiPassReader
+)
 
 from collections import namedtuple
 import deprecation
@@ -327,7 +330,7 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         darkreference = _safe_cast(darkreference, np.float32, 'dark reference')
 
     # Special case for threaded reader
-    if isinstance(reader, SectorThreadedReader):
+    if isinstance(reader, (SectorThreadedReader, SectorThreadedMultiPassReader)):
         args = [reader]
 
         if darkreference is not None:

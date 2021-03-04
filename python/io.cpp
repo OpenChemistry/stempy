@@ -5,6 +5,8 @@
 #include <python/pyreader.h>
 #include <stempy/reader.h>
 
+#include "config.h"
+
 namespace py = pybind11;
 
 using namespace stempy;
@@ -90,11 +92,6 @@ PYBIND11_MODULE(_io, m)
 
   py::class_<SectorStreamReader> sectorReader(m, "_sector_reader");
 
-  py::enum_<SectorStreamReader::H5Format>(sectorReader, "H5Format")
-    .value("Frame", SectorStreamReader::H5Format::Frame)
-    .value("DataCube", SectorStreamReader::H5Format::DataCube)
-    .export_values();
-
   sectorReader.def(py::init<const std::string&, uint8_t>());
   sectorReader.def(py::init<const std::vector<std::string>&, uint8_t>());
   sectorReader.def("read",
@@ -107,13 +104,27 @@ PYBIND11_MODULE(_io, m)
                    (SectorStreamReader::iterator(SectorStreamReader::*)()) &
                      SectorStreamReader::end);
   sectorReader.def("data_captured", &SectorStreamReader::dataCaptured);
+
+#ifdef ENABLE_HDF5
+  py::enum_<SectorStreamReader::H5Format>(sectorReader, "H5Format")
+    .value("Frame", SectorStreamReader::H5Format::Frame)
+    .value("DataCube", SectorStreamReader::H5Format::DataCube)
+    .export_values();
+
   sectorReader.def("to_hdf5", &SectorStreamReader::toHdf5, "Write data to HDF5",
                    py::arg("path"),
                    py::arg("format") = SectorStreamReader::H5Format::Frame);
+#endif // ENABLE_HDF5
 
   py::class_<SectorStreamThreadedReader>(m, "_threaded_reader")
     .def(py::init<const std::string&, uint8_t, int>(), py::arg("path"),
          py::arg("version") = 5, py::arg("threads") = 0)
     .def(py::init<const std::vector<std::string>&, uint8_t, int>(),
          py::arg("files"), py::arg("version") = 5, py::arg("threads") = 0);
+  py::class_<SectorStreamMultiPassThreadedReader>(m,
+                                                  "_threaded_multi_pass_reader")
+    .def(py::init<const std::string&, int>(), py::arg("path"),
+         py::arg("threads") = 0)
+    .def(py::init<const std::vector<std::string>&, int>(), py::arg("files"),
+         py::arg("threads") = 0);
 }

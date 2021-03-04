@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.19)
 project(stempy)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -9,6 +9,12 @@ include(CMakeDependentOption)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS False)
+
+if(WIN32 AND SKBUILD)
+  # For building with setup.py, we want everything in stempy
+  set(CMAKE_INSTALL_BINDIR "stempy")
+  set(CMAKE_INSTALL_LIBDIR "stempy")
+endif()
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
@@ -28,21 +34,29 @@ include_directories(
 find_package(Eigen3 REQUIRED)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
-find_package(PythonInterp 3 REQUIRED)
-find_package(PythonLibs 3 REQUIRED)
 set(PYBIND11_PYTHON_VERSION "3" CACHE STRING "")
 set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
-include_directories(SYSTEM
-  ${PYTHON_INCLUDE_PATH}
-  ${PYBIND11_INCLUDE_DIR}
-)
-
-find_package(HDF5 REQUIRED)
-include_directories(${HDF5_INCLUDE_DIRS})
-
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+set(_libs Threads::Threads)
+
+option(stempy_ENABLE_MPI "Build with MPI" OFF)
+if (stempy_ENABLE_MPI)
+  find_package(MPI REQUIRED)
+  list(APPEND _libs MPI::MPI_C)
+
+  include_directories(
+    SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cereal/include
+  )
+
+  include_directories(
+    SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Empirical/include
+  )
+endif()
+set(USE_MPI ${MPI_FOUND})
 
 set(_vtkm_src
   stempy/image.cpp
@@ -52,11 +66,28 @@ set(_src
   stempy/reader.cpp
   python/pyreader.cpp
   stempy/mask.cpp
-  stempy/electronthresholds.cpp
-  h5cpp/h5readwrite.cpp)
+  stempy/electronthresholds.cpp)
 
-set(_libs Threads::Threads)
-list(APPEND _libs "${HDF5_LIBRARIES}")
+if (stempy_ENABLE_MPI)
+  list(APPEND _src
+    stempy/electron_mpi.cpp
+  )
+  list(APPEND _src
+    stempy/reader_mpi.cpp
+  )
+endif()
+
+list(APPEND _libs pybind11::headers)
+# We have to link to Python3::Module since "pyreader.cpp" includes
+# pybind11 and python header files.
+list(APPEND _libs Python3::Module)
+
+option(stempy_ENABLE_HDF5 "Build with HDF5" ON)
+if (stempy_ENABLE_HDF5)
+  find_package(HDF5 REQUIRED COMPONENTS C)
+  list(APPEND _src h5cpp/h5readwrite.cpp)
+  list(APPEND _libs hdf5::hdf5)
+endif()
 
 option(stempy_ENABLE_VTKm "Build with VTK-m" OFF)
 cmake_dependent_option(stempy_ENABLE_CUDA "Enable VTK-m CUDA backend" OFF "stempy_ENABLE_VTKm" ON)
@@ -92,7 +123,27 @@ set_target_properties(stem
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy"
 )
 
+# Set the RPATH so the dependent libraries can be found in the wheel.
+if(APPLE)
+  set(_rpath_value "@loader_path")
+elseif(UNIX)
+  set(_rpath_value "$ORIGIN")
+endif()
+
+if (NOT WIN32)
+  set_target_properties(stem PROPERTIES
+                        INSTALL_RPATH ${_rpath_value})
+endif()
+
+set(_python_module_install_dir "stempy")
+# SKBUILD is set for binary wheel
+if (NOT SKBUILD)
+  set(_python_module_install_dir "${INSTALL_LIBRARY_DIR}/stempy")
+endif()
+install(TARGETS stem LIBRARY DESTINATION "${_python_module_install_dir}")
+
 set(VTKm ${VTKm_FOUND})
+set(ENABLE_HDF5 ${HDF5_FOUND})
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
 

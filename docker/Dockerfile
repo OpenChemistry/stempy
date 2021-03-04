@@ -1,5 +1,7 @@
 FROM ubuntu:18.04
 
+ARG MPI=OFF
+
 # Install deps
 RUN apt-get update && \
   apt-get install -y \
@@ -74,12 +76,13 @@ RUN mkdir -p /build/stempy && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
+  -Dstempy_ENABLE_MPI:BOOL=${MPI} \
   /source/stempy . && \
   make -j4
 
 # Install stempy
-RUN pip3 install /source/stempy && \
-  cp /build/stempy/lib/stempy/*.so /usr/local/lib/python3.7/site-packages/stempy/ && \
+RUN pip3 install -r /source/stempy/requirements.txt && \
+  cp -r /build/stempy/lib/stempy /usr/local/lib/python3.7/site-packages && \
   pip3 install matplotlib click imageio ncempy
 
 RUN rm -rf /build
