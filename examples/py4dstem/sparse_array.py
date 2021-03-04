@@ -67,7 +67,7 @@ NONE_SLICE = slice(None)
 
 
 class SparseArray:
-    def __init__(self, data, scan_shape, frame_shape, dtype=np.uint8,
+    def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
                  sparse_slicing=True, allow_full_expand=False):
         self.data = data.ravel()
         self.scan_shape = tuple(scan_shape)
