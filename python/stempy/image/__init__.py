@@ -466,7 +466,7 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse(electron_counts, frame_dimensions):
+def com_sparse(electron_counts, frame_dimensions, scan_dimensions):
     """Compute center of mass (COM) for counted data directly from sparse (single)
         electron data. Empty frames will have the average COM value of all frames.
 
@@ -476,6 +476,8 @@ def com_sparse(electron_counts, frame_dimensions):
         :type electron_counts: numpy.ndarray (1D)
         :param frame_dimensions: The shape of the detector.
         :type frame_dimensions: tuple of ints of length 2
+        :param scan_dimensions: The shape of the STEM scan.
+        :type scan_dimensions: tuple of ints of length 2
 
         :return: The center of mass in X and Y for each scan position. If a position
                 has no data (len(electron_counts) == 0) then the center of the
@@ -496,6 +498,7 @@ def com_sparse(electron_counts, frame_dimensions):
     com_mean = np.nanmean(com, axis=(1, 2))
     np.nan_to_num(com[0, ], nan=com_mean[0], copy=False)
     np.nan_to_num(com[1, ], nan=com_mean[1], copy=False)
+    com = com.reshape((2, scan_dimensions[0], scan_dimensions[1]))
     return com
 
 
