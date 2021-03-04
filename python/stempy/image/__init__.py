@@ -481,7 +481,7 @@ def com_sparse(electron_counts, frame_dimensions):
                 has no data (len(electron_counts) == 0) then the center of the
                 frame is used as the center of mass.
         :rtype: numpy.ndarray (2D)
-        """
+    """
     frame_center = [int(ii/2)-1 for ii in frame_dimensions]
     com = np.zeros((2, len(electron_counts)), 'f')
     for ii, ev in enumerate(electron_counts):
