@@ -467,8 +467,8 @@ def maximum_diffraction_pattern(reader, darkreference=None):
 
 
 def com_sparse(electron_counts, frame_dimensions):
-    """Compute center of mass for counted data directly from sparse (single)
-        electron data.
+    """Compute center of mass (COM) for counted data directly from sparse (single)
+        electron data. Empty frames will have the average COM value of all frames.
 
         :param electron_counts: A vector of electron positions flattened. Each
                                 pixel can only be a 1 (electron) or a 0
@@ -482,7 +482,6 @@ def com_sparse(electron_counts, frame_dimensions):
                 frame is used as the center of mass.
         :rtype: numpy.ndarray (2D)
         """
-    frame_center = [int(ii/2)-1 for ii in frame_dimensions]
     com = np.zeros((2, len(electron_counts)), 'f')
     for ii, ev in enumerate(electron_counts):
         if len(ev) > 0:
@@ -492,7 +491,11 @@ def com_sparse(electron_counts, frame_dimensions):
             com_y = np.sum(y) / mm
             com[:, ii] = (com_y, com_x)
         else:
-            com[:, ii] = frame_center
+            com[:, ii] = np.nan # empty frame
+    # Find the mean and replace nan values
+    com_mean = np.nanmean(com, axis=(1, 2))
+    np.nan_to_num(com[0, ], nan=com_mean[0], copy=False)
+    np.nan_to_num(com[1, ], nan=com_mean[1], copy=False)
     return com
 
 
