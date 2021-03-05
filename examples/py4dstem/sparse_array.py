@@ -174,6 +174,37 @@ class SparseArray:
             summed[:] /= mean_length
             return summed
 
+    def bin_scans(self, bin_factor, in_place=False):
+        if not all(x % bin_factor == 0 for x in self.scan_shape):
+            raise ValueError(f'scan_shape must be equally divisible by '
+                             f'bin_factor {bin_factor}')
+
+        shape_size = len(self.scan_shape)
+        new_scan_shape = tuple(x // bin_factor for x in self.scan_shape)
+        flat_new_scan_shape = np.prod(new_scan_shape),
+        new_data = np.empty(flat_new_scan_shape, dtype=object)
+
+        original_reshaped = self.data.reshape(flat_new_scan_shape[0],
+                                              bin_factor * shape_size)
+
+        for i in range(original_reshaped.shape[0]):
+            new_data[i] = np.concatenate(original_reshaped[i])
+
+        if in_place:
+            self.data = new_data
+            self.scan_shape = new_scan_shape
+            return self
+
+        kwargs = {
+            'data': new_data,
+            'scan_shape': new_scan_shape,
+            'frame_shape': self.frame_shape,
+            'dtype': self.dtype,
+            'sparse_slicing': self.sparse_slicing,
+            'allow_full_expand': self.allow_full_expand,
+        }
+        return SparseArray(**kwargs)
+
     def bin_frames(self, bin_factor, in_place=False):
         if not all(x % bin_factor == 0 for x in self.frame_shape):
             raise ValueError(f'frame_shape must be equally divisible by '
