@@ -466,9 +466,10 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse(electron_counts, frame_dimensions):
-    """Compute center of mass for counted data directly from sparse (single)
-        electron data.
+def com_sparse(electron_counts, frame_dimensions, scan_dimensions, crop_to=None):
+    """Compute center of mass (COM) for counted data directly from sparse (single)
+        electron data. Empty frames will have the average COM value of all frames. There is an option to crop to a
+        smaller region around the initial full frame COM to improve finding the center of the zero beam.
 
         :param electron_counts: A vector of electron positions flattened. Each
                                 pixel can only be a 1 (electron) or a 0
@@ -476,23 +477,56 @@ def com_sparse(electron_counts, frame_dimensions):
         :type electron_counts: numpy.ndarray (1D)
         :param frame_dimensions: The shape of the detector.
         :type frame_dimensions: tuple of ints of length 2
+        :param scan_dimensions: The shape of the STEM scan.
+        :type scan_dimensions: tuple of ints of length 2
+        :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
+                        the zero beam
+        :type crop_to: tuple of ints of length 2
 
         :return: The center of mass in X and Y for each scan position. If a position
                 has no data (len(electron_counts) == 0) then the center of the
                 frame is used as the center of mass.
         :rtype: numpy.ndarray (2D)
-    """
-    frame_center = [int(ii/2)-1 for ii in frame_dimensions]
-    com = np.zeros((2, len(electron_counts)), 'f')
+        """
+    com = np.zeros((2, scan_dimensions[0] * scan_dimensions[1]), np.float32)
     for ii, ev in enumerate(electron_counts):
         if len(ev) > 0:
             x, y = np.unravel_index(ev, frame_dimensions)
-            mm = len(ev)
-            com_x = np.sum(x) / mm
-            com_y = np.sum(y) / mm
-            com[:, ii] = (com_y, com_x)
+            mm0 = len(ev)
+            comx0 = np.sum(x) / mm0
+            comy0 = np.sum(y) / mm0
+            if crop_to is not None:
+                # Crop around the center
+                keep = (x > comx0 - crop_to[0]) & (x <= comx0 + crop_to[0]) & (y > comy0 - crop_to[1]) & (
+                            y <= comy0 + crop_to[1])
+                x = x[keep]
+                y = y[keep]
+                mm = len(x)
+                if mm > 0:
+                    # Counts are inside cropped region
+                    comx = np.sum(x)
+                    comy = np.sum(y)
+                    comx = comx / mm
+                    comy = comy / mm
+                else:
+                    # No counts. Use full frame COM
+                    comx = comx0
+                    comy = comy0
+            else:
+                comx = comx0
+                comy = comy0
+            com[:, ii] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
+
         else:
-            com[:, ii] = frame_center
+            com[:, ii] = (np.nan, np.nan)  # empty frame
+
+    com = com.reshape((2, scan_dimensions[1], scan_dimensions[0]))
+
+    # Replace nan's with average without copying
+    com_mean = np.nanmean(com, axis=(1, 2))
+    np.nan_to_num(com[0, :, :], nan=com_mean[0], copy=False)
+    np.nan_to_num(com[1, :, :], nan=com_mean[1], copy=False)
+
     return com
 
 
@@ -584,3 +618,53 @@ def _safe_cast(array, dtype, name=None):
         msg = f'Cannot cast {name} to {dtype} without loss of precision'
         raise ValueError(msg)
     return new_array
+
+
+def phase_from_com(com, theta=0, flip=False, reg=1e-10):
+    """Integrate 4D-STEM centre of mass (DPC) measurements to calculate
+    object phase. Assumes a three dimensional array com, with the final
+    two dimensions corresponding to the image and the first dimension
+    of the array corresponding to the y and x centre of mass respectively.
+    Note this version of the reconstruction is not quantitative.
+
+    Thanks to the py4DSTEM project and author Hamish Brown.
+
+    :param com: The center of mass for each frame as a 3D array of size [2, M, N]
+    :type com: numpy.ndarray, 3D
+    :param theta: The angle between real space and reciprocal space in radians
+    type theta: float
+    :param flip: Whether to flip the com direction to account for a mirror across the vertical axis.
+    type flip: bool
+    :param reg: A regularization parameter
+    type reg: float
+
+    :return: A 2D ndarray of the DPC phase.
+    :rtype: numpy.ndarray
+
+    """
+    # Perform rotation and flipping if needed (from py4dstem)
+    CoMx = com[0, :, :]
+    CoMy = com[1, :, :]
+    if flip:
+        CoMx_rot = CoMx * np.cos(theta) + CoMy * np.sin(theta)
+        CoMy_rot = CoMx * np.sin(theta) - CoMy * np.cos(theta)
+    else:
+        CoMx_rot = CoMx * np.cos(theta) - CoMy * np.sin(theta)
+        CoMy_rot = CoMx * np.sin(theta) + CoMy * np.cos(theta)
+
+    # Get shape of arrays
+    ny, nx = com.shape[1:]
+
+    # Calculate Fourier coordinates for array
+    ky, kx = [np.fft.fftfreq(x) for x in [ny, nx]]
+
+    # Calculate numerator and denominator expressions for solution of
+    # phase from centre of mass measurements
+    numerator = ky[:, None] * np.fft.fft2(CoMx_rot) + kx[None, :] * np.fft.fft2(CoMy_rot)
+    denominator = 2 * np.pi * 1j * ((kx ** 2)[None, :] + (ky ** 2)[:, None]) + reg
+    # Avoid a divide by zero for the origin of the Fourier coordinates
+    numerator[0, 0] = 0
+    denominator[0, 0] = 1
+
+    # Return real part of the inverse Fourier transform
+    return np.real(np.fft.ifft2(numerator / denominator))
