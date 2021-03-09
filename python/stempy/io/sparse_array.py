@@ -6,7 +6,7 @@ import sys
 import numpy as np
 
 
-def format_axis(func):
+def _format_axis(func):
     @wraps(func)
     def wrapper(self, axis, *args, **kwargs):
         if axis is None:
@@ -18,7 +18,7 @@ def format_axis(func):
     return wrapper
 
 
-def default_full_expansion(func):
+def _default_full_expansion(func):
     name = func.__name__
 
     @wraps(func)
@@ -27,7 +27,7 @@ def default_full_expansion(func):
         if ret is not None:
             return ret
 
-        warning(f'performing full expansion for {name}')
+        _warning(f'performing full expansion for {name}')
         prev_sparse_slicing = self.sparse_slicing
         self.sparse_slicing = False
         try:
@@ -38,7 +38,7 @@ def default_full_expansion(func):
     return wrapper
 
 
-def warn_unimplemented_kwargs(func):
+def _warn_unimplemented_kwargs(func):
     name = func.__name__
     signature_args = inspect.getfullargspec(func)[0]
 
@@ -46,17 +46,17 @@ def warn_unimplemented_kwargs(func):
     def wrapper(*args, **kwargs):
         for key, value in kwargs.items():
             if key not in signature_args and value is not None:
-                warning(f'"{key}" is not implemented for {name}')
+                _warning(f'"{key}" is not implemented for {name}')
 
         return func(*args, **kwargs)
     return wrapper
 
 
-def arithmethic_decorators(func):
+def _arithmethic_decorators(func):
     decorators = [
-        format_axis,
-        default_full_expansion,
-        warn_unimplemented_kwargs,
+        _format_axis,
+        _default_full_expansion,
+        _warn_unimplemented_kwargs,
     ]
     for decorate in reversed(decorators):
         func = decorate(func)
@@ -110,7 +110,7 @@ class SparseArray:
 
         return self
 
-    @arithmethic_decorators
+    @_arithmethic_decorators
     def max(self, axis=None, dtype=None, **kwargs):
         if dtype is None:
             dtype = self.dtype
@@ -122,7 +122,7 @@ class SparseArray:
                 ret[unique] = np.maximum(ret[unique], counts)
             return ret.reshape(self.frame_shape)
 
-    @arithmethic_decorators
+    @_arithmethic_decorators
     def min(self, axis=None, dtype=None, **kwargs):
         if dtype is None:
             dtype = self.dtype
@@ -137,7 +137,7 @@ class SparseArray:
                 ret[:] = np.minimum(ret, expanded)
             return ret.reshape(self.frame_shape)
 
-    @arithmethic_decorators
+    @_arithmethic_decorators
     def sum(self, axis=None, dtype=None, **kwargs):
         if dtype is None:
             dtype = self.dtype
@@ -149,7 +149,7 @@ class SparseArray:
                 ret[unique] += counts.astype(dtype)
             return ret.reshape(self.frame_shape)
 
-    @arithmethic_decorators
+    @_arithmethic_decorators
     def mean(self, axis=None, dtype=None, **kwargs):
         if dtype is None:
             dtype = np.float32
@@ -444,5 +444,5 @@ class SparseArray:
         raise ValueError(f'0 < len(indices) < {max_length} is required')
 
 
-def warning(msg):
+def _warning(msg):
     print(f'Warning: {msg}', file=sys.stderr)
