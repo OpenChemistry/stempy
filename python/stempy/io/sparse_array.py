@@ -10,7 +10,7 @@ def format_axis(func):
     @wraps(func)
     def wrapper(self, axis, *args, **kwargs):
         if axis is None:
-            axis = self.default_axis
+            axis = self._default_axis
         elif not isinstance(axis, (list, tuple)):
             axis = (axis,)
         axis = tuple(sorted(axis))
@@ -110,28 +110,13 @@ class SparseArray:
 
         return self
 
-    @property
-    def frame_shape_flat(self):
-        return (np.prod(self.frame_shape),)
-
-    @property
-    def default_axis(self):
-        return tuple(np.arange(len(self.shape)))
-
-    def is_scan_axes(self, axis):
-        shape = self.shape
-        if len(shape) == 3 and tuple(axis) == (0,):
-            return True
-
-        return len(shape) == 4 and tuple(sorted(axis)) == (0, 1)
-
     @arithmethic_decorators
     def max(self, axis=None, dtype=None, **kwargs):
         if dtype is None:
             dtype = self.dtype
 
-        if self.is_scan_axes(axis):
-            ret = np.zeros(self.frame_shape_flat, dtype=dtype)
+        if self._is_scan_axes(axis):
+            ret = np.zeros(self._frame_shape_flat, dtype=dtype)
             for sparse_frame in self.data:
                 unique, counts = np.unique(sparse_frame, return_counts=True)
                 ret[unique] = np.maximum(ret[unique], counts)
@@ -142,9 +127,9 @@ class SparseArray:
         if dtype is None:
             dtype = self.dtype
 
-        if self.is_scan_axes(axis):
-            ret = np.full(self.frame_shape_flat, np.iinfo(dtype).max, dtype)
-            expanded = np.empty(self.frame_shape_flat, dtype)
+        if self._is_scan_axes(axis):
+            ret = np.full(self._frame_shape_flat, np.iinfo(dtype).max, dtype)
+            expanded = np.empty(self._frame_shape_flat, dtype)
             for sparse_frame in self.data:
                 expanded[:] = 0
                 unique, counts = np.unique(sparse_frame, return_counts=True)
@@ -157,8 +142,8 @@ class SparseArray:
         if dtype is None:
             dtype = self.dtype
 
-        if self.is_scan_axes(axis):
-            ret = np.zeros(self.frame_shape_flat, dtype=dtype)
+        if self._is_scan_axes(axis):
+            ret = np.zeros(self._frame_shape_flat, dtype=dtype)
             for sparse_frame in self.data:
                 unique, counts = np.unique(sparse_frame, return_counts=True)
                 ret[unique] += counts.astype(dtype)
@@ -170,7 +155,7 @@ class SparseArray:
             dtype = np.float32
 
         mean_length = np.prod([self.shape[x] for x in axis])
-        if self.is_scan_axes(axis):
+        if self._is_scan_axes(axis):
             summed = self.sum(axis, dtype=dtype)
             summed[:] /= mean_length
             return summed
@@ -233,22 +218,6 @@ class SparseArray:
         }
         return SparseArray(**kwargs)
 
-    def sparse_frame(self, indices):
-        if not isinstance(indices, (list, tuple)):
-            indices = (indices,)
-
-        if len(indices) != len(self.scan_shape):
-            msg = (f'{indices} shape does not match scan shape'
-                   f'{self.scan_shape}')
-            raise ValueError(msg)
-
-        if len(indices) == 1:
-            scan_ind = indices[0]
-        else:
-            scan_ind = indices[0] * self.scan_shape[1] + indices[1]
-
-        return self.data[scan_ind]
-
     def __getitem__(self, key):
         # Make sure it is a list
         if not isinstance(key, (list, tuple)):
@@ -275,14 +244,45 @@ class SparseArray:
         }
 
         if is_single_frame or not self.sparse_slicing:
-            f = self.slice_dense
+            f = self._slice_dense
             kwargs['non_slice_indices'] = non_slice_indices
         else:
-            f = self.slice_sparse
+            f = self._slice_sparse
 
         return f(**kwargs)
 
-    def slice_dense(self, slices, non_slice_indices=None):
+    @property
+    def _frame_shape_flat(self):
+        return (np.prod(self.frame_shape),)
+
+    @property
+    def _default_axis(self):
+        return tuple(np.arange(len(self.shape)))
+
+    def _is_scan_axes(self, axis):
+        shape = self.shape
+        if len(shape) == 3 and tuple(axis) == (0,):
+            return True
+
+        return len(shape) == 4 and tuple(sorted(axis)) == (0, 1)
+
+    def _sparse_frame(self, indices):
+        if not isinstance(indices, (list, tuple)):
+            indices = (indices,)
+
+        if len(indices) != len(self.scan_shape):
+            msg = (f'{indices} shape does not match scan shape'
+                   f'{self.scan_shape}')
+            raise ValueError(msg)
+
+        if len(indices) == 1:
+            scan_ind = indices[0]
+        else:
+            scan_ind = indices[0] * self.scan_shape[1] + indices[1]
+
+        return self.data[scan_ind]
+
+    def _slice_dense(self, slices, non_slice_indices=None):
         # non_slice_indices indicate which indices should be squeezed
         # out of the result.
         if non_slice_indices is None:
@@ -318,7 +318,7 @@ class SparseArray:
             for i in slice_range(ind):
                 current_indices.append(i)
                 if len(current_indices) == expand_num:
-                    output = self.expand(current_indices)
+                    output = self._expand(current_indices)
                     # This could be faster if we only expand what we need
                     output = output[tuple(slices[-expand_num:])]
                     result[tuple(result_indices)] = output
@@ -333,7 +333,7 @@ class SparseArray:
         # Squeeze out the non-slice indices
         return result.squeeze(axis=non_slice_indices)
 
-    def slice_sparse(self, slices):
+    def _slice_sparse(self, slices):
         if len(slices) != len(self.shape):
             raise Exception('Slices must be same length as shape')
 
@@ -370,10 +370,10 @@ class SparseArray:
                 new_frame_shape += (len(slice_range(s, length)),)
 
             # Map old frame indices to new ones. Invalid values will be -1.
-            frame_indices = np.arange(self.frame_shape_flat[0]).reshape(
+            frame_indices = np.arange(self._frame_shape_flat[0]).reshape(
                 self.frame_shape)
             valid_flat_frame_indices = frame_indices[frame_slices].ravel()
-            new_frame_indices_map = np.full(self.frame_shape_flat, -1)
+            new_frame_indices_map = np.full(self._frame_shape_flat, -1)
 
             new_indices = np.arange(len(valid_flat_frame_indices))
             new_frame_indices_map[valid_flat_frame_indices] = new_indices
@@ -399,13 +399,13 @@ class SparseArray:
         }
         return SparseArray(**kwargs)
 
-    def expand(self, indices):
+    def _expand(self, indices):
         if not isinstance(indices, (list, tuple)):
             indices = (indices,)
 
         if len(indices) >= len(self.scan_shape):
             scan_indices = indices[:len(self.scan_shape)]
-            sparse_frame = self.sparse_frame(scan_indices)
+            sparse_frame = self._sparse_frame(scan_indices)
 
         if len(indices) < len(self.scan_shape):
             # len(indices) should be 1 and len(scan_shape) should be 2
@@ -416,7 +416,7 @@ class SparseArray:
             return dp
         elif len(indices) == len(self.scan_shape):
             # Expand the frame this represents
-            dp = np.zeros(self.frame_shape_flat, dtype=self.dtype)
+            dp = np.zeros(self._frame_shape_flat, dtype=self.dtype)
             unique, counts = np.unique(sparse_frame, return_counts=True)
             dp[unique] += counts.astype(self.dtype)
             return dp.reshape(self.frame_shape)
