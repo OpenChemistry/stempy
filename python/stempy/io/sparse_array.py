@@ -68,8 +68,44 @@ NONE_SLICE = slice(None)
 
 
 class SparseArray:
+    """Utility class for analyzing sparse electron counted data
+
+    This implements functions performed directly on the sparse data
+    including binning scans/frames, and min/max/sum/mean operations
+    for certain axes.
+
+    Standard slicing notation is also supported, including start, stop,
+    and stride. Slicing returns either a new sparse array or a dense
+    array depending on the user-defined settings.
+    """
     def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
                  sparse_slicing=True, allow_full_expand=False):
+        """Initialize a sparse array.
+
+        :param data: the sparse array data, where the arrays represent
+                     individual frames, and each value in the arrays
+                     represent 1 at that index.
+        :type data: np.ndarray (1D) of np.ndarray (1D)
+        :param scan_shape: the shape of the scan
+        :type scan_shape: tuple of length 1 or 2
+        :param frame_shape: the shape of the frame
+        :type frame_shape: tuple of length 2
+        :param dtype: the dtype to use for expansions and arithmetic
+        :type dtype: np.dtype
+        :param sparse_slicing: when slicing, return another sparse
+                               array, except when an individual frame
+                               is returned. If False, a dense array
+                               will be returned.
+        :type sparse_slicing: bool
+        :param allow_full_expand: allow full expansions of the data.
+                                  This parameter is used to prevent
+                                  full expansions of the data when it
+                                  would take up too much memory. If
+                                  False and a full expansion is
+                                  attempted anywhere, an exception will
+                                  be raised.
+        :type allow_full_expand: bool
+        """
         self.data = data.ravel()
         self.scan_shape = tuple(scan_shape)
         self.frame_shape = tuple(frame_shape)
@@ -79,16 +115,34 @@ class SparseArray:
 
     @property
     def shape(self):
+        """The full shape of the data (scan shape + frame shape)
+
+        :return: the full shape of the data
+        :rtype: tuple of length 3 or 4
+        """
         return tuple(self.scan_shape + self.frame_shape)
 
     @shape.setter
     def shape(self, shape):
+        """Set the shape of the data (scan shape + frame shape)
+
+        :param shape: the new shape of the data.
+        :type shape: tuple of length 3 or 4
+        """
         if not isinstance(shape, (list, tuple)):
             shape = (shape,)
 
         self.reshape(*shape)
 
     def reshape(self, *shape):
+        """Set the shape of the data (scan shape + frame shape)
+
+        :param shape: the new shape of the data.
+        :type shape: tuple of length 3 or 4
+
+        :return: self
+        :rtype: SparseArray
+        """
         if len(shape) not in (3, 4):
             raise ValueError('Shape must be length 3 or 4')
 
@@ -112,6 +166,28 @@ class SparseArray:
 
     @_arithmethic_decorators
     def max(self, axis=None, dtype=None, **kwargs):
+        """Return the maximum along a given axis.
+
+        For specialized axes, a quick, optimized max will be performed
+        using the sparse data. For non specialized axes, a full
+        expansion will be performed and then the max taken of that.
+
+        Current specialized axes are:
+        1. (0,) for 3D shape
+        2. (0, 1) for 4D shape
+
+        :param axis: the axis along which to perform the max
+        :type axis: int or tuple
+        :param dtype: the type of array to create and return.
+                      Defaults to self.dtype.
+        :type dtype: np.dtype
+        :param kwargs: any kwargs to pass to a non specialized axes
+                       operation
+        :type kwargs: dict
+
+        :return: the result of the max
+        :rtype: np.ndarray
+        """
         if dtype is None:
             dtype = self.dtype
 
@@ -124,6 +200,28 @@ class SparseArray:
 
     @_arithmethic_decorators
     def min(self, axis=None, dtype=None, **kwargs):
+        """Return the minimum along a given axis.
+
+        For specialized axes, a quick, optimized min will be performed
+        using the sparse data. For non specialized axes, a full
+        expansion will be performed and then the min taken of that.
+
+        Current specialized axes are:
+        1. (0,) for 3D shape
+        2. (0, 1) for 4D shape
+
+        :param axis: the axis along which to perform the min
+        :type axis: int or tuple
+        :param dtype: the type of array to create and return.
+                      Defaults to self.dtype.
+        :type dtype: np.dtype
+        :param kwargs: any kwargs to pass to a non specialized axes
+                       operation
+        :type kwargs: dict
+
+        :return: the result of the min
+        :rtype: np.ndarray
+        """
         if dtype is None:
             dtype = self.dtype
 
@@ -139,6 +237,28 @@ class SparseArray:
 
     @_arithmethic_decorators
     def sum(self, axis=None, dtype=None, **kwargs):
+        """Return the sum along a given axis.
+
+        For specialized axes, a quick, optimized sum will be performed
+        using the sparse data. For non specialized axes, a full
+        expansion will be performed and then the sum taken of that.
+
+        Current specialized axes are:
+        1. (0,) for 3D shape
+        2. (0, 1) for 4D shape
+
+        :param axis: the axis along which to perform the sum
+        :type axis: int or tuple
+        :param dtype: the type of array to create and return.
+                      Defaults to self.dtype.
+        :type dtype: np.dtype
+        :param kwargs: any kwargs to pass to a non specialized axes
+                       operation
+        :type kwargs: dict
+
+        :return: the result of the sum
+        :rtype: np.ndarray
+        """
         if dtype is None:
             dtype = self.dtype
 
@@ -151,6 +271,28 @@ class SparseArray:
 
     @_arithmethic_decorators
     def mean(self, axis=None, dtype=None, **kwargs):
+        """Return the mean along a given axis.
+
+        For specialized axes, a quick, optimized mean will be performed
+        using the sparse data. For non specialized axes, a full
+        expansion will be performed and then the mean taken of that.
+
+        Current specialized axes are:
+        1. (0,) for 3D shape
+        2. (0, 1) for 4D shape
+
+        :param axis: the axis along which to perform the mean
+        :type axis: int or tuple
+        :param dtype: the type of array to create and return.
+                      Defaults to np.float32.
+        :type dtype: np.dtype
+        :param kwargs: any kwargs to pass to a non specialized axes
+                       operation
+        :type kwargs: dict
+
+        :return: the result of the mean
+        :rtype: np.ndarray
+        """
         if dtype is None:
             dtype = np.float32
 
@@ -161,6 +303,20 @@ class SparseArray:
             return summed
 
     def bin_scans(self, bin_factor, in_place=False):
+        """Perform a binning on the scan dimensions
+
+        This will sum sparse frames together to reduce the scan
+        dimensions. The scan dimensions are the first 1 or 2 dimension.
+
+        :param bin_factor: the factor to use for binning
+        :type bin_factor: int
+        :param in_place: whether to modify the current SparseArray or
+                         create and return a new one.
+        :type in_place: bool
+
+        :return: self if in_place is True, otherwise a new SparseArray
+        :rtype: SparseArray
+        """
         if not all(x % bin_factor == 0 for x in self.scan_shape):
             raise ValueError(f'scan_shape must be equally divisible by '
                              f'bin_factor {bin_factor}')
@@ -192,6 +348,20 @@ class SparseArray:
         return SparseArray(**kwargs)
 
     def bin_frames(self, bin_factor, in_place=False):
+        """Perform a binning on the frame dimensions
+
+        This will sum frame values together to reduce the frame
+        dimensions. The frame dimensions are the last 2 dimensions.
+
+        :param bin_factor: the factor to use for binning
+        :type bin_factor: int
+        :param in_place: whether to modify the current SparseArray or
+                         create and return a new one.
+        :type in_place: bool
+
+        :return: self if in_place is True, otherwise a new SparseArray
+        :rtype: SparseArray
+        """
         if not all(x % bin_factor == 0 for x in self.frame_shape):
             raise ValueError(f'frame_shape must be equally divisible by '
                              f'bin_factor {bin_factor}')
