@@ -1,6 +1,7 @@
 import copy
 from functools import wraps
 import inspect
+import sys
 
 import numpy as np
 
@@ -26,7 +27,7 @@ def default_full_expansion(func):
         if ret is not None:
             return ret
 
-        print(f'Warning: performing full expansion for {name}')
+        warning(f'performing full expansion for {name}')
         prev_sparse_slicing = self.sparse_slicing
         self.sparse_slicing = False
         try:
@@ -45,7 +46,7 @@ def warn_unimplemented_kwargs(func):
     def wrapper(*args, **kwargs):
         for key, value in kwargs.items():
             if key not in signature_args and value is not None:
-                print(f"{name}: warning - '{key}' is not implemented")
+                warning(f'"{key}" is not implemented for {name}')
 
         return func(*args, **kwargs)
     return wrapper
@@ -441,3 +442,7 @@ class SparseArray:
 
         max_length = len(self.shape) + 1
         raise ValueError(f'0 < len(indices) < {max_length} is required')
+
+
+def warning(msg):
+    print(f'Warning: {msg}', file=sys.stderr)
