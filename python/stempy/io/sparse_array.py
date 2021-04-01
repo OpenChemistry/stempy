@@ -459,7 +459,7 @@ class SparseArray:
             non_slice_indices = []
 
         if all(x == NONE_SLICE for x in slices) and not self.allow_full_expand:
-            raise Exception('Full expansion is not allowed')
+            raise FullExpansionDenied('Full expansion is not allowed')
 
         data_shape = self.shape
 
@@ -616,3 +616,7 @@ class SparseArray:
 
 def _warning(msg):
     print(f'Warning: {msg}', file=sys.stderr)
+
+
+class FullExpansionDenied(Exception):
+    pass
