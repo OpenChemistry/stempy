@@ -29,7 +29,7 @@ env:
   CIBW_TEST_REQUIRES: pytest
 
   # Run a very simple test to make sure the wheels are working
-  CIBW_TEST_COMMAND: pytest {project}/.github/scripts/simple_test.py
+  CIBW_TEST_COMMAND: pytest {project}/tests
 
 
 # Use bash by default for the run command
