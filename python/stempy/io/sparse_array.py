@@ -438,12 +438,12 @@ class SparseArray:
         is_single_frame = all(x in non_slice_indices for x in scan_indices)
 
         kwargs = {
-            'slices': key
+            'slices': key,
+            'non_slice_indices': non_slice_indices,
         }
 
         if is_single_frame or not self.sparse_slicing:
             f = self._slice_dense
-            kwargs['non_slice_indices'] = non_slice_indices
         else:
             f = self._slice_sparse
 
@@ -531,7 +531,12 @@ class SparseArray:
         # Squeeze out the non-slice indices
         return result.squeeze(axis=non_slice_indices)
 
-    def _slice_sparse(self, slices):
+    def _slice_sparse(self, slices, non_slice_indices=None):
+        # non_slice_indices indicate which indices should be squeezed
+        # out of the result.
+        if non_slice_indices is None:
+            non_slice_indices = []
+
         if len(slices) != len(self.shape):
             raise Exception('Slices must be same length as shape')
 
@@ -550,10 +555,9 @@ class SparseArray:
 
         if scan_shape_modified:
             new_scan_shape = ()
-            for s, length in zip(scan_slices, self.scan_shape):
-                num_items = len(slice_range(s, length))
-                if num_items > 1:
-                    new_scan_shape += (num_items,)
+            for i, (s, length) in enumerate(zip(scan_slices, self.scan_shape)):
+                if i not in non_slice_indices:
+                    new_scan_shape += (len(slice_range(s, length)),)
             shaped_data = self.data.reshape(self.scan_shape)
             new_frames = shaped_data[scan_slices].ravel()
         else:
@@ -564,8 +568,10 @@ class SparseArray:
 
         if frame_shape_modified:
             new_frame_shape = ()
-            for s, length in zip(frame_slices, self.frame_shape):
-                new_frame_shape += (len(slice_range(s, length)),)
+            for i, (s, length) in enumerate(zip(frame_slices,
+                                                self.frame_shape)):
+                if i + len(self.scan_shape) not in non_slice_indices:
+                    new_frame_shape += (len(slice_range(s, length)),)
 
             # Map old frame indices to new ones. Invalid values will be -1.
             frame_indices = np.arange(self._frame_shape_flat[0]).reshape(

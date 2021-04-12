@@ -100,8 +100,8 @@ def test_sparse_slicing(sparse_array_small, full_array_small):
 
     # Just test a few indices
     test_frames = [
-        (0, 0), (0, 1), (1, 0), (0, 5), (1, 3), (2, 2), (3, 1), (8, 4), (9, 6),
-        (10, 100), (25, 90), (65, 37), (200, 30),
+        (0, 0), (0, 1), (0, 5), (0, 9), (0, 11), (1, 0), (1, 3), (2, 2),
+        (3, 1), (8, 4), (9, 6), (10, 100), (25, 90), (65, 37), (200, 30),
     ]
     for slices in TEST_SLICES:
         sliced = array[slices]
@@ -259,6 +259,36 @@ def test_index_error(sparse_array_small):
         array[:, -array.shape[1] - 5]
 
 
+def test_slice_shapes(sparse_array_small, full_array_small):
+    # Indexing should always remove the axis.
+    # Slicing should always retain the axis.
+    # To make it simple, just make sure it matches the behavior
+    # of numpy...
+    array = sparse_array_small
+    full = full_array_small
+
+    def run_it(sparse_slicing):
+        array.sparse_slicing = sparse_slicing
+        assert array[0, :, :, :].shape == full[0, :, :, :].shape
+        assert array[0:1, :, :, :].shape == full[0:1, :, :, :].shape
+        assert array[0:2, :, :, :].shape == full[0:2, :, :, :].shape
+
+        assert array[:, 0:, :, :].shape == full[:, 0:, :, :].shape
+        assert array[:, 0:1, :, :].shape == full[:, 0:1, :, :].shape
+        assert array[:, 0:2, :, :].shape == full[:, 0:2, :, :].shape
+
+        assert array[:, :, 0, :].shape == full[:, :, 0, :].shape
+        assert array[:, :, 0:1, :].shape == full[:, :, 0:1, :].shape
+        assert array[:, :, 0:2, :].shape == full[:, :, 0:2, :].shape
+
+        assert array[:, :, :, 0].shape == full[:, :, :, 0].shape
+        assert array[:, :, :, 0:1].shape == full[:, :, :, 0:1].shape
+        assert array[:, :, :, 0:2].shape == full[:, :, :, 0:2].shape
+
+    run_it(True)
+    run_it(False)
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 
@@ -273,6 +303,7 @@ TEST_SLICES = [
     (7, -20, 6),
     (30, 7, -5, 8),
     (3, 4, slice(100, 1, -2)),
+    (slice(3, 4, None), slice(70, 10, -2)),
     (slice(None), 5),
     (slice(None), 8, slice(None), slice(1, 300, 3)),
     (slice(4), slice(7), slice(3), slice(5)),
