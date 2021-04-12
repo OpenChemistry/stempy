@@ -21,7 +21,11 @@ def sparse_array_small(electron_data_small):
         'frame_shape': data.frame_dimensions,
         'dtype': np.uint64,
     }
-    return SparseArray(**kwargs)
+    array = SparseArray(**kwargs)
+
+    # Perform some slicing so we don't blow up CI memory when we
+    # do a full expansion.
+    return array[:40:2, :40:2]
 
 
 @pytest.fixture
@@ -60,9 +64,15 @@ def test_deny_full_expansion(sparse_array_small):
 def test_first_frame_expansion(sparse_array_small, full_array_small):
     array = sparse_array_small
     full = full_array_small
-    first_frame = array[0, 0]
 
-    assert np.array_equal(first_frame, full[0, 0])
+    if array.ndim == 3:
+        slices = (0,)
+    elif array.ndim == 4:
+        slices = (0, 0)
+
+    first_frame = array[slices]
+
+    assert np.array_equal(first_frame, full[slices])
 
     # Check the data and make sure it truly matches
     unique, counts = np.unique(array.data[0], return_counts=True)
@@ -100,8 +110,9 @@ def test_sparse_slicing(sparse_array_small, full_array_small):
 
     # Just test a few indices
     test_frames = [
-        (0, 0), (0, 1), (0, 5), (0, 9), (0, 11), (1, 0), (1, 3), (2, 2),
-        (3, 1), (8, 4), (9, 6), (10, 100), (25, 90), (65, 37), (200, 30),
+        (0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 7), (0, 9), (0, 11),
+        (1, 0), (1, 3), (2, 2), (3, 1), (8, 4), (9, 6), (10, 13), (17, 17),
+        (14, 16), (18, 15),
     ]
     for slices in TEST_SLICES:
         sliced = array[slices]
@@ -212,7 +223,7 @@ def test_reshape(sparse_array_small, full_array_small):
 
     # Ensure that we can pass a tuple or variable length args
     original_shape = array.shape
-    shape = (25, 100, 576, 576)
+    shape = (10, 40, 576, 576)
     # Try tuple
     array.reshape(shape)
     assert array.shape == shape
@@ -223,13 +234,14 @@ def test_reshape(sparse_array_small, full_array_small):
 
     # Try a few different reshapings, and test the first frame each time
     shapes = [
-        (25, 100, 576, 576),
-        (10, 250, 576, 576),
-        (5, 500, 576, 576),
-        (10, 250, 288, 1152),
-        (250, 10, 1152, 288),
-        (5, 500, 192, 1728),
-        (500, 5, 1728, 192),
+        (40, 10, 576, 576),
+        (10, 40, 576, 576),
+        (1, 400, 576, 576),
+        (400, 576, 576),
+        (5, 80, 288, 1152),
+        (80, 5, 1152, 288),
+        (10, 40, 192, 1728),
+        (20, 20, 1728, 192),
     ]
 
     for shape in shapes:
@@ -315,14 +327,14 @@ TEST_SLICES = [
     (-1, -1),
     (-5, 10),
     (7, -20, 6),
-    (30, 7, -5, 8),
+    (19, 7, -5, 8),
     (3, 4, slice(100, 1, -2)),
     (slice(3, 4, None), slice(70, 10, -2)),
     (slice(None), 5),
     (slice(None), 8, slice(None), slice(1, 300, 3)),
     (slice(4), slice(7), slice(3), slice(5)),
     (slice(2, 8), slice(5, 9), slice(2, 20), slice(50, 200)),
-    (slice(2, 30, 2), slice(3, 27, 3), slice(2, 50, 2), slice(20, 100)),
+    (slice(2, 18, 2), slice(3, 20, 3), slice(2, 50, 2), slice(20, 100)),
     (slice(None, None, 2), slice(None, None, 3), slice(None, None, 4),
      slice(None, None, 5)),
     (slice(3, None, 2), slice(5, None, 5), slice(4, None, 4),
