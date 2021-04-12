@@ -134,6 +134,17 @@ class SparseArray:
 
         self.reshape(*shape)
 
+    @property
+    def ndim(self):
+        """The number of dimensions of the data
+
+        This is equal to len(scan shape + frame shape)
+
+        :return: the number of dimensions of the data
+        :rtype: int
+        """
+        return len(self.shape)
+
     def reshape(self, *shape):
         """Set the shape of the data (scan shape + frame shape)
 
