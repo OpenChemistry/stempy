@@ -149,11 +149,14 @@ class SparseArray:
         """Set the shape of the data (scan shape + frame shape)
 
         :param shape: the new shape of the data.
-        :type shape: tuple of length 3 or 4
+        :type shape: argument list or tuple of length 3 or 4
 
         :return: self
         :rtype: SparseArray
         """
+        if len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
+
         if len(shape) not in (3, 4):
             raise ValueError('Shape must be length 3 or 4')
 
