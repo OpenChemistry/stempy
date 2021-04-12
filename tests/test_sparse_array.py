@@ -289,6 +289,20 @@ def test_slice_shapes(sparse_array_small, full_array_small):
     run_it(False)
 
 
+def test_slice_sum(sparse_array_small, full_array_small):
+    data = sparse_array_small
+    full = full_array_small
+
+    assert np.array_equal(data[0, 0:1, :, :].sum(axis=0),
+                          full[0, 0:1, :, :].sum(axis=0))
+    assert np.array_equal(data[0:1, 0:1, :, :].sum(axis=(0, 1)),
+                          full[0:1, 0:1, :, :].sum(axis=(0, 1)))
+    assert np.array_equal(data[0:2, 0:2, :, :].sum(axis=(0, 1)),
+                          full[0:2, 0:2, :, :].sum(axis=(0, 1)))
+    assert np.array_equal(data[0, 0, :, :].sum(),
+                          full[0, 0, :, :].sum())
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 
