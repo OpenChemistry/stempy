@@ -507,7 +507,7 @@ class SparseArray:
                 if len(current_indices) == expand_num:
                     output = self._expand(current_indices)
                     # This could be faster if we only expand what we need
-                    output = output[tuple(slices[-expand_num:])]
+                    output = output[tuple(slices[-output.ndim:])]
                     result[tuple(result_indices)] = output
                 else:
                     iterate()
