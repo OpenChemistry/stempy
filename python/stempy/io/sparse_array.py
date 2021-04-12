@@ -321,16 +321,18 @@ class SparseArray:
             raise ValueError(f'scan_shape must be equally divisible by '
                              f'bin_factor {bin_factor}')
 
-        shape_size = len(self.scan_shape)
         new_scan_shape = tuple(x // bin_factor for x in self.scan_shape)
         flat_new_scan_shape = np.prod(new_scan_shape),
         new_data = np.empty(flat_new_scan_shape, dtype=object)
 
-        original_reshaped = self.data.reshape(flat_new_scan_shape[0],
-                                              bin_factor * shape_size)
+        original_reshaped = self.data.reshape(new_scan_shape[0], bin_factor,
+                                              new_scan_shape[1], bin_factor)
 
-        for i in range(original_reshaped.shape[0]):
-            new_data[i] = np.concatenate(original_reshaped[i])
+        for i in range(new_scan_shape[0]):
+            for j in range(new_scan_shape[1]):
+                idx = i * new_scan_shape[1] + j
+                to_combine = original_reshaped[i, :, j, :].ravel()
+                new_data[idx] = np.concatenate(to_combine)
 
         if in_place:
             self.data = new_data
