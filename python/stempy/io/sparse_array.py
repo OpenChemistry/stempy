@@ -403,6 +403,10 @@ class SparseArray:
         non_slice_indices = ()
         for i, item in enumerate(key):
             if not isinstance(item, slice):
+                if item >= self.shape[i]:
+                    raise IndexError(f'index {item} is out of bounds for '
+                                     f'axis {i} with size {self.shape[i]}')
+
                 non_slice_indices += (i,)
                 key[i] = slice(item, item + 1)
 
