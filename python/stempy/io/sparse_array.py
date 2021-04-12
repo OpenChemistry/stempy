@@ -419,12 +419,20 @@ class SparseArray:
         non_slice_indices = ()
         for i, item in enumerate(key):
             if not isinstance(item, slice):
-                if item >= self.shape[i]:
+                if item >= self.shape[i] or item < -self.shape[i]:
                     raise IndexError(f'index {item} is out of bounds for '
                                      f'axis {i} with size {self.shape[i]}')
 
                 non_slice_indices += (i,)
-                key[i] = slice(item, item + 1)
+                if item == -1:
+                    # slice(-1, 0) will not work, since negative and
+                    # positive numbers are treated differently.
+                    # Instead, set the next number to the last number.
+                    next_num = self.shape[i]
+                else:
+                    next_num = item + 1
+
+                key[i] = slice(item, next_num)
 
         scan_indices = np.arange(len(self.scan_shape))
         is_single_frame = all(x in non_slice_indices for x in scan_indices)

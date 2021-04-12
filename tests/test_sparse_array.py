@@ -102,6 +102,10 @@ def test_sparse_slicing(sparse_array_small, full_array_small):
     ]
     for slices in TEST_SLICES:
         sliced = array[slices]
+        if sliced.ndim < 2:
+            # Skip these ones...
+            continue
+
         was_tested = []
         for x, y in test_frames:
             # Just skip it if it is out of bounds
@@ -243,6 +247,10 @@ TEST_BINNING_FAIL_MIN = 4
 
 TEST_SLICES = [
     (0, 4),
+    (-1, -1),
+    (-5, 10),
+    (7, -20, 6),
+    (30, 7, -5, 8),
     (3, 4, slice(100, 1, -2)),
     (slice(None), 5),
     (slice(None), 8, slice(None), slice(1, 300, 3)),
