@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 
 import numpy as np
@@ -27,7 +29,8 @@ def full_array_small(sparse_array_small):
     global cached_full_array_small
 
     if cached_full_array_small is None:
-        array = sparse_array_small
+        # Don't allow this fixture to modify the other fixture
+        array = copy.deepcopy(sparse_array_small)
 
         # Have to change these so we won't return a SparseArray,
         # and allow it to return a fully expanded array
