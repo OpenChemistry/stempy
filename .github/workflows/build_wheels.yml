@@ -26,9 +26,8 @@ env:
   # Get cmake to use python in the path...
   CIBW_ENVIRONMENT_MACOS: USE_PYTHON_IN_PATH=1
 
-  CIBW_TEST_REQUIRES: pytest
+  CIBW_BEFORE_TEST: pip install -r {project}/tests/requirements.txt
 
-  # Run a very simple test to make sure the wheels are working
   CIBW_TEST_COMMAND: pytest {project}/tests
 
 
