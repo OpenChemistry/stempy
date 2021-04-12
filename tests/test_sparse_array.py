@@ -238,6 +238,24 @@ def test_reshape(sparse_array_small, full_array_small):
         test_first_frame_expansion(array, full)
 
 
+def test_index_error(sparse_array_small):
+    array = sparse_array_small
+    with pytest.raises(IndexError):
+        array[array.shape[0]]
+
+    with pytest.raises(IndexError):
+        array[:, array.shape[1] + 5]
+
+    with pytest.raises(IndexError):
+        array[:, :, :, array.shape[3]]
+
+    with pytest.raises(IndexError):
+        array[-array.shape[0] - 1]
+
+    with pytest.raises(IndexError):
+        array[:, -array.shape[1] - 5]
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 
