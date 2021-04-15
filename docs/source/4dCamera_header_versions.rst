@@ -70,7 +70,7 @@ file name.
  Header
 
  * scan number, 1 x uint32
- * frame number, 1 x uint16
+ * frame number, 1 x uint32
  * STEM scan size, 2 x uint16
  * STEM position of this frame, 2x uint16
 
@@ -103,7 +103,7 @@ file name. See below for manual stitching code.
  Header
 
  * scan number, 1 x uint32
- * frame number, 1 x uint16
+ * frame number, 1 x uint32
  * STEM scan size, 2 x uint16
  * STEM position of this frame, 2x uint16
 
@@ -128,11 +128,11 @@ file name. See below for manual stitching code.
   import numpy as np
   modulePositions = ((0,144),(144,144*2),(144*2,144*3),(144*3,144*4))
 
-  scan = np.zeros((scanXY[0],scanXY[1], 576, 576),dtype='<u2')
+  scan = np.zeros((scanXY[0], scanXY[1], 576, 576), dtype='<u2')
 
   for file in files:
       #print(file.stem)
-      with open(file,'rb') as f1:
+      with open(file, 'rb') as f1:
           start = str(file).find('module')
           m = int(str(file)[start+6])
           module = modulePositions[int(str(file)[start+6])]
