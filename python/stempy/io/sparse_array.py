@@ -113,6 +113,47 @@ class SparseArray:
         self.sparse_slicing = sparse_slicing
         self.allow_full_expand = allow_full_expand
 
+    @classmethod
+    def from_electron_counts(cls, electron_counts, **init_kwargs):
+        """Create a SparseArray from an ElectronCountedData namedtuple
+
+        :param electron_counts: electron counted data (usually obtained
+                                from `stempy.io.load_electron_counts()`)
+        :type electron_counts: ElectronCountedData namedtuple
+        :param init_kwargs: any kwargs to forward to SparseArray.__init__()
+        :type init_kwargs: dict
+
+        :return: the generated sparse array
+        :rtype: SparseArray
+        """
+        kwargs = {
+            'data': electron_counts.data,
+            'scan_shape': electron_counts.scan_dimensions[::-1],
+            'frame_shape': electron_counts.frame_dimensions,
+        }
+        kwargs.update(init_kwargs)
+        return cls(**kwargs)
+
+    @classmethod
+    def from_hdf5(cls, filepath, **init_kwargs):
+        """Create a SparseArray from a stempy HDF5 file
+
+        :param filepath: the path to the HDF5 file
+        :type filepath: str
+        :param init_kwargs: any kwargs to forward to SparseArray.__init__()
+        :type init_kwargs: dict
+
+        :return: the generated sparse array
+        :rtype: SparseArray
+        """
+
+        # This is here instead of at the top so the basic SparseArray does
+        # not depend on the stempy C++ python modules being present.
+        from stempy.io import load_electron_counts
+
+        electron_counts = load_electron_counts(filepath)
+        return cls.from_electron_counts(electron_counts, **init_kwargs)
+
     @property
     def shape(self):
         """The full shape of the data (scan shape + frame shape)

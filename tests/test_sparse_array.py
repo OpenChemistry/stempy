@@ -4,7 +4,6 @@ import pytest
 
 import numpy as np
 
-from stempy import io
 from stempy.io.sparse_array import FullExpansionDenied
 from stempy.io.sparse_array import SparseArray
 
@@ -14,14 +13,10 @@ cached_full_array_small = None
 
 @pytest.fixture
 def sparse_array_small(electron_data_small):
-    data = io.load_electron_counts(electron_data_small)
     kwargs = {
-        'data': data.data,
-        'scan_shape': data.scan_dimensions,
-        'frame_shape': data.frame_dimensions,
         'dtype': np.uint64,
     }
-    array = SparseArray(**kwargs)
+    array = SparseArray.from_hdf5(electron_data_small, **kwargs)
 
     # Perform some slicing so we don't blow up CI memory when we
     # do a full expansion.
