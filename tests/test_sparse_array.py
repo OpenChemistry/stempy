@@ -315,6 +315,22 @@ def test_slice_sum(sparse_array_small, full_array_small):
                           full[0, 0, :, :].sum())
 
 
+def test_scan_ravel(sparse_array_small, full_array_small):
+    array = sparse_array_small
+    full = full_array_small
+
+    array.ravel_scans()
+    expected_shape = (400, 576, 576)
+    assert array.shape == expected_shape
+
+    # Perform a few simple tests on the raveled SparseArray
+    assert np.array_equal(array.sum(axis=0), full.sum(axis=(0, 1)))
+
+    full = full.reshape(expected_shape)
+    for i in range(expected_shape[0]):
+        assert np.array_equal(array[i], full[i])
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 

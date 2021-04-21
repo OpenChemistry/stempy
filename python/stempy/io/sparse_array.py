@@ -178,6 +178,18 @@ class SparseArray:
 
         return self
 
+    def ravel_scans(self):
+        """Reshape the SparseArray so the scan shape is flattened
+
+        The resulting SparseArray will be 3D, with 1 scan dimension
+        and 2 frame dimensions.
+
+        :return: self
+        :rtype: SparseArray
+        """
+        self.shape = (np.prod(self.scan_shape), *self.frame_shape)
+        return self
+
     @_arithmethic_decorators
     def max(self, axis=None, dtype=None, **kwargs):
         """Return the maximum along a given axis.
