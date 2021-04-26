@@ -113,6 +113,47 @@ class SparseArray:
         self.sparse_slicing = sparse_slicing
         self.allow_full_expand = allow_full_expand
 
+    @classmethod
+    def from_electron_counts(cls, electron_counts, **init_kwargs):
+        """Create a SparseArray from an ElectronCountedData namedtuple
+
+        :param electron_counts: electron counted data (usually obtained
+                                from `stempy.io.load_electron_counts()`)
+        :type electron_counts: ElectronCountedData namedtuple
+        :param init_kwargs: any kwargs to forward to SparseArray.__init__()
+        :type init_kwargs: dict
+
+        :return: the generated sparse array
+        :rtype: SparseArray
+        """
+        kwargs = {
+            'data': electron_counts.data,
+            'scan_shape': electron_counts.scan_dimensions[::-1],
+            'frame_shape': electron_counts.frame_dimensions,
+        }
+        kwargs.update(init_kwargs)
+        return cls(**kwargs)
+
+    @classmethod
+    def from_hdf5(cls, filepath, **init_kwargs):
+        """Create a SparseArray from a stempy HDF5 file
+
+        :param filepath: the path to the HDF5 file
+        :type filepath: str
+        :param init_kwargs: any kwargs to forward to SparseArray.__init__()
+        :type init_kwargs: dict
+
+        :return: the generated sparse array
+        :rtype: SparseArray
+        """
+
+        # This is here instead of at the top so the basic SparseArray does
+        # not depend on the stempy C++ python modules being present.
+        from stempy.io import load_electron_counts
+
+        electron_counts = load_electron_counts(filepath)
+        return cls.from_electron_counts(electron_counts, **init_kwargs)
+
     @property
     def shape(self):
         """The full shape of the data (scan shape + frame shape)
@@ -134,15 +175,29 @@ class SparseArray:
 
         self.reshape(*shape)
 
+    @property
+    def ndim(self):
+        """The number of dimensions of the data
+
+        This is equal to len(scan shape + frame shape)
+
+        :return: the number of dimensions of the data
+        :rtype: int
+        """
+        return len(self.shape)
+
     def reshape(self, *shape):
         """Set the shape of the data (scan shape + frame shape)
 
         :param shape: the new shape of the data.
-        :type shape: tuple of length 3 or 4
+        :type shape: argument list or tuple of length 3 or 4
 
         :return: self
         :rtype: SparseArray
         """
+        if len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
+
         if len(shape) not in (3, 4):
             raise ValueError('Shape must be length 3 or 4')
 
@@ -162,6 +217,18 @@ class SparseArray:
         self.scan_shape = scan_shape
         self.frame_shape = frame_shape
 
+        return self
+
+    def ravel_scans(self):
+        """Reshape the SparseArray so the scan shape is flattened
+
+        The resulting SparseArray will be 3D, with 1 scan dimension
+        and 2 frame dimensions.
+
+        :return: self
+        :rtype: SparseArray
+        """
+        self.shape = (np.prod(self.scan_shape), *self.frame_shape)
         return self
 
     @_arithmethic_decorators
@@ -321,16 +388,18 @@ class SparseArray:
             raise ValueError(f'scan_shape must be equally divisible by '
                              f'bin_factor {bin_factor}')
 
-        shape_size = len(self.scan_shape)
         new_scan_shape = tuple(x // bin_factor for x in self.scan_shape)
         flat_new_scan_shape = np.prod(new_scan_shape),
         new_data = np.empty(flat_new_scan_shape, dtype=object)
 
-        original_reshaped = self.data.reshape(flat_new_scan_shape[0],
-                                              bin_factor * shape_size)
+        original_reshaped = self.data.reshape(new_scan_shape[0], bin_factor,
+                                              new_scan_shape[1], bin_factor)
 
-        for i in range(original_reshaped.shape[0]):
-            new_data[i] = np.concatenate(original_reshaped[i])
+        for i in range(new_scan_shape[0]):
+            for j in range(new_scan_shape[1]):
+                idx = i * new_scan_shape[1] + j
+                to_combine = original_reshaped[i, :, j, :].ravel()
+                new_data[idx] = np.concatenate(to_combine)
 
         if in_place:
             self.data = new_data
@@ -403,19 +472,31 @@ class SparseArray:
         non_slice_indices = ()
         for i, item in enumerate(key):
             if not isinstance(item, slice):
+                if item >= self.shape[i] or item < -self.shape[i]:
+                    raise IndexError(f'index {item} is out of bounds for '
+                                     f'axis {i} with size {self.shape[i]}')
+
                 non_slice_indices += (i,)
-                key[i] = slice(item, item + 1)
+                if item == -1:
+                    # slice(-1, 0) will not work, since negative and
+                    # positive numbers are treated differently.
+                    # Instead, set the next number to the last number.
+                    next_num = self.shape[i]
+                else:
+                    next_num = item + 1
+
+                key[i] = slice(item, next_num)
 
         scan_indices = np.arange(len(self.scan_shape))
         is_single_frame = all(x in non_slice_indices for x in scan_indices)
 
         kwargs = {
-            'slices': key
+            'slices': key,
+            'non_slice_indices': non_slice_indices,
         }
 
         if is_single_frame or not self.sparse_slicing:
             f = self._slice_dense
-            kwargs['non_slice_indices'] = non_slice_indices
         else:
             f = self._slice_sparse
 
@@ -459,7 +540,7 @@ class SparseArray:
             non_slice_indices = []
 
         if all(x == NONE_SLICE for x in slices) and not self.allow_full_expand:
-            raise Exception('Full expansion is not allowed')
+            raise FullExpansionDenied('Full expansion is not allowed')
 
         data_shape = self.shape
 
@@ -490,7 +571,7 @@ class SparseArray:
                 if len(current_indices) == expand_num:
                     output = self._expand(current_indices)
                     # This could be faster if we only expand what we need
-                    output = output[tuple(slices[-expand_num:])]
+                    output = output[tuple(slices[-output.ndim:])]
                     result[tuple(result_indices)] = output
                 else:
                     iterate()
@@ -503,7 +584,12 @@ class SparseArray:
         # Squeeze out the non-slice indices
         return result.squeeze(axis=non_slice_indices)
 
-    def _slice_sparse(self, slices):
+    def _slice_sparse(self, slices, non_slice_indices=None):
+        # non_slice_indices indicate which indices should be squeezed
+        # out of the result.
+        if non_slice_indices is None:
+            non_slice_indices = []
+
         if len(slices) != len(self.shape):
             raise Exception('Slices must be same length as shape')
 
@@ -522,10 +608,9 @@ class SparseArray:
 
         if scan_shape_modified:
             new_scan_shape = ()
-            for s, length in zip(scan_slices, self.scan_shape):
-                num_items = len(slice_range(s, length))
-                if num_items > 1:
-                    new_scan_shape += (num_items,)
+            for i, (s, length) in enumerate(zip(scan_slices, self.scan_shape)):
+                if i not in non_slice_indices:
+                    new_scan_shape += (len(slice_range(s, length)),)
             shaped_data = self.data.reshape(self.scan_shape)
             new_frames = shaped_data[scan_slices].ravel()
         else:
@@ -536,8 +621,10 @@ class SparseArray:
 
         if frame_shape_modified:
             new_frame_shape = ()
-            for s, length in zip(frame_slices, self.frame_shape):
-                new_frame_shape += (len(slice_range(s, length)),)
+            for i, (s, length) in enumerate(zip(frame_slices,
+                                                self.frame_shape)):
+                if i + len(self.scan_shape) not in non_slice_indices:
+                    new_frame_shape += (len(slice_range(s, length)),)
 
             # Map old frame indices to new ones. Invalid values will be -1.
             frame_indices = np.arange(self._frame_shape_flat[0]).reshape(
@@ -616,3 +703,7 @@ class SparseArray:
 
 def _warning(msg):
     print(f'Warning: {msg}', file=sys.stderr)
+
+
+class FullExpansionDenied(Exception):
+    pass
