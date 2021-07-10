@@ -18,6 +18,8 @@ Welcome to stempy's documentation!
 
    StempyH5Format.rst
 
+   4dCamera_header_versions.rst
+
    singularity.rst
 
 Indices and tables
