@@ -30,7 +30,7 @@ void load(Archive& archive, std::streampos& m)
   m = static_cast<std::streampos>(p);
 }
 
-// Needed to suppose std::pairs
+// Needed to support std::pairs
 // https://github.com/USCiLab/cereal/issues/547
 namespace cereal {
 template <class Archive, class F, class S>
