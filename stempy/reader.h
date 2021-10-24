@@ -538,8 +538,6 @@ private:
   void serializeScanMap(std::ostream* stream);
   void partitionScanMap();
   void gatherScanMap();
-  // void missingStreams();
-  // void missingPartStreams(SparseScanMap &sparse);
 
 #endif
 };
@@ -635,14 +633,8 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
     future.get();
   }
 
-  // missingStreams();
-
 #ifdef USE_MPI
   gatherScanMap();
-
-  // std::cout << "after gather\n";
-
-  // missingStreams();
 
   // Partion scan map
   partitionScanMap();
