@@ -18,19 +18,21 @@ class ContiguousStream;
 template <class Archive>
 void save(Archive& archive, std::streampos const& m)
 {
-  int pos = static_cast<int>(m);
-  archive.saveBinary(&pos, sizeof(int));
+  // Not sure of the best what to serialze a std::streampos, this seems to
+  // work, but may not be portable or work with all file sizes.
+  int64_t pos = static_cast<int64_t>(m);
+  archive.saveBinary(&pos, sizeof(int64_t));
 }
 
 template <class Archive>
 void load(Archive& archive, std::streampos& m)
 {
-  int p;
-  archive.loadBinary(&p, sizeof(int));
+  int64_t p;
+  archive.loadBinary(&p, sizeof(int64_t));
   m = static_cast<std::streampos>(p);
 }
 
-// Needed to suppose std::pairs
+// Needed to support std::pairs
 // https://github.com/USCiLab/cereal/issues/547
 namespace cereal {
 template <class Archive, class F, class S>
