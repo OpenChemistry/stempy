@@ -544,10 +544,36 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
     getSampleBlocksPerRank(worldSize, rank, thresholdNumberOfBlocks);
 #endif
 
-  auto counter = [&events, &electronCounting, &backgroundThreshold,
-                  &xRayThreshold, &sampleMutex, &sampleCondition, &sampleBlocks,
-                  thresholdNumberOfBlocks, numberOfSamples, darkReference, gain,
-                  &positionMutexes](Block& b) {
+  auto countBlock = [&events, &electronCounting, &backgroundThreshold,
+                     &xRayThreshold, darkReference, gain,
+                     &positionMutexes](Block& b) {
+    auto data = b.data.get();
+    auto frameDimensions = b.header.frameDimensions;
+    for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
+      auto frameStart =
+        data + i * frameDimensions.first * frameDimensions.second;
+      std::vector<FrameType> frame(frameStart,
+                                   frameStart + frameDimensions.first *
+                                                  frameDimensions.second);
+
+      auto frameEvents = electronCount<FrameType, dark>(
+        frame, frameDimensions, darkReference, backgroundThreshold,
+        xRayThreshold, gain);
+
+      auto position = b.header.imageNumbers[i];
+      auto& eventsForPosition = events[position];
+      // Find the mutex for this position and lock it
+      auto& mutex = positionMutexes[position];
+      std::unique_lock<std::mutex> positionLock(mutex);
+      // Append the events
+      eventsForPosition.insert(eventsForPosition.end(), frameEvents.begin(),
+                               frameEvents.end());
+    }
+  };
+
+  auto counter = [&events, &electronCounting, &sampleMutex, &sampleCondition,
+                  &sampleBlocks, thresholdNumberOfBlocks,
+                  &countBlock](Block& b) {
     // If we are still collecting sample block for calculating the threshold
     if (!electronCounting) {
       std::unique_lock<std::mutex> sampleLock(sampleMutex);
@@ -566,32 +592,13 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
         sampleCondition.wait(sampleLock, [&electronCounting]() {
           return electronCounting.load();
         });
+        // Make sure we count the block.
+        countBlock(b);
       }
     }
     // We are electron counting
     else {
-      auto data = b.data.get();
-      auto frameDimensions = b.header.frameDimensions;
-      for (unsigned i = 0; i < b.header.imagesInBlock; i++) {
-        auto frameStart =
-          data + i * frameDimensions.first * frameDimensions.second;
-        std::vector<FrameType> frame(frameStart,
-                                     frameStart + frameDimensions.first *
-                                                    frameDimensions.second);
-
-        auto frameEvents = electronCount<FrameType, dark>(
-          frame, frameDimensions, darkReference, backgroundThreshold,
-          xRayThreshold, gain);
-
-        auto position = b.header.imageNumbers[i];
-        auto& eventsForPosition = events[position];
-        // Find the mutex for this position and lock it
-        auto& mutex = positionMutexes[position];
-        std::unique_lock<std::mutex> positionLock(mutex);
-        // Append the events
-        eventsForPosition.insert(eventsForPosition.end(), frameEvents.begin(),
-                                frameEvents.end());
-      }
+      countBlock(b);
     }
   };
 
