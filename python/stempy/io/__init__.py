@@ -7,6 +7,9 @@ from stempy._io import (
     _threaded_multi_pass_reader
 )
 
+# For exporting SparseArray
+from .sparse_array import SparseArray  # noqa
+
 COMPILED_WITH_HDF5 = hasattr(_sector_reader, 'H5Format')
 
 
