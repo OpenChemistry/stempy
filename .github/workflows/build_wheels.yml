@@ -9,9 +9,9 @@ on:
   pull_request:
 
 env:
-  # Only support 64-bit CPython >= 3.6
+  # Only support 64-bit CPython >= 3.7
   # Skip CPython 3.10 while it's young. We'll add it back later.
-  CIBW_SKIP: "cp27-* cp35-* pp* *-manylinux_i686 *-win32 cp310-*"
+  CIBW_SKIP: "cp27-* cp35-* cp36-* pp* *-manylinux_i686 *-win32 cp310-*"
 
   # This has some of the software we need pre-installed on it
   CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
