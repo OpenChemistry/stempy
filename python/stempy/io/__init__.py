@@ -8,7 +8,7 @@ from stempy._io import (
 )
 
 # For exporting SparseArray
-from .sparse_array import SparseArray  # noqa
+from .sparse_array import SparseArray
 
 COMPILED_WITH_HDF5 = hasattr(_sector_reader, 'H5Format')
 
@@ -155,41 +155,15 @@ def save_raw_data(path, data, scan_positions=None, zip_data=False):
         if scan_positions is not None:
             f.create_dataset('scan_positions', data=scan_positions)
 
-def save_electron_counts(path, data):
+def save_electron_counts(path, array):
     """Save the electron counted data to an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
-    :param data: the electron counted data.
-    :type data: ElectronCountedData (named tuple with fields 'data',
-                'scan_dimensions', and 'frame_dimensions')
+    :param array: the electron counted data.
+    :type array: SparseArray
     """
-    # Electron counted data attributes
-    ecd_attrs = ['data', 'scan_dimensions', 'frame_dimensions']
-    if not all([hasattr(data, x) for x in ecd_attrs]):
-        raise Exception('`data` must be electron counted data')
-
-    events = data.data
-    scan_dimensions = data.scan_dimensions
-    frame_dimensions = data.frame_dimensions
-
-    with h5py.File(path, 'a') as f:
-        group = f.require_group('electron_events')
-        scan_positions = group.create_dataset('scan_positions', (events.shape[0],), dtype=np.int32)
-        # For now just assume we have all the frames, so the event index can
-        # be used to derive the scan_postions.
-        # TODO: This should be passed to use
-        scan_positions[...] = [i for i in range(0, events.shape[0])]
-        scan_positions.attrs['Nx'] = scan_dimensions[0]
-        scan_positions.attrs['Ny'] = scan_dimensions[1]
-
-        coordinates_type = h5py.special_dtype(vlen=np.uint32)
-        frames = group.create_dataset('frames', (events.shape[0],), dtype=coordinates_type)
-        # Add the frame dimensions as attributes
-        frames.attrs['Nx'] = frame_dimensions[0]
-        frames.attrs['Ny'] = frame_dimensions[1]
-
-        frames[...] = events
+    array.write_to_hdf5(path)
 
 def load_electron_counts(path):
     """Load electron counted data from an HDF5 file.
@@ -197,23 +171,10 @@ def load_electron_counts(path):
     :param path: path to the HDF5 file.
     :type path: str
 
-    :return: the coordinates of the electron hits for each frame.
-    :rtype: ElectronCountedData (named tuple with fields 'data',
-            'scan_dimensions', and 'frame_dimensions')
+    :return: a SparseArray containing the electron counted data
+    :rtype: SparseArray
     """
-
-    ret = namedtuple('ElectronCountedData',
-                     ['data', 'scan_dimensions', 'frame_dimensions'])
-
-    with h5py.File(path, 'r') as f:
-        frames = f['electron_events/frames']
-        scan_positions = f['electron_events/scan_positions']
-
-        ret.data = frames[()]
-        ret.scan_dimensions = [scan_positions.attrs[x] for x in ['Nx', 'Ny']]
-        ret.frame_dimensions = [frames.attrs[x] for x in ['Nx', 'Ny']]
-
-    return ret
+    return SparseArray.from_hdf5(path)
 
 def save_stem_images(outputFile, images, names):
     """Save STEM images to an HDF5 file.

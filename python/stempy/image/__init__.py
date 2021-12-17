@@ -2,10 +2,9 @@ from stempy import _image
 from stempy import _io
 from stempy.io import (
     get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader,
-    SectorThreadedMultiPassReader
+    SectorThreadedMultiPassReader, SparseArray
 )
 
-from collections import namedtuple
 import deprecation
 import h5py
 import numpy as np
@@ -16,11 +15,12 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
 
     :param input: the file reader that has already opened the data, or an
                   open h5py file, or an ElectronCountedData namedtuple
-                  containing sparse data, or a numpy.ndarray of either the
-                  sparse or the raw data (if the frame_dimensions argument
-                  is supplied, numpy.ndarray is inferred to be sparse data).
-    :type input: stempy.io.reader, an h5py file, ElectronCountedData, or
-                 numpy.ndarray
+                  containing the sparse data, or a SparseArray, or a
+                  numpy.ndarray of either the sparse or the raw data (if the
+                  frame_dimensions argument is supplied, numpy.ndarray is
+                  inferred to be sparse data).
+    :type input: stempy.io.reader, an h5py file, ElectronCountedData,
+                 SparseArray, or numpy.ndarray
     :param inner_radii: a list of inner radii. Must match
                         the length of `outer_radii`.
     :type inner_radii: list of ints
@@ -71,8 +71,13 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
                                          scan_dimensions, center)
     elif hasattr(input, '_electron_counted_data'):
         # Handle electron counted data with C++ object
+        # This could also be a SparseArray created via electron_count()
         imgs = _image.create_stem_images(input._electron_counted_data,
                                          inner_radii, outer_radii, center)
+    elif isinstance(input, SparseArray):
+        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
+                                         input.scan_shape[::-1],
+                                         input.frame_dimensions, center, 0)
     elif all([hasattr(input, x) for x in ecd_attrs]):
         # Handle electron counted data without C++ object
         imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
@@ -147,7 +152,7 @@ def create_stem_images_sparse(data, inner_radii, outer_radii,
     """Create a series of stem images from sparsified data.
 
     :param data: the input sparsified data.
-    :type data: ElectronCountedData or numpy.ndarray
+    :type data: ElectronCountedData, SparseArray, or numpy.ndarray
     :param inner_radii: a list of inner radii. Must match
                         the length of `outer_radii`.
     :type inner_radii: list of ints
@@ -185,7 +190,7 @@ def create_stem_image_sparse(data, inner_radius, outer_radius,
     """Create a stem image from sparsified data.
 
     :param data: the input sparsified data.
-    :type data: ElectronCountedData or numpy.ndarray
+    :type data: ElectronCountedData, SparseArray, or numpy.ndarray
     :param inner_radius: the inner radius to use.
     :type inner_radius: int
     :param outer_radius: the outer radius to use.
@@ -316,8 +321,7 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     :type gain: numpy.ndarray (2D)
 
     :return: the coordinates of the electron hits for each frame.
-    :rtype: ElectronCountedData (named tuple with fields 'data',
-            'scan_dimensions', and 'frame_dimensions')
+    :rtype: SparseArray
     """
     if gain is not None:
         # Invert, as we will multiply in C++
@@ -404,19 +408,20 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
 
         data = _image.electron_count(*args)
 
-    electron_counted_data = namedtuple('ElectronCountedData',
-                                       ['data', 'scan_dimensions',
-                                        'frame_dimensions'])
-
     # Convert to numpy array
-    electron_counted_data.data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
-    electron_counted_data.scan_dimensions = data.scan_dimensions
-    electron_counted_data.frame_dimensions = data.frame_dimensions
+    np_data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
+
+    kwargs = {
+        'data': np_data,
+        'scan_shape': data.scan_dimensions[::-1],
+        'frame_shape': data.frame_dimensions,
+    }
+    array = SparseArray(**kwargs)
 
     # Store a copy of the underlying C++ object in case we need it later
-    electron_counted_data._electron_counted_data = data
+    array._electron_counted_data = data
 
-    return electron_counted_data
+    return array
 
 def radial_sum(reader, center=(-1, -1), scan_dimensions=(0, 0)):
     """Generate a radial sum from which STEM images can be generated.

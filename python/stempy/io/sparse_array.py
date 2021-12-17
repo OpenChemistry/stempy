@@ -114,27 +114,6 @@ class SparseArray:
         self.allow_full_expand = allow_full_expand
 
     @classmethod
-    def from_electron_counts(cls, electron_counts, **init_kwargs):
-        """Create a SparseArray from an ElectronCountedData namedtuple
-
-        :param electron_counts: electron counted data (usually obtained
-                                from `stempy.io.load_electron_counts()`)
-        :type electron_counts: ElectronCountedData namedtuple
-        :param init_kwargs: any kwargs to forward to SparseArray.__init__()
-        :type init_kwargs: dict
-
-        :return: the generated sparse array
-        :rtype: SparseArray
-        """
-        kwargs = {
-            'data': electron_counts.data,
-            'scan_shape': electron_counts.scan_dimensions[::-1],
-            'frame_shape': electron_counts.frame_dimensions,
-        }
-        kwargs.update(init_kwargs)
-        return cls(**kwargs)
-
-    @classmethod
     def from_hdf5(cls, filepath, **init_kwargs):
         """Create a SparseArray from a stempy HDF5 file
 
@@ -146,13 +125,50 @@ class SparseArray:
         :return: the generated sparse array
         :rtype: SparseArray
         """
+        import h5py
 
-        # This is here instead of at the top so the basic SparseArray does
-        # not depend on the stempy C++ python modules being present.
-        from stempy.io import load_electron_counts
+        with h5py.File(filepath, 'r') as f:
+            frames = f['electron_events/frames']
+            scan_positions = f['electron_events/scan_positions']
 
-        electron_counts = load_electron_counts(filepath)
-        return cls.from_electron_counts(electron_counts, **init_kwargs)
+            data = frames[()]
+            scan_shape = [scan_positions.attrs[x] for x in ['Nx', 'Ny']]
+            frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
+
+        kwargs = {
+            'data': data,
+            'scan_shape': scan_shape[::-1],
+            'frame_shape': frame_shape,
+        }
+        kwargs.update(init_kwargs)
+        return cls(**kwargs)
+
+    def write_to_hdf5(self, path):
+        """Save the SparseArray to an HDF5 file.
+
+        :param path: path to the HDF5 file.
+        :type path: str
+        """
+        import h5py
+
+        data = self.data
+        with h5py.File(path, 'a') as f:
+            group = f.require_group('electron_events')
+            scan_positions = group.create_dataset('scan_positions',
+                                                  (data.shape[0],),
+                                                  dtype=np.int32)
+            scan_positions[...] = [i for i in range(0, data.shape[0])]
+            scan_positions.attrs['Nx'] = self.scan_shape[1]
+            scan_positions.attrs['Ny'] = self.scan_shape[0]
+
+            coordinates_type = h5py.special_dtype(vlen=np.uint32)
+            frames = group.create_dataset('frames', (data.shape[0],),
+                                          dtype=coordinates_type)
+            # Add the frame dimensions as attributes
+            frames.attrs['Nx'] = self.frame_shape[0]
+            frames.attrs['Ny'] = self.frame_shape[1]
+
+            frames[...] = data
 
     @property
     def shape(self):
