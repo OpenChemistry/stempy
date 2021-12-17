@@ -26,7 +26,7 @@ def main(input_path, scan_num):
                                 center=(307, 282))
 
     # Calculate summed diffraction pattern
-    dp = stim.calculate_sum_sparse(ee.data, ee.frame_dimensions)
+    dp = stim.calculate_sum_sparse(ee.data, ee.frame_shape)
 
 if __name__ == '__main__':
     main()

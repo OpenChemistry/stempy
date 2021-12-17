@@ -1,7 +1,6 @@
 from stempy import io, image
 
 import click
-from collections import namedtuple
 import matplotlib.pyplot as plt
 from mpi4py import MPI
 import numpy as np
@@ -88,11 +87,11 @@ def main(files, dark_file, center, inner_radii, outer_radii, output_file,
 
     if rank == 0:
         # Create new electron counted data with the global frame events
-        data = namedtuple('ElectronCountedData',
-                          ['data', 'scan_dimensions', 'frame_dimensions'])
-        data.data = global_frame_events
-        data.scan_dimensions = electron_counted_data.scan_dimensions
-        data.frame_dimensions = electron_counted_data.frame_dimensions
+        array = io.SparseArray(**{
+            'data': global_frame_events,
+            'scan_shape': electron_counted_data.scan_shape[::-1],
+            'frame_shape': electron_counted_data.frame_shape,
+        })
 
         # Write out the HDF5 file
         io.save_electron_counts(output_file, data)

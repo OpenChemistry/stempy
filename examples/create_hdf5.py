@@ -60,7 +60,7 @@ def make_stem_hdf5(files, dark_sample, width, height, inner_radius,
     reader = io.reader(files, version=reader_version)
     data = image.electron_count(reader, dark, scan_dimensions=scan_dimensions)
 
-    frame_dimensions = data.frame_dimensions
+    frame_dimensions = data.frame_shape
 
     inner_radii = [0, inner_radius]
     outer_radii = [outer_radius, outer_radius]
