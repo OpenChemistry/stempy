@@ -1,4 +1,6 @@
 import copy
+import os
+import tempfile
 
 import pytest
 
@@ -324,6 +326,26 @@ def test_scan_ravel(sparse_array_small, full_array_small):
     full = full.reshape(expected_shape)
     for i in range(expected_shape[0]):
         assert np.array_equal(array[i], full[i])
+
+
+def test_round_trip_hdf5(sparse_array_small):
+    # Test writing to HDF5 then reading back in
+    original = sparse_array_small
+
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        temp.close()
+        original.write_to_hdf5(temp.name)
+        array = SparseArray.from_hdf5(temp.name, dtype=np.uint64)
+    finally:
+        os.remove(temp.name)
+
+    # These should be equal in every respect
+    assert original.scan_shape == array.scan_shape
+    assert original.frame_shape == array.frame_shape
+
+    for a, b in zip(original.data, array.data):
+        assert np.array_equal(a, b)
 
 
 # Test binning until this number
