@@ -568,8 +568,9 @@ def calculate_sum_sparse(electron_counts, frame_dimensions):
     :rtype: numpy.ndarray
     """
     dp = np.zeros((frame_dimensions[0] * frame_dimensions[1]), '<u8')
-    for ii, ev in enumerate(electron_counts):
-        dp[ev] += 1
+    for ev in electron_counts:
+        for ee in ev:
+            dp[ee] += 1
     dp = dp.reshape(frame_dimensions)
     return dp
 
