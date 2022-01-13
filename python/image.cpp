@@ -38,11 +38,13 @@ struct ElectronCountedDataPyArray
       data.push_back(vectorToPyArray(std::move(vec)));
     }
 
+    scanPositions = other.scanPositions;
     scanDimensions = other.scanDimensions;
     frameDimensions = other.frameDimensions;
   }
 
   std::vector<py::array_t<uint32_t>> data;
+  std::vector<uint32_t> scanPositions;
 
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
@@ -389,12 +391,14 @@ PYBIND11_MODULE(_image, m)
   py::class_<ElectronCountedData>(m, "_electron_counted_data",
                                   py::buffer_protocol())
     .def_readonly("data", &ElectronCountedData::data)
+    .def_readonly("scan_positions", &ElectronCountedData::scanPositions)
     .def_readonly("scan_dimensions", &ElectronCountedData::scanDimensions)
     .def_readonly("frame_dimensions", &ElectronCountedData::frameDimensions);
 
   py::class_<ElectronCountedDataPyArray>(m, "_electron_counted_data_pyarray",
                                          py::buffer_protocol())
     .def_readonly("data", &ElectronCountedDataPyArray::data)
+    .def_readonly("scan_positions", &ElectronCountedDataPyArray::scanPositions)
     .def_readonly("scan_dimensions",
                   &ElectronCountedDataPyArray::scanDimensions)
     .def_readonly("frame_dimensions",
