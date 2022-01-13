@@ -7,10 +7,29 @@ namespace stempy {
 
 class SectorStreamThreadedReader;
 
+struct ElectronCountedMetadata
+{
+  bool thresholdCalculated = true;
+  double backgroundThreshold = 0.0;
+  double xRayThreshold = 0.0;
+  int numberOfSamples = 0;
+  double minSample = 0;
+  double maxSample = 0;
+  double mean = 0.0;
+  double variance = 0.0;
+  double stdDev = 0.0;
+  int numberOfBins = 0;
+  double xRayThresholdNSigma = 0.0;
+  double backgroundThresholdNSigma = 0.0;
+  double optimizedMean = 0.0;
+  double optimizedStdDev = 0.0;
+};
+
 struct ElectronCountedData
 {
   std::vector<std::vector<uint32_t>> data;
 
+  ElectronCountedMetadata metadata;
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
 };
