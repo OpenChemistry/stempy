@@ -749,21 +749,16 @@ def save_dict_to_h5(d, group):
             new_group = group.require_group(k)
             save_dict_to_h5(v, new_group)
         else:
-            group[k] = v
+            group.attrs[k] = v
 
 
 def load_h5_to_dict(group, d):
     import h5py
 
+    for k, v in group.attrs.items():
+        d[k] = v
+
     for k, v in group.items():
         if isinstance(v, h5py.Group):
             d[k] = {}
             load_h5_to_dict(v, d[k])
-        else:
-            # h5py no longer automatically converts to string for us
-            # convert it manually...
-            string_dtype = h5py.check_string_dtype(v.dtype)
-            if string_dtype is not None and string_dtype.encoding == 'utf-8':
-                v = v.asstr()
-
-            d[k] = v[()]
