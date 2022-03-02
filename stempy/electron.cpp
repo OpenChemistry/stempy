@@ -714,6 +714,24 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
       ret.scanPositions.push_back(position);
     }
   }
+  auto& metadata = ret.metadata;
+
+  metadata.thresholdCalculated = calculateThreshold;
+  metadata.backgroundThreshold = threshold.backgroundThreshold;
+  metadata.xRayThreshold = threshold.xRayThreshold;
+  metadata.numberOfSamples = threshold.numberOfSamples;
+  metadata.minSample = threshold.minSample;
+  metadata.maxSample = threshold.maxSample;
+  metadata.mean = threshold.mean;
+  metadata.variance = threshold.variance;
+  metadata.stdDev = threshold.stdDev;
+  metadata.numberOfBins = threshold.numberOfBins;
+  metadata.xRayThresholdNSigma = threshold.xRayThresholdNSigma;
+  metadata.backgroundThresholdNSigma = threshold.backgroundThresholdNSigma;
+  metadata.optimizedMean = threshold.optimizedMean;
+  metadata.optimizedStdDev = threshold.optimizedStdDev;
+
+  ret.data = events;
   ret.scanDimensions = scanDimensions;
   ret.frameDimensions = frameSize;
 

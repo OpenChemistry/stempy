@@ -332,6 +332,16 @@ def test_round_trip_hdf5(sparse_array_small):
     # Test writing to HDF5 then reading back in
     original = sparse_array_small
 
+    # Store some metadata that we will test for
+    original.metadata.update({
+        'nested': {
+            'string': 's',
+        },
+        'array1d': np.arange(3, dtype=int),
+        'array2d': np.arange(9, dtype=np.float32).reshape((3, 3)),
+        'float': np.float64(7.21),
+    })
+
     temp = tempfile.NamedTemporaryFile(delete=False)
     try:
         temp.close()
@@ -343,9 +353,39 @@ def test_round_trip_hdf5(sparse_array_small):
     # These should be equal in every respect
     assert original.scan_shape == array.scan_shape
     assert original.frame_shape == array.frame_shape
+    assert dicts_equal(original.metadata, array.metadata)
 
     for a, b in zip(original.data, array.data):
         assert np.array_equal(a, b)
+
+    original.metadata['float'] = np.float64(6.5)
+    # Now, the metadata shouldn't be equal
+    assert not dicts_equal(original.metadata, array.metadata)
+
+
+def dicts_equal(d1, d2):
+    if d1.keys() != d2.keys():
+        return False
+
+    for k, v1 in d1.items():
+        v2 = d2[k]
+
+        if type(v1) != type(v2):
+            return False
+
+        if isinstance(v1, np.ndarray):
+            if v1.shape != v2.shape:
+                return False
+            if not np.allclose(v1, v2):
+                return False
+        elif isinstance(v1, dict):
+            if not dicts_equal(v1, v2):
+                return False
+        else:
+            if v1 != v2:
+                return False
+
+    return True
 
 
 def test_multiple_frames_per_scan_position():
