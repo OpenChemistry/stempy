@@ -420,11 +420,13 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
 
     # Convert to numpy array
     np_data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
+    metadata = _electron_counted_metadata_to_dict(data.metadata)
 
     kwargs = {
         'data': np_data,
         'scan_shape': data.scan_dimensions[::-1],
         'frame_shape': data.frame_dimensions,
+        'metadata': {'electron_counting': metadata},
     }
     array = SparseArray(**kwargs)
 
@@ -684,3 +686,29 @@ def phase_from_com(com, theta=0, flip=False, reg=1e-10):
 
     # Return real part of the inverse Fourier transform
     return np.real(np.fft.ifft2(numerator / denominator))
+
+
+def _electron_counted_metadata_to_dict(metadata):
+    # Convert the electron counted metadata to a python dict
+    attributes = [
+        'threshold_calculated',
+        'background_threshold',
+        'x_ray_threshold',
+        'number_of_samples',
+        'min_sample',
+        'max_sample',
+        'mean',
+        'variance',
+        'std_dev',
+        'number_of_bins',
+        'x_ray_threshold_n_sigma',
+        'background_threshold_n_sigma',
+        'optimized_mean',
+        'optimized_std_dev',
+    ]
+
+    ret = {}
+    for name in attributes:
+        ret[name] = getattr(metadata, name)
+
+    return ret
