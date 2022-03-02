@@ -7,6 +7,8 @@ namespace stempy {
 
 class SectorStreamThreadedReader;
 
+using Events = std::vector<std::vector<uint32_t>>;
+
 struct ElectronCountedMetadata
 {
   bool thresholdCalculated = true;
@@ -27,14 +29,13 @@ struct ElectronCountedMetadata
 
 struct ElectronCountedData
 {
-  std::vector<std::vector<uint32_t>> data;
+  Events data;
+  std::vector<uint32_t> scanPositions;
 
   ElectronCountedMetadata metadata;
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
 };
-
-using Events = std::vector<std::vector<uint32_t>>;
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,

@@ -388,6 +388,126 @@ def dicts_equal(d1, d2):
     return True
 
 
+def test_multiple_frames_per_scan_position():
+    # Some simple tests where we know the answer for multiple frames
+    # per scan position.
+    data = np.empty(4, dtype=object)
+    data[0] = np.array([0])
+    data[1] = np.array([0, 2])
+    data[2] = np.array([0])
+    data[3] = np.array([0, 1])
+    kwargs = {
+        'data': data,
+        'scan_shape': (2, 1),
+        'frame_shape': (2, 2),
+        'scan_positions': (0, 0, 1, 1),
+        'sparse_slicing': False,
+        'allow_full_expand': True,
+    }
+    array = SparseArray(**kwargs)
+
+    # These are our expected expansions of the positions
+    position_zero = np.array([[2, 0], [1, 0]])
+    position_one = np.array([[2, 1], [0, 0]])
+
+    # Test full array
+    full = array[:]
+    assert full.shape == (2, 1, 2, 2)
+    assert np.array_equal(full[0, 0], position_zero)
+    assert np.array_equal(full[1, 0], position_one)
+
+    # Test dense slicing
+    assert array[0].shape == (1, 2, 2)
+    assert np.array_equal(array[0, 0], position_zero)
+    assert np.array_equal(array[1, 0], position_one)
+
+    # Test sparse slicing
+    array.sparse_slicing = True
+
+    # Scan slicing
+    assert isinstance(array[0], SparseArray)
+    assert isinstance(array[:, 0], SparseArray)
+    assert array[0].shape == full[0].shape
+    assert array[:, 0].shape == full[:, 0].shape
+    assert np.array_equal(array[0][0], array[0, 0])
+    assert np.array_equal(array[1][0], array[1, 0])
+    assert np.array_equal(array[0:][0][0], array[0, 0])
+    assert np.array_equal(array[1:][0][0], array[1, 0])
+    assert np.array_equal(array[:, 0][0], array[0, 0])
+    assert np.array_equal(array[:, 0][1], array[1, 0])
+    assert np.array_equal(array[::2, 0][0], full[::2, 0][0])
+
+    # Frame slicing
+    assert isinstance(array[:, :, 0], SparseArray)
+    assert array[:, :, 0].shape == full[:, :, 0].shape
+    assert array[:, :, 0, 1].shape == full[:, :, 0, 1].shape
+    assert np.array_equal(array[:, :, 0][0, 0], full[:, :, 0][0, 0])
+    assert np.array_equal(array[:, :, 0][1, 0], full[:, :, 0][1, 0])
+    assert np.array_equal(array[:, :, 0, 1][0, 0], full[:, :, 0, 1][0, 0])
+    assert np.array_equal(array[:, :, 0, 1:][0, 0], full[:, :, 0, 1:][0, 0])
+    assert np.array_equal(array[:, :, 0:2, 0:2][0, 0],
+                          full[:, :, 0:2, 0:2][0, 0])
+    assert np.array_equal(array[:, :, 0:2, 0:2][1, 0],
+                          full[:, :, 0:2, 0:2][1, 0])
+    assert np.array_equal(array[0, :, :, 0][0], full[0, :, :, 0][0])
+    assert np.array_equal(array[0, :, :, 1][0], full[0, :, :, 1][0])
+    assert np.array_equal(array[0, :, 0:2, 0:2][0], full[0, :, 0:2, 0:2][0])
+    assert np.array_equal(array[1, :, 0:2, 0:2][0], full[1, :, 0:2, 0:2][0])
+    assert np.array_equal(array[0, 0, ::2, ::2], full[0, 0, ::2, ::2])
+    assert np.array_equal(array[1, 0, ::2, ::2], full[1, 0, ::2, ::2])
+
+    # Test arithmetic
+    axis = (0, 1)
+    assert np.array_equal(array.sum(axis=axis), [[4, 1], [1, 0]])
+    assert np.array_equal(array.max(axis=axis), [[2, 1], [1, 0]])
+    assert np.array_equal(array.min(axis=axis), [[2, 0], [0, 0]])
+    assert np.array_equal(array.mean(axis=axis), [[2, 0.5], [0.5, 0]])
+
+    # Test frame binning
+    data = np.empty(4, dtype=object)
+    data[0] = np.array([0, 2, 3, 5, 9])
+    data[1] = np.array([15])
+    data[2] = np.array([7])
+    data[3] = np.array([], dtype=int)
+
+    kwargs = {
+        'data': data,
+        'scan_shape': (2, 1),
+        'frame_shape': (4, 4),
+        'scan_positions': (0, 0, 1, 1),
+        'sparse_slicing': False,
+    }
+    test_bin_frames_array = SparseArray(**kwargs)
+    binned = test_bin_frames_array.bin_frames(2)
+
+    assert binned.shape == (2, 1, 2, 2)
+    assert np.array_equal(binned[0, 0], [[2, 2], [1, 1]])
+    assert np.array_equal(binned[1, 0], [[0, 1], [0, 0]])
+
+    # Test scan binning
+    data = np.empty(16, dtype=object)
+    data[0] = np.array([0, 1])
+    data[1] = np.array([0, 2])
+    # Automate the rest of them...
+    for i in range(2, 16):
+        data[i] = np.array([i % 4])
+
+    kwargs = {
+        'data': data,
+        'scan_shape': (4, 4),
+        'frame_shape': (2, 2),
+        'sparse_slicing': False,
+    }
+    test_bin_scans_array = SparseArray(**kwargs)
+    binned = test_bin_scans_array.bin_scans(2)
+
+    assert binned.shape == (2, 2, 2, 2)
+    assert np.array_equal(binned[0, 0], [[3, 2], [1, 0]])
+    assert np.array_equal(binned[0, 1], [[0, 0], [2, 2]])
+    assert np.array_equal(binned[1, 0], [[2, 2], [0, 0]])
+    assert np.array_equal(binned[1, 1], [[0, 0], [2, 2]])
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 

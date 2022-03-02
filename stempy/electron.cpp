@@ -515,7 +515,10 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
                                   Dimensions2D scanDimensions, bool verbose)
 {
   // This is where we will save the electron events as the calculated
-  Events events;
+  // Outer vector is scan position, middle vector is a frame at that
+  // scan position, and inner vector is the electron counted data for
+  // the frame.
+  std::vector<std::vector<std::vector<uint32_t>>> events;
   // We need an array of mutexes to protect updates for each event vector for a
   // given position, as we may have muliple frames per location.
   std::unique_ptr<std::mutex[]> positionMutexes;
@@ -566,8 +569,7 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
       auto& mutex = positionMutexes[position];
       std::unique_lock<std::mutex> positionLock(mutex);
       // Append the events
-      eventsForPosition.insert(eventsForPosition.end(), frameEvents.begin(),
-                               frameEvents.end());
+      eventsForPosition.push_back(std::move(frameEvents));
     }
   };
 
@@ -690,7 +692,8 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
       auto frameEvents = electronCount<FrameType, dark>(
         frame, frameDimensions, darkReference, backgroundThreshold,
         xRayThreshold, gain);
-      events[b.header.imageNumbers[j]] = frameEvents;
+      auto position = b.header.imageNumbers[j];
+      events[position].push_back(std::move(frameEvents));
     }
   }
 
@@ -702,6 +705,18 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
 #endif
 
   ElectronCountedData ret;
+  // We need at least the number of scan positions, potentially more.
+  // Go ahead and reserve the number of scan positions.
+  ret.data.reserve(numberOfScanPositions);
+  for (int position = 0; position < events.size(); ++position) {
+    for (int i = 0; i < events[position].size(); ++i) {
+      ret.data.push_back(std::move(events[position][i]));
+      ret.scanPositions.push_back(position);
+    }
+  }
+  ret.scanDimensions = scanDimensions;
+  ret.frameDimensions = frameSize;
+
   auto& metadata = ret.metadata;
 
   metadata.thresholdCalculated = calculateThreshold;
@@ -718,10 +733,6 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
   metadata.backgroundThresholdNSigma = threshold.backgroundThresholdNSigma;
   metadata.optimizedMean = threshold.optimizedMean;
   metadata.optimizedStdDev = threshold.optimizedStdDev;
-
-  ret.data = events;
-  ret.scanDimensions = scanDimensions;
-  ret.frameDimensions = frameSize;
 
   return ret;
 }

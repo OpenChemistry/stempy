@@ -322,6 +322,7 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         'data': np_data,
         'scan_shape': data.scan_dimensions[::-1],
         'frame_shape': data.frame_dimensions,
+        'scan_positions': data.scan_positions,
         'metadata': {'electron_counting': metadata},
     }
     array = SparseArray(**kwargs)
