@@ -43,7 +43,7 @@ if args.threaded:
 else:
     print('unthreaded')
     threaded = None
- 
+
 scanName = 'data_scan{:010}_'.format(scanNum)
 #scanName = 'data_scan{}_'.format(scanNum)
 
@@ -56,7 +56,7 @@ for ii in range(1,5):
         # Temporarily staged files
         drive_name += '/temp'
     drives.append(Path(drive_name))
-    
+
 print('Looking for files in:')
 for d in drives:
     print(d)
@@ -102,15 +102,18 @@ if outPath.exists():
         outPath2 = outPath.with_name(outPath.stem + '_{:03d}.h5'.format(ii))
 else:
     outPath2 = outPath
-print('Saving to {}'.format(outPath2))
-stio.save_electron_counts(str(outPath2), ee)
 
 # Add meta data
-with h5py.File(outPath2,'a') as f0:
-    user_group = f0.create_group('user')
-    user_group.attrs['threshold sigma'] = threshold
-    user_group.attrs['scan number'] = scanNum
-    user_group.attrs['threaded'] = args.threaded
-    user_group.attrs['date processed'] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-    user_group.attrs['process time (s)'] = full_time 
+ee.metadata.update({
+    'user': {
+        'threshold sigma': threshold,
+        'scan number': scanNum,
+        'threaded': args.threaded,
+        'date processed': datetime.now().strftime('%Y/%m/%d %H:%M:%S'),
+        'process time (s)': full_time,
+    }
+})
+
+print('Saving to {}'.format(outPath2))
+stio.save_electron_counts(str(outPath2), ee)
 print('done')

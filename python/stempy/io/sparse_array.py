@@ -80,7 +80,7 @@ class SparseArray:
     """
     def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
                  sparse_slicing=True, allow_full_expand=False,
-                 scan_positions=None):
+                 scan_positions=None, metadata=None):
         """Initialize a sparse array.
 
         :param data: the sparse array data, where the arrays represent
@@ -109,6 +109,10 @@ class SparseArray:
         :param scan_positions: the scan position of each sparse data frame.
                                If None, it will be set to np.arange(num_scans).
         :type scan_positions: np.ndarray (1D) of int
+        :param metadata: a dict containing any metadata. This will be
+                         saved and loaded with the HDF5 methods. If
+                         None, it will default to an empty dict.
+        :type metadata: dict or None
         """
         self.data = data.ravel()
         self.scan_shape = tuple(scan_shape)
@@ -124,6 +128,11 @@ class SparseArray:
 
         # Prevent obscure errors later by validating now
         self._validate()
+
+        if metadata is None:
+            metadata = {}
+
+        self.metadata = metadata
 
     def _validate(self):
         if len(self.scan_positions) != len(self.data):
@@ -164,12 +173,17 @@ class SparseArray:
             frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
 
             scan_positions = scan_positions_group[()]
+            # Load any metadata
+            metadata = {}
+            if 'metadata' in f:
+                load_h5_to_dict(f['metadata'], metadata)
 
         kwargs = {
             'data': data,
             'scan_shape': scan_shape[::-1],
             'frame_shape': frame_shape,
             'scan_positions': scan_positions,
+            'metadata': metadata,
         }
         kwargs.update(init_kwargs)
         return cls(**kwargs)
@@ -198,6 +212,9 @@ class SparseArray:
             frames.attrs['Ny'] = self.frame_shape[1]
 
             frames[...] = data
+
+            # Write out the metadata
+            save_dict_to_h5(self.metadata, f.require_group('metadata'))
 
     @property
     def shape(self):
@@ -814,3 +831,24 @@ def _warning(msg):
 
 class FullExpansionDenied(Exception):
     pass
+
+
+def save_dict_to_h5(d, group):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            new_group = group.require_group(k)
+            save_dict_to_h5(v, new_group)
+        else:
+            group.attrs[k] = v
+
+
+def load_h5_to_dict(group, d):
+    import h5py
+
+    for k, v in group.attrs.items():
+        d[k] = v
+
+    for k, v in group.items():
+        if isinstance(v, h5py.Group):
+            d[k] = {}
+            load_h5_to_dict(v, d[k])

@@ -39,12 +39,14 @@ struct ElectronCountedDataPyArray
     }
 
     scanPositions = other.scanPositions;
+    metadata = other.metadata;
     scanDimensions = other.scanDimensions;
     frameDimensions = other.frameDimensions;
   }
 
   std::vector<py::array_t<uint32_t>> data;
   std::vector<uint32_t> scanPositions;
+  ElectronCountedMetadata metadata;
 
   Dimensions2D scanDimensions = { 0, 0 };
   Dimensions2D frameDimensions = { 0, 0 };
@@ -393,16 +395,41 @@ PYBIND11_MODULE(_image, m)
     .def_readonly("data", &ElectronCountedData::data)
     .def_readonly("scan_positions", &ElectronCountedData::scanPositions)
     .def_readonly("scan_dimensions", &ElectronCountedData::scanDimensions)
-    .def_readonly("frame_dimensions", &ElectronCountedData::frameDimensions);
+    .def_readonly("frame_dimensions", &ElectronCountedData::frameDimensions)
+    .def_readonly("metadata", &ElectronCountedData::metadata);
 
   py::class_<ElectronCountedDataPyArray>(m, "_electron_counted_data_pyarray",
                                          py::buffer_protocol())
     .def_readonly("data", &ElectronCountedDataPyArray::data)
     .def_readonly("scan_positions", &ElectronCountedDataPyArray::scanPositions)
+    .def_readonly("metadata", &ElectronCountedDataPyArray::metadata)
     .def_readonly("scan_dimensions",
                   &ElectronCountedDataPyArray::scanDimensions)
     .def_readonly("frame_dimensions",
                   &ElectronCountedDataPyArray::frameDimensions);
+
+  py::class_<ElectronCountedMetadata>(m, "_electron_counted_metadata",
+                                      py::buffer_protocol())
+    .def_readonly("threshold_calculated",
+                  &ElectronCountedMetadata::thresholdCalculated)
+    .def_readonly("background_threshold",
+                  &ElectronCountedMetadata::backgroundThreshold)
+    .def_readonly("x_ray_threshold", &ElectronCountedMetadata::xRayThreshold)
+    .def_readonly("number_of_samples",
+                  &ElectronCountedMetadata::numberOfSamples)
+    .def_readonly("min_sample", &ElectronCountedMetadata::minSample)
+    .def_readonly("max_sample", &ElectronCountedMetadata::maxSample)
+    .def_readonly("mean", &ElectronCountedMetadata::mean)
+    .def_readonly("variance", &ElectronCountedMetadata::variance)
+    .def_readonly("std_dev", &ElectronCountedMetadata::stdDev)
+    .def_readonly("number_of_bins", &ElectronCountedMetadata::numberOfBins)
+    .def_readonly("x_ray_threshold_n_sigma",
+                  &ElectronCountedMetadata::xRayThresholdNSigma)
+    .def_readonly("background_threshold_n_sigma",
+                  &ElectronCountedMetadata::backgroundThresholdNSigma)
+    .def_readonly("optimized_mean", &ElectronCountedMetadata::optimizedMean)
+    .def_readonly("optimized_std_dev",
+                  &ElectronCountedMetadata::optimizedStdDev);
 
   // Add more template instantiations as we add more types of iterators
   m.def("create_stem_images",
