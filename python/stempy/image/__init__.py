@@ -1,3 +1,5 @@
+import warnings
+
 from stempy import _image
 from stempy import _io
 from stempy.io import (
@@ -352,6 +354,14 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
 
         data = _image.electron_count(*args)
     else:
+        deprecation_message = (
+            'Using a reader in electron_count() that is not a '
+            'SectorThreadedReader or a SectorThreadedMultiPassReader is '
+            'deprecated in stempy==1.1 and will be removed in stempy==1.2'
+        )
+        warnings.warn(deprecation_message, category=DeprecationWarning,
+                      stacklevel=2)
+
         blocks = []
         for i in range(threshold_num_blocks):
             blocks.append(next(reader))
