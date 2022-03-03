@@ -1,6 +1,6 @@
 [![Documentation Status](https://readthedocs.org/projects/stempy/badge/?version=latest)](https://stempy.readthedocs.io/en/latest/?badge=latest)
 
-Toolkit for processing 4D STEM image data on HPC.
+Toolkit for processing sparse 4D STEM image data.
 
 Singularity instructions may be found [here](https://stempy.readthedocs.io/en/latest/singularity.html).
 
