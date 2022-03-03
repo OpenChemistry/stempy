@@ -13,7 +13,7 @@
 
 namespace stempy {
 
-using SparseEventMap = std::map<uint32_t, std::vector<uint32_t>>;
+using SparseEventMap = std::map<uint32_t, std::vector<std::vector<uint32_t>>>;
 
 void initMpiWorldRank(int& worldSize, int& rank)
 {
@@ -33,7 +33,7 @@ void serializeBlocks(std::vector<Block>& blocks, std::ostream* stream)
   archive(blocks);
 }
 
-void receivePartialMap(std::vector<std::vector<uint32_t>>& events,
+void receivePartialMap(std::vector<Events>& events,
                        std::vector<char>& recvBuffer)
 {
   MPI_Status status;
@@ -67,7 +67,7 @@ void receivePartialMap(std::vector<std::vector<uint32_t>>& events,
   }
 }
 
-void sendPartialMap(std::vector<std::vector<uint32_t>>& events)
+void sendPartialMap(std::vector<Events>& events)
 {
   // Create a partial map of electron events
   SparseEventMap partialEventMap;
@@ -89,7 +89,7 @@ void sendPartialMap(std::vector<std::vector<uint32_t>>& events)
 }
 
 void gatherEvents(int worldSize, int rank,
-                  std::vector<std::vector<uint32_t>>& events)
+                 std::vector<Events>& events)
 {
   // Now the final gather!
   // It would be nice to use a gather here, but the displacement values can

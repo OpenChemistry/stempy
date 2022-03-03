@@ -128,7 +128,7 @@ void initMpiWorldRank(int& worldSize, int& rank);
 int getSampleBlocksPerRank(int worldSize, int rank,
                            int thresholdNumberOfBlocks);
 void gatherBlocks(int worldSize, int rank, std::vector<Block>& blocks);
-void gatherEvents(int worldSize, int rank, Events& events);
+void gatherEvents(int worldSize, int rank, std::vector<Events>& events);
 void broadcastThresholds(double& background, double& xRay);
 
 #endif
