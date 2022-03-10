@@ -323,7 +323,7 @@ class SparseArray:
         if self._is_scan_axes(axis):
             ret = np.zeros(self._frame_shape_flat, dtype=dtype)
             for position in range(self._scan_shape_flat[0]):
-                data_indices = self._data_indices(position)
+                data_indices = self.data_indices(position)
                 concatenated = np.concatenate(self.data[data_indices])
                 unique, counts = np.unique(concatenated, return_counts=True)
                 ret[unique] = np.maximum(ret[unique], counts)
@@ -361,7 +361,7 @@ class SparseArray:
             expanded = np.empty(self._frame_shape_flat, dtype)
             for position in range(self._scan_shape_flat[0]):
                 expanded[:] = 0
-                data_indices = self._data_indices(position)
+                data_indices = self.data_indices(position)
                 concatenated = np.concatenate(self.data[data_indices])
                 unique, counts = np.unique(concatenated, return_counts=True)
                 expanded[unique] = counts
@@ -619,7 +619,15 @@ class SparseArray:
 
         return len(shape) == 4 and tuple(sorted(axis)) == (0, 1)
 
-    def _data_indices(self, scan_position):
+    def data_indices(self, scan_position):
+        """Get the data indices for a particular scan position
+
+        :param scan_position: the scan position to use
+        :type scan_position: int
+
+        :return: the data indices for the given scan position
+        :rtype: np.ndarray of int
+        """
         return np.where(self.scan_positions == scan_position)[0]
 
     def _sparse_frames(self, indices):
@@ -636,7 +644,7 @@ class SparseArray:
         else:
             scan_ind = indices[0] * self.scan_shape[1] + indices[1]
 
-        return self.data[self._data_indices(scan_ind)]
+        return self.data[self.data_indices(scan_ind)]
 
     def _slice_dense(self, slices, non_slice_indices=None):
         # non_slice_indices indicate which indices should be squeezed
