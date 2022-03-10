@@ -601,6 +601,15 @@ class SparseArray:
         return f(**kwargs)
 
     @property
+    def num_scans(self):
+        """Get the number of scan positions
+
+        :return: the number of scan positions
+        :rtype: int
+        """
+        return self._scan_shape_flat[0]
+
+    @property
     def _frame_shape_flat(self):
         return (np.prod(self.frame_shape),)
 
