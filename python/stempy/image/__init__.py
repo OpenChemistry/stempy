@@ -406,7 +406,9 @@ def com_sparse(array, crop_to=None):
             ev = []
 
         if len(ev) > 0:
-            x, y = np.unravel_index(ev, array.frame_shape)
+            x = ev // array.frame_shape[0]
+            y = ev % array.frame_shape[1]
+
             mm0 = len(ev)
             comx0 = np.sum(x) / mm0
             comy0 = np.sum(y) / mm0
