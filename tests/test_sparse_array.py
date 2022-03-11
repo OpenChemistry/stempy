@@ -1,4 +1,3 @@
-import copy
 import os
 import tempfile
 
@@ -8,39 +7,6 @@ import numpy as np
 
 from stempy.io.sparse_array import FullExpansionDenied
 from stempy.io.sparse_array import SparseArray
-
-
-cached_full_array_small = None
-
-
-@pytest.fixture
-def sparse_array_small(electron_data_small):
-    kwargs = {
-        'dtype': np.uint64,
-    }
-    array = SparseArray.from_hdf5(electron_data_small, **kwargs)
-
-    # Perform some slicing so we don't blow up CI memory when we
-    # do a full expansion.
-    return array[:40:2, :40:2]
-
-
-@pytest.fixture
-def full_array_small(sparse_array_small):
-    global cached_full_array_small
-
-    if cached_full_array_small is None:
-        # Don't allow this fixture to modify the other fixture
-        array = copy.deepcopy(sparse_array_small)
-
-        # Have to change these so we won't return a SparseArray,
-        # and allow it to return a fully expanded array
-        array.sparse_slicing = False
-        array.allow_full_expand = True
-
-        cached_full_array_small = array[:]
-
-    return cached_full_array_small
 
 
 def test_full_expansion(sparse_array_small, full_array_small):
