@@ -1,7 +1,6 @@
 import numpy as np
-from scipy.ndimage import center_of_mass
 
-from stempy.image import com_sparse
+from stempy.image import com_dense, com_sparse
 from stempy.io.sparse_array import SparseArray
 
 
@@ -34,7 +33,6 @@ def test_com_sparse(sparse_array_small, full_array_small):
     full_com = np.empty((2, *full_array_small.shape[:2]), dtype=np.float32)
     for i in range(full_array_small.shape[0]):
         for j in range(full_array_small.shape[1]):
-            # Need to swap com order, as com_sparse() does
-            full_com[:, i, j] = center_of_mass(full_array_small[i, j])[::-1]
+            full_com[:, i, j] = com_dense(full_array_small[i, j])[:, 0]
 
     assert np.array_equal(com, full_com)
