@@ -474,6 +474,30 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(binned[1, 1], [[0, 0], [2, 2]])
 
 
+def test_data_conversion(cropped_multi_frames_v1):
+    # This dataset contains duplicates in its frames, a characteristic of
+    # v1 data. But when it was loaded into the SparseArray, it should have
+    # automatically converted it to v2. Confirm this is the case.
+    array = cropped_multi_frames_v1
+    array.allow_full_expand = True
+
+    # Should be no duplicates
+    for row in array.data:
+        assert len(np.unique(row)) == len(row)
+
+    # From local testing, these values should match
+    assert array.min() == 0
+    assert array.max() == 2
+    assert array.sum() == 949625
+    assert np.isclose(array.mean(), 0.0071556185)
+
+    assert array.shape == (20, 20, 576, 576)
+
+    # There will be twice as many frames as there are scans
+    assert array.data.shape[0] == np.prod(array.scan_shape) * 2
+    assert len(array.scan_positions) == 800
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 

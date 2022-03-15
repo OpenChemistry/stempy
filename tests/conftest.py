@@ -11,6 +11,7 @@ from stempy.io.sparse_array import SparseArray
 DATA_URLS = {
     'electron_small': 'https://data.kitware.com/api/v1/file/6065f00d2fa25629b93bdabe/download',  # noqa
     'electron_large': 'https://data.kitware.com/api/v1/file/6065f2792fa25629b93c0303/download',  # noqa
+    'cropped_multi_frames_v1': 'https://data.kitware.com/api/v1/file/623119814acac99f4261aa59/download',  # noqa
 }
 
 DATA_RESPONSES = {}
@@ -38,6 +39,11 @@ def electron_data_small():
 @pytest.fixture
 def electron_data_large():
     return io_object('electron_large')
+
+
+@pytest.fixture
+def cropped_multi_frames_data_v1():
+    return io_object('cropped_multi_frames_v1')
 
 
 # SparseArray fixtures
@@ -74,3 +80,8 @@ def full_array_small(sparse_array_small):
         cached_full_array_small = array[:]
 
     return cached_full_array_small
+
+
+@pytest.fixture
+def cropped_multi_frames_v1(cropped_multi_frames_data_v1):
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v1)

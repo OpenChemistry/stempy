@@ -5,6 +5,8 @@ import sys
 
 import numpy as np
 
+from .compatibility import convert_data_format
+
 
 def _format_axis(func):
     @wraps(func)
@@ -78,6 +80,8 @@ class SparseArray:
     and stride. Slicing returns either a new sparse array or a dense
     array depending on the user-defined settings.
     """
+    VERSION = 2
+
     def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
                  sparse_slicing=True, allow_full_expand=False,
                  scan_positions=None, metadata=None):
@@ -165,6 +169,8 @@ class SparseArray:
         import h5py
 
         with h5py.File(filepath, 'r') as f:
+            version = f.attrs.get('version', 1)
+
             frames = f['electron_events/frames']
             scan_positions_group = f['electron_events/scan_positions']
 
@@ -178,9 +184,23 @@ class SparseArray:
             if 'metadata' in f:
                 load_h5_to_dict(f['metadata'], metadata)
 
+        scan_shape = scan_shape[::-1]
+
+        # We may need to convert the version of the data
+        if version != cls.VERSION:
+            kwargs = {
+                'data': data,
+                'scan_positions': scan_positions,
+                'scan_shape': scan_shape,
+                'frame_shape': frame_shape,
+                'from_version': version,
+                'to_version': cls.VERSION,
+            }
+            data, scan_positions = convert_data_format(**kwargs)
+
         kwargs = {
             'data': data,
-            'scan_shape': scan_shape[::-1],
+            'scan_shape': scan_shape,
             'frame_shape': frame_shape,
             'scan_positions': scan_positions,
             'metadata': metadata,
@@ -198,6 +218,8 @@ class SparseArray:
 
         data = self.data
         with h5py.File(path, 'a') as f:
+            f.attrs['version'] = self.VERSION
+
             group = f.require_group('electron_events')
             scan_positions = group.create_dataset('scan_positions',
                                                   data=self.scan_positions)
