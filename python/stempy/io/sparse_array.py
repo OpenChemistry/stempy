@@ -8,7 +8,7 @@ import numpy as np
 
 def _format_axis(func):
     @wraps(func)
-    def wrapper(self, axis, *args, **kwargs):
+    def wrapper(self, axis=None, *args, **kwargs):
         if axis is None:
             axis = self._default_axis
         elif not isinstance(axis, (list, tuple)):
