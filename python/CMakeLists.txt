@@ -28,16 +28,34 @@ if(NOT WIN32)
                         INSTALL_RPATH ${_rpath_value})
 endif()
 
-install(FILES stempy/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}")
-install(FILES stempy/io/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
-install(FILES stempy/io/compatibility.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
-install(FILES stempy/io/sparse_array.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
-install(FILES stempy/image/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/image")
-install(FILES stempy/pipeline/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/pipeline")
+# Install all python files
+set(python_dir "${CMAKE_CURRENT_SOURCE_DIR}/stempy")
+file(GLOB_RECURSE python_files RELATIVE "${python_dir}" "*.py")
+foreach(file ${python_files})
+  set(destination_file "${_python_module_install_dir}/${file}")
+  get_filename_component(destination "${destination_file}" DIRECTORY)
+  install(FILES "stempy/${file}" COMPONENT python DESTINATION "${destination}")
+endforeach()
 
 if(NOT SKBUILD)
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib/stempy/")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/io" "${CMAKE_BINARY_DIR}/lib/stempy/io")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/image" "${CMAKE_BINARY_DIR}/lib/stempy/image")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/stempy/pipeline" "${CMAKE_BINARY_DIR}/lib/stempy/pipeline")
+
+  # Create soft links to all root files and directories in stempy/python/stempy
+  set(exclude_list "__pycache__")
+  file(GLOB link_paths RELATIVE "${python_dir}" "${python_dir}/*")
+  foreach(path ${link_paths})
+    set(full_path "${python_dir}/${path}")
+    if ("${path}" IN_LIST exclude_list)
+      continue()
+    endif()
+
+    # If it is a file but doesn't end with .py, exclude it
+    if (NOT IS_DIRECTORY "${full_path}" AND NOT "${path}" MATCHES ".py$")
+      continue()
+    endif()
+
+    set(dest_dir "${CMAKE_BINARY_DIR}/lib/stempy")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    "${full_path}" "${dest_dir}/${path}")
+  endforeach()
 endif()
