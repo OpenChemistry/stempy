@@ -653,6 +653,12 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
       };
       writer.createDataSet("/", "frames", dims,
                            h5::H5ReadWrite::DataType::UInt16, chunkDims);
+      std::vector<int> scanDimensions = {
+        static_cast<int>(b.header.scanDimensions.first),
+        static_cast<int>(b.header.scanDimensions.second)
+      };
+      writer.setAttribute("/frames", "scan_dimensions", scanDimensions);
+
       std::vector<int> scanSize = {
         0, static_cast<int>(b.header.scanDimensions.second),
         static_cast<int>(b.header.scanDimensions.first)
@@ -660,6 +666,7 @@ void SectorStreamReader::toHdf5FrameFormat(h5::H5ReadWrite& writer)
       writer.createGroup("/stem");
       writer.createDataSet("/stem", "images", scanSize,
                            h5::H5ReadWrite::DataType::UInt64);
+
       created = true;
     }
 

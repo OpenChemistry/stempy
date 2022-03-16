@@ -17,7 +17,7 @@ Currently, the structure of the format is as follows:
    frames
 
 
-* 
+*
   ``electron_events/frames`` - Array of arrays, the first index is the scan position
   ( corresponding to ``scan_positions`` ) and the second array holds an array of
   of indices into the diffractogram where an electron strike was detected.
@@ -28,7 +28,7 @@ Currently, the structure of the format is as follows:
     * ``Nx``\ : the width of the frame
     * ``Ny``\ : the height of the frame
 
-* 
+*
   ``electron_events/scan_positions`` - Array of shorts holding the scan positions.
 
 
@@ -37,7 +37,7 @@ Currently, the structure of the format is as follows:
     * ``Nx``\ : the width of the scan
     * ``Ny``\ : the height of the scan
 
-* 
+*
   ``stem/images`` - A list of 2D arrays of unsigned integers containing stem images
   (possibly bright and dark fields).
 
@@ -46,9 +46,14 @@ Currently, the structure of the format is as follows:
 
     * ``names``\ : a list of names assigned to the images
 
-* 
+*
   ``frames`` - If present, the raw diffractogram data, where the first index is the scan
   position index for the 2D diffractogram.
+
+
+  * Attributes:
+
+    * ``scan_dimensions``\ : the dimensions (width, height) of the scan
 
 This file can be produced with the script at ``examples/create_hdf5.py``
 by using a command similar to the following:
