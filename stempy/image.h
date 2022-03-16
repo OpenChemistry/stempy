@@ -64,8 +64,8 @@ namespace stempy {
   // Create STEM Images from sparse data
   template <typename T>
   void calculateSTEMValuesSparse(const std::vector<T>& sparseData,
-                                 uint16_t* mask, STEMImage& image,
-                                 int frameOffset)
+                                 const std::vector<uint32_t>& scanPositions,
+                                 uint16_t* mask, STEMImage& image)
   {
     for (unsigned i = 0; i < sparseData.size(); ++i) {
       uint64_t values = 0;
@@ -75,16 +75,19 @@ namespace stempy {
         auto pos = sparseData[i].data()[j];
         values += mask[pos];
       }
-      image.data.get()[i + frameOffset] = values;
+
+      auto pos = scanPositions[i];
+      image.data.get()[pos] += values;
     }
   }
 
   template <typename T>
   std::vector<STEMImage> createSTEMImages(
-    const std::vector<T>& sparseData, const std::vector<int>& innerRadii,
-    const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
-    Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 },
-    int frameOffset = 0)
+    const std::vector<T>& sparseData,
+    const std::vector<uint32_t>& scanPositions,
+    const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
+    Dimensions2D scanDimensions = { 0, 0 },
+    Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 })
   {
     if (innerRadii.empty() || outerRadii.empty()) {
       std::ostringstream msg;
@@ -107,7 +110,7 @@ namespace stempy {
     }
 
     for (size_t i = 0; i < masks.size(); ++i)
-      calculateSTEMValuesSparse(sparseData, masks[i], images[i], frameOffset);
+      calculateSTEMValuesSparse(sparseData, scanPositions, masks[i], images[i]);
 
     for (auto* p : masks)
       delete[] p;

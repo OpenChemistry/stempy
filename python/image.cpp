@@ -258,9 +258,10 @@ ElectronCountedDataPyArray electronCount(
 // Explicitly instantiate version for py::array_t
 template std::vector<STEMImage> createSTEMImages(
   const std::vector<py::array_t<uint32_t>>& sparseData,
+  const std::vector<uint32_t>& scanPositions,
   const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
   Dimensions2D scanDimensions, Dimensions2D frameDimensions,
-  Coordinates2D center, int frameOffset);
+  Coordinates2D center);
 
 } // namespace stempy
 
@@ -269,8 +270,9 @@ vector<STEMImage> createSTEMImages(const ElectronCountedDataPyArray& array,
                                    const vector<int>& outerRadii,
                                    Coordinates2D coords)
 {
-  return createSTEMImages(array.data, innerRadii, outerRadii,
-                          array.scanDimensions, array.frameDimensions, coords);
+  return createSTEMImages(array.data, array.scanPositions, innerRadii,
+                          outerRadii, array.scanDimensions,
+                          array.frameDimensions, coords);
 }
 
 template <typename... Params>
@@ -447,8 +449,9 @@ PYBIND11_MODULE(_image, m)
     py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images",
         (vector<STEMImage>(*)(const std::vector<py::array_t<uint32_t>>&,
-                              const vector<int>&, const vector<int>&,
-                              Dimensions2D, Dimensions2D, Coordinates2D, int)) &
+                              const vector<uint32_t>&, const vector<int>&,
+                              const vector<int>&, Dimensions2D, Dimensions2D,
+                              Coordinates2D)) &
           createSTEMImages,
         py::call_guard<py::gil_scoped_release>());
   m.def(

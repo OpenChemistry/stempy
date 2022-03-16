@@ -337,7 +337,7 @@ vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
                                    const vector<int>& outerRadii,
                                    Coordinates2D center)
 {
-  return createSTEMImages(data.data, innerRadii, outerRadii,
+  return createSTEMImages(data.data, data.scanPositions, innerRadii, outerRadii,
                           data.scanDimensions, data.frameDimensions, center);
 }
 

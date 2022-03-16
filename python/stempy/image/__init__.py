@@ -76,21 +76,33 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         imgs = _image.create_stem_images(input._electron_counted_data,
                                          inner_radii, outer_radii, center)
     elif isinstance(input, SparseArray):
-        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
+        imgs = _image.create_stem_images(input.data, input.scan_positions,
+                                         inner_radii, outer_radii,
                                          input.scan_shape[::-1],
-                                         input.frame_dimensions, center, 0)
+                                         input.frame_shape, center)
     elif all([hasattr(input, x) for x in ecd_attrs]):
         # Handle electron counted data without C++ object
-        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
+        # Assume this is v1 data and use an arange for the scan positions
+        scan_positions = np.arange(len(input.data))
+        imgs = _image.create_stem_images(input.data, scan_positions,
+                                         inner_radii, outer_radii,
                                          input.scan_dimensions,
-                                         input.frame_dimensions, center, 0)
+                                         input.frame_dimensions, center)
     elif isinstance(input, np.ndarray):
         # The presence of frame dimensions implies it is sparse data
         if frame_dimensions is not None:
             # Handle sparse data
-            imgs = _image.create_stem_images(input, inner_radii, outer_radii,
-                                             scan_dimensions, frame_dimensions,
-                                             center, frame_offset)
+            # Make sure the data is compatible with v1
+            if frame_offset + len(input) >= np.prod(scan_dimensions):
+                msg = (
+                    'The data appears to be in v2 format, but this '
+                    'function currently only handles v1 format.'
+                )
+                raise NotImplementedError(msg)
+            scan_positions = np.arange(frame_offset, len(input))
+            imgs = _image.create_stem_images(input, scan_positions, inner_radii,
+                                             outer_radii, scan_dimensions,
+                                             frame_dimensions, center)
         else:
             # Handle raw data
             # Make sure the scan dimensions were passed
