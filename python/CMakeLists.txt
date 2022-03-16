@@ -30,6 +30,7 @@ endif()
 
 install(FILES stempy/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}")
 install(FILES stempy/io/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
+install(FILES stempy/io/compatibility.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
 install(FILES stempy/io/sparse_array.py COMPONENT python DESTINATION "${_python_module_install_dir}/io")
 install(FILES stempy/image/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/image")
 install(FILES stempy/pipeline/__init__.py COMPONENT python DESTINATION "${_python_module_install_dir}/pipeline")
