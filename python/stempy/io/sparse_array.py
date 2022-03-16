@@ -5,10 +5,12 @@ import sys
 
 import numpy as np
 
+from .compatibility import convert_data_format
+
 
 def _format_axis(func):
     @wraps(func)
-    def wrapper(self, axis, *args, **kwargs):
+    def wrapper(self, axis=None, *args, **kwargs):
         if axis is None:
             axis = self._default_axis
         elif not isinstance(axis, (list, tuple)):
@@ -78,6 +80,8 @@ class SparseArray:
     and stride. Slicing returns either a new sparse array or a dense
     array depending on the user-defined settings.
     """
+    VERSION = 2
+
     def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
                  sparse_slicing=True, allow_full_expand=False,
                  scan_positions=None, metadata=None):
@@ -165,6 +169,8 @@ class SparseArray:
         import h5py
 
         with h5py.File(filepath, 'r') as f:
+            version = f.attrs.get('version', 1)
+
             frames = f['electron_events/frames']
             scan_positions_group = f['electron_events/scan_positions']
 
@@ -178,9 +184,23 @@ class SparseArray:
             if 'metadata' in f:
                 load_h5_to_dict(f['metadata'], metadata)
 
+        scan_shape = scan_shape[::-1]
+
+        # We may need to convert the version of the data
+        if version != cls.VERSION:
+            kwargs = {
+                'data': data,
+                'scan_positions': scan_positions,
+                'scan_shape': scan_shape,
+                'frame_shape': frame_shape,
+                'from_version': version,
+                'to_version': cls.VERSION,
+            }
+            data, scan_positions = convert_data_format(**kwargs)
+
         kwargs = {
             'data': data,
-            'scan_shape': scan_shape[::-1],
+            'scan_shape': scan_shape,
             'frame_shape': frame_shape,
             'scan_positions': scan_positions,
             'metadata': metadata,
@@ -198,6 +218,8 @@ class SparseArray:
 
         data = self.data
         with h5py.File(path, 'a') as f:
+            f.attrs['version'] = self.VERSION
+
             group = f.require_group('electron_events')
             scan_positions = group.create_dataset('scan_positions',
                                                   data=self.scan_positions)
@@ -323,7 +345,7 @@ class SparseArray:
         if self._is_scan_axes(axis):
             ret = np.zeros(self._frame_shape_flat, dtype=dtype)
             for position in range(self._scan_shape_flat[0]):
-                data_indices = self._data_indices(position)
+                data_indices = self.data_indices(position)
                 concatenated = np.concatenate(self.data[data_indices])
                 unique, counts = np.unique(concatenated, return_counts=True)
                 ret[unique] = np.maximum(ret[unique], counts)
@@ -361,7 +383,7 @@ class SparseArray:
             expanded = np.empty(self._frame_shape_flat, dtype)
             for position in range(self._scan_shape_flat[0]):
                 expanded[:] = 0
-                data_indices = self._data_indices(position)
+                data_indices = self.data_indices(position)
                 concatenated = np.concatenate(self.data[data_indices])
                 unique, counts = np.unique(concatenated, return_counts=True)
                 expanded[unique] = counts
@@ -601,6 +623,15 @@ class SparseArray:
         return f(**kwargs)
 
     @property
+    def num_scans(self):
+        """Get the number of scan positions
+
+        :return: the number of scan positions
+        :rtype: int
+        """
+        return self._scan_shape_flat[0]
+
+    @property
     def _frame_shape_flat(self):
         return (np.prod(self.frame_shape),)
 
@@ -619,7 +650,15 @@ class SparseArray:
 
         return len(shape) == 4 and tuple(sorted(axis)) == (0, 1)
 
-    def _data_indices(self, scan_position):
+    def data_indices(self, scan_position):
+        """Get the data indices for a particular scan position
+
+        :param scan_position: the scan position to use
+        :type scan_position: int
+
+        :return: the data indices for the given scan position
+        :rtype: np.ndarray of int
+        """
         return np.where(self.scan_positions == scan_position)[0]
 
     def _sparse_frames(self, indices):
@@ -636,7 +675,7 @@ class SparseArray:
         else:
             scan_ind = indices[0] * self.scan_shape[1] + indices[1]
 
-        return self.data[self._data_indices(scan_ind)]
+        return self.data[self.data_indices(scan_ind)]
 
     def _slice_dense(self, slices, non_slice_indices=None):
         # non_slice_indices indicate which indices should be squeezed

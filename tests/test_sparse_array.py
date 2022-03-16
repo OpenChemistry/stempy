@@ -1,4 +1,3 @@
-import copy
 import os
 import tempfile
 
@@ -8,39 +7,6 @@ import numpy as np
 
 from stempy.io.sparse_array import FullExpansionDenied
 from stempy.io.sparse_array import SparseArray
-
-
-cached_full_array_small = None
-
-
-@pytest.fixture
-def sparse_array_small(electron_data_small):
-    kwargs = {
-        'dtype': np.uint64,
-    }
-    array = SparseArray.from_hdf5(electron_data_small, **kwargs)
-
-    # Perform some slicing so we don't blow up CI memory when we
-    # do a full expansion.
-    return array[:40:2, :40:2]
-
-
-@pytest.fixture
-def full_array_small(sparse_array_small):
-    global cached_full_array_small
-
-    if cached_full_array_small is None:
-        # Don't allow this fixture to modify the other fixture
-        array = copy.deepcopy(sparse_array_small)
-
-        # Have to change these so we won't return a SparseArray,
-        # and allow it to return a fully expanded array
-        array.sparse_slicing = False
-        array.allow_full_expand = True
-
-        cached_full_array_small = array[:]
-
-    return cached_full_array_small
 
 
 def test_full_expansion(sparse_array_small, full_array_small):
@@ -506,6 +472,30 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(binned[0, 1], [[0, 0], [2, 2]])
     assert np.array_equal(binned[1, 0], [[2, 2], [0, 0]])
     assert np.array_equal(binned[1, 1], [[0, 0], [2, 2]])
+
+
+def test_data_conversion(cropped_multi_frames_v1):
+    # This dataset contains duplicates in its frames, a characteristic of
+    # v1 data. But when it was loaded into the SparseArray, it should have
+    # automatically converted it to v2. Confirm this is the case.
+    array = cropped_multi_frames_v1
+    array.allow_full_expand = True
+
+    # Should be no duplicates
+    for row in array.data:
+        assert len(np.unique(row)) == len(row)
+
+    # From local testing, these values should match
+    assert array.min() == 0
+    assert array.max() == 2
+    assert array.sum() == 949625
+    assert np.isclose(array.mean(), 0.0071556185)
+
+    assert array.shape == (20, 20, 576, 576)
+
+    # There will be twice as many frames as there are scans
+    assert array.data.shape[0] == np.prod(array.scan_shape) * 2
+    assert len(array.scan_positions) == 800
 
 
 # Test binning until this number

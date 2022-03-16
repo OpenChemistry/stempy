@@ -380,19 +380,13 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse(electron_counts, frame_dimensions, scan_dimensions, crop_to=None):
+def com_sparse(array, crop_to=None):
     """Compute center of mass (COM) for counted data directly from sparse (single)
         electron data. Empty frames will have the average COM value of all frames. There is an option to crop to a
         smaller region around the initial full frame COM to improve finding the center of the zero beam.
 
-        :param electron_counts: A vector of electron positions flattened. Each
-                                pixel can only be a 1 (electron) or a 0
-                                (no electron).
-        :type electron_counts: numpy.ndarray (1D)
-        :param frame_dimensions: The shape of the detector.
-        :type frame_dimensions: tuple of ints of length 2
-        :param scan_dimensions: The shape of the STEM scan.
-        :type scan_dimensions: tuple of ints of length 2
+        :param array: A SparseArray of the electron counted data
+        :type array: stempy.io.SparseArray
         :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
                         the zero beam
         :type crop_to: tuple of ints of length 2
@@ -402,10 +396,19 @@ def com_sparse(electron_counts, frame_dimensions, scan_dimensions, crop_to=None)
                 frame is used as the center of mass.
         :rtype: numpy.ndarray (2D)
         """
-    com = np.zeros((2, scan_dimensions[0] * scan_dimensions[1]), np.float32)
-    for ii, ev in enumerate(electron_counts):
+    com = np.zeros((2, array.num_scans), np.float32)
+    for scan_position in range(array.num_scans):
+        data_indices = array.data_indices(scan_position)
+        if len(data_indices) != 0:
+            # Combine the sparse arrays into one array that we will use
+            ev = np.hstack(array.data[data_indices])
+        else:
+            ev = []
+
         if len(ev) > 0:
-            x, y = np.unravel_index(ev, frame_dimensions)
+            x = ev // array.frame_shape[0]
+            y = ev % array.frame_shape[1]
+
             mm0 = len(ev)
             comx0 = np.sum(x) / mm0
             comy0 = np.sum(y) / mm0
@@ -429,12 +432,12 @@ def com_sparse(electron_counts, frame_dimensions, scan_dimensions, crop_to=None)
             else:
                 comx = comx0
                 comy = comy0
-            com[:, ii] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
+            com[:, scan_position] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
 
         else:
-            com[:, ii] = (np.nan, np.nan)  # empty frame
+            com[:, scan_position] = (np.nan, np.nan)  # empty frame
 
-    com = com.reshape((2, scan_dimensions[1], scan_dimensions[0]))
+    com = com.reshape((2, *array.scan_shape))
 
     # Replace nan's with average without copying
     com_mean = np.nanmean(com, axis=(1, 2))
