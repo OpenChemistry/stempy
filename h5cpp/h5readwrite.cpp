@@ -133,7 +133,7 @@ public:
     return H5Aread(attr, memTypeId, value) >= 0;
   }
 
-  bool setAttribute(const string& path, const string& name, void* value,
+  bool setAttribute(const string& path, const string& name, const void* value,
                     hid_t fileTypeId, hid_t typeId, hsize_t dims)
   {
     if (!fileIsValid()) {
@@ -918,11 +918,22 @@ bool H5ReadWrite::setAttribute(const string& path, const string& name, T value)
   return m_impl->setAttribute(path, name, &value, dataTypeId, memTypeId, 1);
 }
 
-// Specialization for string
+template <typename T>
+bool H5ReadWrite::setAttribute(const string& path, const string& name,
+                               const vector<T>& values)
+{
+  const hid_t dataTypeId = BasicTypeToH5<T>::dataTypeId();
+  const hid_t memTypeId = BasicTypeToH5<T>::memTypeId();
+
+  return m_impl->setAttribute(path, name, values.data(), dataTypeId, memTypeId,
+                              values.size());
+}
+
+// Specialization for c string
 template <>
-bool H5ReadWrite::setAttribute<const string&>(const string& path,
-                                              const string& name,
-                                              const string& value)
+bool H5ReadWrite::setAttribute<const char*>(const string& path,
+                                            const string& name,
+                                            const char* value)
 {
   if (!m_impl->fileIsValid()) {
     cerr << "File is not valid\n";
@@ -968,16 +979,16 @@ bool H5ReadWrite::setAttribute<const string&>(const string& path,
   HIDCloser attributeCloser(attributeId, H5Aclose);
 
   // Need a char**
-  const char* tmp = value.c_str();
-  return H5Awrite(attributeId, dataType, &tmp) >= 0;
+  return H5Awrite(attributeId, dataType, &value) >= 0;
 }
 
+// Specialization for string
 template <>
-bool H5ReadWrite::setAttribute<const char*>(const string& path,
-                                            const string& name,
-                                            const char* value)
+bool H5ReadWrite::setAttribute<const string&>(const string& path,
+                                              const string& name,
+                                              const string& value)
 {
-  return setAttribute<const string&>(path, name, value);
+  return setAttribute(path, name, value.c_str());
 }
 
 bool H5ReadWrite::createGroup(const string& path)
@@ -1096,6 +1107,27 @@ template bool H5ReadWrite::setAttribute(const string&, const string&,
                                         const string&);
 template bool H5ReadWrite::setAttribute(const string&, const string&,
                                         const char*);
+
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<char>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<short>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<int>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<long long>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<unsigned char>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<unsigned short>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<unsigned int>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<unsigned long long>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<float>&);
+template bool H5ReadWrite::setAttribute(const string&, const string&,
+                                        const vector<double>&);
 
 // writeData
 template bool H5ReadWrite::writeData(const string&, const string&,
