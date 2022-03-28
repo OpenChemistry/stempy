@@ -770,9 +770,9 @@ class SparseArray:
             # Sort them so we don't undo the new ordering which is already
             # a part of the new_frames.
             new_scan_positions = self.scan_positions[np.sort(to_keep)]
-            for i in range(len(positions_to_keep)):
-                while i not in new_scan_positions:
-                    new_scan_positions[new_scan_positions > i] -= 1
+            unique = np.unique(new_scan_positions)
+            for i, x in enumerate(unique):
+                new_scan_positions[new_scan_positions == x] = i
         else:
             new_scan_shape = self.scan_shape
             new_frames = self.data
