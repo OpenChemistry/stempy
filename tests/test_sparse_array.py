@@ -38,7 +38,8 @@ def test_first_frame_expansion(sparse_array_small, full_array_small):
     assert np.array_equal(first_frame, full[slices])
 
     # Check the data and make sure it truly matches
-    unique, counts = np.unique(array.data[0], return_counts=True)
+    concatenated = np.concatenate(array.data[0])
+    unique, counts = np.unique(concatenated, return_counts=True)
     same = np.zeros(first_frame.shape).flatten()
     same[unique] += counts
 
@@ -321,8 +322,9 @@ def test_round_trip_hdf5(sparse_array_small):
     assert original.frame_shape == array.frame_shape
     assert dicts_equal(original.metadata, array.metadata)
 
-    for a, b in zip(original.data, array.data):
-        assert np.array_equal(a, b)
+    for sfa, sfb in zip(original.data, array.data):
+        for a, b in zip(sfa, sfb):
+            assert np.array_equal(a, b)
 
     original.metadata['float'] = np.float64(6.5)
     # Now, the metadata shouldn't be equal
@@ -357,16 +359,15 @@ def dicts_equal(d1, d2):
 def test_multiple_frames_per_scan_position():
     # Some simple tests where we know the answer for multiple frames
     # per scan position.
-    data = np.empty(4, dtype=object)
-    data[0] = np.array([0])
-    data[1] = np.array([0, 2])
-    data[2] = np.array([0])
-    data[3] = np.array([0, 1])
+    data = np.empty((2, 2), dtype=object)
+    data[0][0] = np.array([0])
+    data[0][1] = np.array([0, 2])
+    data[1][0] = np.array([0])
+    data[1][1] = np.array([0, 1])
     kwargs = {
         'data': data,
         'scan_shape': (2, 1),
         'frame_shape': (2, 2),
-        'scan_positions': (0, 0, 1, 1),
         'sparse_slicing': False,
         'allow_full_expand': True,
     }
@@ -430,17 +431,16 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(array.mean(axis=axis), [[2, 0.5], [0.5, 0]])
 
     # Test frame binning
-    data = np.empty(4, dtype=object)
-    data[0] = np.array([0, 2, 3, 5, 9])
-    data[1] = np.array([15])
-    data[2] = np.array([7])
-    data[3] = np.array([], dtype=int)
+    data = np.empty((2, 2), dtype=object)
+    data[0][0] = np.array([0, 2, 3, 5, 9])
+    data[0][1] = np.array([15])
+    data[1][0] = np.array([7])
+    data[1][1] = np.array([], dtype=int)
 
     kwargs = {
         'data': data,
         'scan_shape': (2, 1),
         'frame_shape': (4, 4),
-        'scan_positions': (0, 0, 1, 1),
         'sparse_slicing': False,
     }
     test_bin_frames_array = SparseArray(**kwargs)
@@ -474,28 +474,38 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(binned[1, 1], [[0, 0], [2, 2]])
 
 
-def test_data_conversion(cropped_multi_frames_v1):
-    # This dataset contains duplicates in its frames, a characteristic of
-    # v1 data. But when it was loaded into the SparseArray, it should have
-    # automatically converted it to v2. Confirm this is the case.
-    array = cropped_multi_frames_v1
-    array.allow_full_expand = True
+def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2,
+                         cropped_multi_frames_v3):
+    # These datasets were in older formats, but when they were converted
+    # into a SparseArray via the fixture, they should have automatically
+    # been converted to the latest version. Confirm this is the case.
+    latest_version = 3
 
-    # Should be no duplicates
-    for row in array.data:
-        assert len(np.unique(row)) == len(row)
+    to_test_list = [
+        cropped_multi_frames_v1,
+        cropped_multi_frames_v2,
+        cropped_multi_frames_v3,
+    ]
+    for array in to_test_list:
+        array.allow_full_expand = True
 
-    # From local testing, these values should match
-    assert array.min() == 0
-    assert array.max() == 2
-    assert array.sum() == 949625
-    assert np.isclose(array.mean(), 0.0071556185)
+        assert array.VERSION == latest_version
 
-    assert array.shape == (20, 20, 576, 576)
+        # Should be no duplicates
+        for scan_frames in array.data:
+            for sparse_frame in scan_frames:
+                assert len(np.unique(sparse_frame)) == len(sparse_frame)
 
-    # There will be twice as many frames as there are scans
-    assert array.data.shape[0] == np.prod(array.scan_shape) * 2
-    assert len(array.scan_positions) == 800
+        # From local testing, these values should match
+        assert array.min() == 0
+        assert array.max() == 2
+        assert array.sum() == 949625
+        assert np.isclose(array.mean(), 0.0071556185)
+
+        assert array.shape == (20, 20, 576, 576)
+
+        # There should be two frames per scan
+        assert array.data.shape == (400, 2)
 
 
 # Test binning until this number

@@ -340,8 +340,12 @@ ElectronCountedData electronCount(
   auto frameDimensions = first->header.frameDimensions;
 
   // Matrix to hold electron events.
-  std::vector<std::vector<uint32_t>> events(scanDimensions.first *
-                                            scanDimensions.second);
+  // Assume only one frame per scan.
+  Events events(scanDimensions.first * scanDimensions.second);
+  for (size_t i = 0; i < events.size(); ++i) {
+    events[i].resize(1);
+  }
+
   for (; first != last; ++first) {
     auto block = std::move(*first);
     auto data = block.data.get();
@@ -353,7 +357,7 @@ ElectronCountedData electronCount(
                                                  frameDimensions.second);
 
 #ifdef VTKm
-      events[block.header.imageNumbers[i]] =
+      events[block.header.imageNumbers[i]][0] =
         maximalPointsParallel<FrameType, dark>(
           frame, frameDimensions, darkReference, gain, backgroundThreshold,
           xRayThreshold);
@@ -372,7 +376,7 @@ ElectronCountedData electronCount(
         }
       }
       // Now find the maximal events
-      events[block.header.imageNumbers[i]] =
+      events[block.header.imageNumbers[i]][0] =
         maximalPoints<FrameType>(frame, frameDimensions);
 #endif
     }
@@ -518,7 +522,7 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
   // Outer vector is scan position, middle vector is a frame at that
   // scan position, and inner vector is the electron counted data for
   // the frame.
-  std::vector<std::vector<std::vector<uint32_t>>> events;
+  Events events;
   // We need an array of mutexes to protect updates for each event vector for a
   // given position, as we may have muliple frames per location.
   std::unique_ptr<std::mutex[]> positionMutexes;
@@ -704,16 +708,22 @@ ElectronCountedData electronCount(Reader* reader, const float darkReference[],
   gatherEvents(worldSize, rank, events);
 #endif
 
-  ElectronCountedData ret;
-  // We need at least the number of scan positions, potentially more.
-  // Go ahead and reserve the number of scan positions.
-  ret.data.reserve(numberOfScanPositions);
-  for (int position = 0; position < events.size(); ++position) {
-    for (int i = 0; i < events[position].size(); ++i) {
-      ret.data.push_back(std::move(events[position][i]));
-      ret.scanPositions.push_back(position);
+  // Find the maximum number of frames in a position, and make sure all
+  // scan positions have this number of frames.
+  int maxNumFrames = 0;
+  for (int i = 0; i < events.size(); ++i) {
+    if (events[i].size() > maxNumFrames) {
+      maxNumFrames = events[i].size();
     }
   }
+
+  // Now make sure they are all the same size
+  for (int i = 0; i < events.size(); ++i) {
+    events[i].resize(maxNumFrames);
+  }
+
+  ElectronCountedData ret;
+  ret.data = std::move(events);
   ret.scanDimensions = scanDimensions;
   ret.frameDimensions = frameSize;
 

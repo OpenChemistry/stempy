@@ -7,7 +7,7 @@ namespace stempy {
 
 class SectorStreamThreadedReader;
 
-using Events = std::vector<std::vector<uint32_t>>;
+using Events = std::vector<std::vector<std::vector<uint32_t>>>;
 
 struct ElectronCountedMetadata
 {
@@ -30,7 +30,6 @@ struct ElectronCountedMetadata
 struct ElectronCountedData
 {
   Events data;
-  std::vector<uint32_t> scanPositions;
 
   ElectronCountedMetadata metadata;
   Dimensions2D scanDimensions = { 0, 0 };
@@ -128,7 +127,7 @@ void initMpiWorldRank(int& worldSize, int& rank);
 int getSampleBlocksPerRank(int worldSize, int rank,
                            int thresholdNumberOfBlocks);
 void gatherBlocks(int worldSize, int rank, std::vector<Block>& blocks);
-void gatherEvents(int worldSize, int rank, std::vector<Events>& events);
+void gatherEvents(int worldSize, int rank, Events& events);
 void broadcastThresholds(double& background, double& xRay);
 
 #endif
