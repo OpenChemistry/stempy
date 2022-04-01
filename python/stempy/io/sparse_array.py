@@ -760,19 +760,35 @@ class SparseArray:
                 self.scan_shape)
             positions_to_keep = all_positions[scan_slices].ravel()
 
+            # Remove any positions to keep that are not in the scan positions
+            found = np.where(np.isin(positions_to_keep,
+                                     self.scan_positions))[0]
+            positions_to_keep = positions_to_keep[found]
+
             # Find all frames that have positions to keep
-            to_keep = np.concatenate([np.where(self.scan_positions == x)[0]
-                                      for x in positions_to_keep])
+            to_keep = np.where(np.isin(self.scan_positions,
+                                       positions_to_keep))[0]
             new_frames = self.data[to_keep]
+
+            # Now get the new scan positions for each frame
+            # To keep the ordering the same, first get the counts and
+            # then apply these counts to the positions_to_keep
+            _, counts = np.unique(np.sort(self.scan_positions[to_keep]),
+                                  return_counts=True)
+
+            sort_sequence = np.argsort(positions_to_keep)
+            new_scan_positions = np.repeat(positions_to_keep, counts[sort_sequence])
 
             # Re-number the positions so they go from zero to
             # len(positions_to_keep).
             # Sort them so we don't undo the new ordering which is already
             # a part of the new_frames.
-            new_scan_positions = self.scan_positions[np.sort(to_keep)]
-            unique = np.unique(new_scan_positions)
-            for i, x in enumerate(unique):
-                new_scan_positions[new_scan_positions == x] = i
+            unique = np.unique(np.sort(new_scan_positions))
+
+            # Create a map of old values to new values
+            conversion_map = {x: i for i, x in enumerate(unique)}
+            for i, pos in enumerate(new_scan_positions):
+                new_scan_positions[i] = conversion_map[pos]
         else:
             new_scan_shape = self.scan_shape
             new_frames = self.data
