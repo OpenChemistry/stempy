@@ -96,14 +96,14 @@ def full_array_small(sparse_array_small):
 
 @pytest.fixture
 def cropped_multi_frames_v1(cropped_multi_frames_data_v1):
-    return SparseArray.from_hdf5(cropped_multi_frames_data_v1)
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v1, dtype=np.uint16)
 
 
 @pytest.fixture
 def cropped_multi_frames_v2(cropped_multi_frames_data_v2):
-    return SparseArray.from_hdf5(cropped_multi_frames_data_v2)
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v2, dtype=np.uint16)
 
 
 @pytest.fixture
 def cropped_multi_frames_v3(cropped_multi_frames_data_v3):
-    return SparseArray.from_hdf5(cropped_multi_frames_data_v3)
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v3, dtype=np.uint16)
