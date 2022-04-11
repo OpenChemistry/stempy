@@ -12,6 +12,8 @@ DATA_URLS = {
     'electron_small': 'https://data.kitware.com/api/v1/file/6065f00d2fa25629b93bdabe/download',  # noqa
     'electron_large': 'https://data.kitware.com/api/v1/file/6065f2792fa25629b93c0303/download',  # noqa
     'cropped_multi_frames_v1': 'https://data.kitware.com/api/v1/file/623119814acac99f4261aa59/download',  # noqa
+    'cropped_multi_frames_v2': 'https://data.kitware.com/api/v1/file/6244e9944acac99f424743df/download',  # noqa
+    'cropped_multi_frames_v3': 'https://data.kitware.com/api/v1/file/624601cd4acac99f425c73f6/download',  # noqa
 }
 
 DATA_RESPONSES = {}
@@ -44,6 +46,16 @@ def electron_data_large():
 @pytest.fixture
 def cropped_multi_frames_data_v1():
     return io_object('cropped_multi_frames_v1')
+
+
+@pytest.fixture
+def cropped_multi_frames_data_v2():
+    return io_object('cropped_multi_frames_v2')
+
+
+@pytest.fixture
+def cropped_multi_frames_data_v3():
+    return io_object('cropped_multi_frames_v3')
 
 
 # SparseArray fixtures
@@ -84,4 +96,14 @@ def full_array_small(sparse_array_small):
 
 @pytest.fixture
 def cropped_multi_frames_v1(cropped_multi_frames_data_v1):
-    return SparseArray.from_hdf5(cropped_multi_frames_data_v1)
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v1, dtype=np.uint16)
+
+
+@pytest.fixture
+def cropped_multi_frames_v2(cropped_multi_frames_data_v2):
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v2, dtype=np.uint16)
+
+
+@pytest.fixture
+def cropped_multi_frames_v3(cropped_multi_frames_data_v3):
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v3, dtype=np.uint16)

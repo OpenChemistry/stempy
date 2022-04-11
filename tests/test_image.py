@@ -7,16 +7,15 @@ from stempy.io.sparse_array import SparseArray
 def test_com_sparse(sparse_array_small, full_array_small):
     # Do a basic test of com_sparse() with multiple frames per scan
     # position.
-    data = np.empty(4, dtype=object)
-    data[0] = np.array([0])
-    data[1] = np.array([3])
-    data[2] = np.array([0])
-    data[3] = np.array([0, 1, 2])
+    data = np.empty((2, 2), dtype=object)
+    data[0][0] = np.array([0])
+    data[0][1] = np.array([3])
+    data[1][0] = np.array([0])
+    data[1][1] = np.array([0, 1, 2])
     kwargs = {
         'data': data,
         'scan_shape': (2, 1),
         'frame_shape': (2, 2),
-        'scan_positions': (0, 0, 1, 1),
     }
     array = SparseArray(**kwargs)
 

@@ -33,8 +33,7 @@ void serializeBlocks(std::vector<Block>& blocks, std::ostream* stream)
   archive(blocks);
 }
 
-void receivePartialMap(std::vector<Events>& events,
-                       std::vector<char>& recvBuffer)
+void receivePartialMap(Events& events, std::vector<char>& recvBuffer)
 {
   MPI_Status status;
   // Probe for an incoming message from rank zero
@@ -67,7 +66,7 @@ void receivePartialMap(std::vector<Events>& events,
   }
 }
 
-void sendPartialMap(std::vector<Events>& events)
+void sendPartialMap(Events& events)
 {
   // Create a partial map of electron events
   SparseEventMap partialEventMap;
@@ -88,8 +87,7 @@ void sendPartialMap(std::vector<Events>& events)
            MPI_BYTE, 0, 0, MPI_COMM_WORLD);
 }
 
-void gatherEvents(int worldSize, int rank,
-                 std::vector<Events>& events)
+void gatherEvents(int worldSize, int rank, Events& events)
 {
   // Now the final gather!
   // It would be nice to use a gather here, but the displacement values can

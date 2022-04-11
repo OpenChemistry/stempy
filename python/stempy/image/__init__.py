@@ -76,33 +76,27 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         imgs = _image.create_stem_images(input._electron_counted_data,
                                          inner_radii, outer_radii, center)
     elif isinstance(input, SparseArray):
-        imgs = _image.create_stem_images(input.data, input.scan_positions,
-                                         inner_radii, outer_radii,
+        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
                                          input.scan_shape[::-1],
                                          input.frame_shape, center)
     elif all([hasattr(input, x) for x in ecd_attrs]):
         # Handle electron counted data without C++ object
-        # Assume this is v1 data and use an arange for the scan positions
-        scan_positions = np.arange(len(input.data))
-        imgs = _image.create_stem_images(input.data, scan_positions,
-                                         inner_radii, outer_radii,
+        # Assume this is v1 data and that each frame is one scan position
+        data = input.data
+        if data.ndim == 1:
+            data = data[:, np.newaxis]
+        imgs = _image.create_stem_images(input.data, inner_radii, outer_radii,
                                          input.scan_dimensions,
                                          input.frame_dimensions, center)
     elif isinstance(input, np.ndarray):
         # The presence of frame dimensions implies it is sparse data
         if frame_dimensions is not None:
             # Handle sparse data
-            # Make sure the data is compatible with v1
-            if frame_offset + len(input) >= np.prod(scan_dimensions):
-                msg = (
-                    'The data appears to be in v2 format, but this '
-                    'function currently only handles v1 format.'
-                )
-                raise NotImplementedError(msg)
-            scan_positions = np.arange(frame_offset, len(input))
-            imgs = _image.create_stem_images(input, scan_positions, inner_radii,
-                                             outer_radii, scan_dimensions,
-                                             frame_dimensions, center)
+            if input.ndim == 1:
+                input = input[:, np.newaxis]
+            imgs = _image.create_stem_images(input, inner_radii, outer_radii,
+                                             scan_dimensions, frame_dimensions,
+                                             center)
         else:
             # Handle raw data
             # Make sure the scan dimensions were passed
@@ -327,14 +321,20 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         data = _image.electron_count(*args)
 
     # Convert to numpy array
-    np_data = np.array([np.array(x, copy=False) for x in data.data], dtype=np.object)
+    num_scans = len(data.data)
+    frames_per_scan = len(data.data[0]) if data.data else 0
+
+    np_data = np.empty((num_scans, frames_per_scan), dtype=object)
+    for i, scan_frames in enumerate(data.data):
+        for j, sparse_frame in enumerate(scan_frames):
+            np_data[i, j] = np.array(sparse_frame, copy=False)
+
     metadata = _electron_counted_metadata_to_dict(data.metadata)
 
     kwargs = {
         'data': np_data,
         'scan_shape': data.scan_dimensions[::-1],
         'frame_shape': data.frame_dimensions,
-        'scan_positions': data.scan_positions,
         'metadata': {'electron_counting': metadata},
     }
     array = SparseArray(**kwargs)
@@ -409,13 +409,9 @@ def com_sparse(array, crop_to=None):
         :rtype: numpy.ndarray (2D)
         """
     com = np.zeros((2, array.num_scans), np.float32)
-    for scan_position in range(array.num_scans):
-        data_indices = array.data_indices(scan_position)
-        if len(data_indices) != 0:
-            # Combine the sparse arrays into one array that we will use
-            ev = np.hstack(array.data[data_indices])
-        else:
-            ev = []
+    for scan_position, frames in enumerate(array.data):
+        # Combine the sparse arrays into one array that we will use
+        ev = np.hstack(frames)
 
         if len(ev) > 0:
             x = ev // array.frame_shape[0]
