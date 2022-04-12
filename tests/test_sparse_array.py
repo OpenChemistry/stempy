@@ -507,6 +507,9 @@ def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2,
         # There should be two frames per scan
         assert array.data.shape == (400, 2)
 
+        assert array.num_scans == 400
+        assert array.num_frames_per_scan == 2
+
 
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
