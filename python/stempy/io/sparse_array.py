@@ -682,6 +682,15 @@ class SparseArray:
         return self._scan_shape_flat[0]
 
     @property
+    def num_frames_per_scan(self):
+        """Get the number of frames per scan position
+
+        :return: the number of frames per scan position
+        :rtype: int
+        """
+        return self.data.shape[1]
+
+    @property
     def _frame_shape_flat(self):
         return (np.prod(self.frame_shape),)
 
