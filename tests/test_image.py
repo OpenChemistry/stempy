@@ -1,6 +1,6 @@
 import numpy as np
 
-from stempy.image import com_dense, com_sparse
+from stempy.image import com_dense, com_sparse, radial_sum_sparse
 from stempy.io.sparse_array import SparseArray
 
 
@@ -35,3 +35,10 @@ def test_com_sparse(sparse_array_small, full_array_small):
             full_com[:, i, j] = com_dense(full_array_small[i, j])[:, 0]
 
     assert np.array_equal(com, full_com)
+
+
+def test_radial_sum_sparse(sparse_array_10x10):
+
+    rr = radial_sum_sparse(sparse_array_10x10, center=(4, 4))
+
+    assert np.all(rr[0, 0, :] == [0, 6, 0, 0, 3])

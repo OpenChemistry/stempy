@@ -60,6 +60,15 @@ def cropped_multi_frames_data_v3():
 
 # SparseArray fixtures
 
+@pytest.fixture
+def sparse_array_10x10():
+    aa = np.zeros((4, 3), dtype='object')
+    for ii in range(4):
+        aa[ii, 0] = np.array((0, 48, 72, 65))
+        aa[ii, 1] = np.array((0, 48, 72, 65))
+        aa[ii, 2] = np.array((0, 48, 72, 65))
+
+    return SparseArray(aa, (2, 2), (11, 11))
 
 @pytest.fixture
 def sparse_array_small(electron_data_small):
