@@ -39,6 +39,6 @@ def test_com_sparse(sparse_array_small, full_array_small):
 
 def test_radial_sum_sparse(sparse_array_10x10):
 
-    rr = radial_sum_sparse(sparse_array_10x10, center=(4, 4))
+    rr = radial_sum_sparse(sparse_array_10x10, center=(5, 5))
 
-    assert np.all(rr[0, 0, :] == [0, 6, 0, 0, 3])
+    assert np.array_equal(rr[0, 0, :] == [0, 6, 0, 0, 3])
