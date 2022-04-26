@@ -462,7 +462,7 @@ def com_dense(frames):
     :type frames: numpy.ndarray (2D or 3D)
 
     :return: The center of mass along each axis of set of frames
-    :
+    :rtype: np.ndarray
 
     """
     # Make 3D if its only 2D
@@ -500,35 +500,31 @@ def calculate_sum_sparse(electron_counts, frame_dimensions):
     return dp
 
 
-def radial_sum_sparse(electron_counts, scan_dimensions, frame_dimensions,
-                      center):
-    """Radial sum of sparse (single) electron counted data
+def radial_sum_sparse(sa, center):
+    """Radial sum of sparse electron counted data
 
-    :param electron_counts: A vector of electron positions flattened. Each
-                            pixel can only be a 1 (electron) or a 0
-                            (no electron).
-    :type electron_counts: numpy.ndarray (1D)
-    :param scan_dimensions: The number of X and Y scan positions in pixels.
-    :type scan_dimensions: tuple of ints of length 2
-    :param frame_dimensions: The shape of the detector.
-    :type frame_dimensions: tuple of ints of length 2
+    :param sa: A SparseArray data set.
+    :type sa: stempy.io.SparseArray
     :param center: The center of the diffraction pattern in pixels.
     :type center: tuple of ints of length 2
 
-    :return: A ndarray of the radial sum of shape (scan_dimensions[0],
-             scan_dimensions[0], max(frame_dimensions/2)
+    :return: A ndarray of the radial sum of shape (scan_shape[0],
+             scan_shape[0], max(frame_dimensions)/2
     :rtype: numpy.ndarray
     """
-    num_bins = int(max(frame_dimensions) / 2)
-    r_sum = np.zeros((scan_dimensions[0] * scan_dimensions[1], num_bins),
-                     dtype='<u8')
 
-    for ii, ev in enumerate(electron_counts):
-        x, y = np.unravel_index(ev, frame_dimensions)
-        r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-        hh, hhx = np.histogram(r, bins=range(0, num_bins + 1))
-        r_sum[ii, :] = hh
-    r_sum = r_sum.reshape((scan_dimensions[0], scan_dimensions[1], num_bins))
+    num_bins = int(max(sa.frame_shape) / 2)
+    r_sum = np.zeros((sa.num_scans, num_bins), dtype='<i8')
+
+    for ii, frames in enumerate(sa.data):
+        # Loop over all scan positions
+        for jj, events in enumerate(frames):
+            # Loop over all frames in this scan position
+            x, y = np.unravel_index(events, sa.frame_shape)
+            r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            hh, hhx = np.histogram(r, bins=range(0, num_bins + 1))
+            r_sum[ii, :] += hh
+    r_sum = r_sum.reshape((sa.scan_shape[0], sa.scan_shape[1], num_bins))
 
     return r_sum
 
