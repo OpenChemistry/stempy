@@ -465,6 +465,31 @@ def com_sparse2(array, crop_to=None, init_center=None, replace_nans=True):
     return com
 
 
+def filter_bad_sectors(com, cut_off):
+    """ Missing sectors of data can greatly affect the center of mass calculation. This
+    function attempts to fix that issue. Usually, the problem will be evident by a
+    bimodal histogram for the horizontal center of mass. Set the cut_off to a value between
+    the real values and the outliers. cut_off is a tuple where values below cut_off[0]
+    or above cut_off[1] will be set to the local median.
+
+    :param com: The center of mass for the vertical and horizontal axes
+    :type com: np.ndarray (3d)
+    :param cut_off: The lower and upper cutoffs as a 2-tuple
+    :type cut_off: 2-tuple
+
+    :rtype numpy.ndarray (3d)
+    """
+    _ = (com[1, :, :] > cut_off[1]) | (com[1, :, :] < cut_off[0])
+    com[0, _] = np.nan
+    com[1, _] = np.nan
+
+    x, y = np.where(_)
+
+    for ii, jj in zip(x, y):
+        com[0, ii, jj] = np.nanmedian(com[0, ii - 1:ii + 2, jj - 1:jj + 2])
+        com[1, ii, jj] = np.nanmedian(com[1, ii - 1:ii + 2, jj - 1:jj + 2])
+    return com
+
 def com_dense(frames):
     """Compute the center of mass for a set of dense 2D frames.
 
