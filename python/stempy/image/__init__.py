@@ -392,7 +392,7 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse2(array, crop_to=None, init_center=None, replace_nans=True):
+def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
     """Compute center of mass (COM) for counted data directly from sparse (single)
         electron data. Empty frames will have the average COM value of all frames. There is an option to crop to a
         smaller region around the initial full frame COM to improve finding the center of the zero beam.
