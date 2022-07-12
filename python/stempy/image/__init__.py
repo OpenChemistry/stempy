@@ -392,17 +392,21 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse(array, crop_to=None):
+def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
     """Compute center of mass (COM) for counted data directly from sparse (single)
         electron data. Empty frames will have the average COM value of all frames. There is an option to crop to a
         smaller region around the initial full frame COM to improve finding the center of the zero beam.
-
         :param array: A SparseArray of the electron counted data
         :type array: stempy.io.SparseArray
         :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
                         the zero beam
         :type crop_to: tuple of ints of length 2
-
+        :param init_center: The initial center to use before cropping. If this is not set then the center of mass
+                            of the each full frame will be the initial center.
+        :type init_center: tuple of ints of length 2
+        :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
+                             of the the entire data set. If this is False they will be set to np.NAN.
+        :type replace_nans: bool
         :return: The center of mass in X and Y for each scan position. If a position
                 has no data (len(electron_counts) == 0) then the center of the
                 frame is used as the center of mass.
@@ -417,13 +421,17 @@ def com_sparse(array, crop_to=None):
             x = ev // array.frame_shape[0]
             y = ev % array.frame_shape[1]
 
-            mm0 = len(ev)
-            comx0 = np.sum(x) / mm0
-            comy0 = np.sum(y) / mm0
+            if init_center:
+                comx0, comy0 = init_center
+            else:
+                # Center of mass of the full frame
+                mm0 = len(ev)
+                comx0 = np.sum(x) / mm0
+                comy0 = np.sum(y) / mm0
             if crop_to is not None:
                 # Crop around the center
                 keep = (x > comx0 - crop_to[0]) & (x <= comx0 + crop_to[0]) & (y > comy0 - crop_to[1]) & (
-                            y <= comy0 + crop_to[1])
+                        y <= comy0 + crop_to[1])
                 x = x[keep]
                 y = y[keep]
                 mm = len(x)
@@ -447,13 +455,40 @@ def com_sparse(array, crop_to=None):
 
     com = com.reshape((2, *array.scan_shape))
 
-    # Replace nan's with average without copying
-    com_mean = np.nanmean(com, axis=(1, 2))
-    np.nan_to_num(com[0, :, :], nan=com_mean[0], copy=False)
-    np.nan_to_num(com[1, :, :], nan=com_mean[1], copy=False)
+    if replace_nans:
+        # Replace nan's with average without copying
+        # This is true by default
+        com_mean = np.nanmean(com, axis=(1, 2))
+        np.nan_to_num(com[0, :, :], nan=com_mean[0], copy=False)
+        np.nan_to_num(com[1, :, :], nan=com_mean[1], copy=False)
 
     return com
 
+
+def filter_bad_sectors(com, cut_off):
+    """ Missing sectors of data can greatly affect the center of mass calculation. This
+    function attempts to fix that issue. Usually, the problem will be evident by a
+    bimodal histogram for the horizontal center of mass. Set the cut_off to a value between
+    the real values and the outliers. cut_off is a tuple where values below cut_off[0]
+    or above cut_off[1] will be set to the local median.
+
+    :param com: The center of mass for the vertical and horizontal axes
+    :type com: np.ndarray (3d)
+    :param cut_off: The lower and upper cutoffs as a 2-tuple
+    :type cut_off: 2-tuple
+
+    :rtype numpy.ndarray (3d)
+    """
+    _ = (com[1, :, :] > cut_off[1]) | (com[1, :, :] < cut_off[0])
+    com[0, _] = np.nan
+    com[1, _] = np.nan
+
+    x, y = np.where(_)
+
+    for ii, jj in zip(x, y):
+        com[0, ii, jj] = np.nanmedian(com[0, ii - 1:ii + 2, jj - 1:jj + 2])
+        com[1, ii, jj] = np.nanmedian(com[1, ii - 1:ii + 2, jj - 1:jj + 2])
+    return com
 
 def com_dense(frames):
     """Compute the center of mass for a set of dense 2D frames.
