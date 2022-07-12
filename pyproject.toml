@@ -1,2 +1,2 @@
 [build-system]
-requires = ["setuptools", "wheel", "scikit-build", "setuptools_scm[toml]"]
+requires = ["setuptools", "wheel", "scikit-build==0.14.1", "setuptools_scm[toml]"]
