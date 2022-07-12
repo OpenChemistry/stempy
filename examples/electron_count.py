@@ -3,15 +3,17 @@
 import argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--verbose', '-v', dest='verbose', action='store_true') 
 parser.add_argument('--scan_number','-s', type=int)
 parser.add_argument('--threshold', '-t', type=float)
 parser.add_argument('--num-threads','-r',dest='num_threads', type=int, default=20) # not implemented yet on ms6
 parser.add_argument('--location', '-l', type=str, default='/mnt/nvmedata')
-parser.add_argument('--no-threads', '-d', dest='threaded',action='store_false') # disable threading
+#parser.add_argument('--no-threads', '-d', dest='threaded',action='store_false') # disable threading
+parser.add_argument('--no-multi-pass', dest='multi_pass',action='store_false') # multi-pass testing
 parser.add_argument('--temp-dir', dest='temp_dir', action='store_true')
 parser.add_argument('--no-temp-dir', dest='temp_dir', action='store_false')
 parser.add_argument('--out-dir', dest='out_dir', type=str)
-parser.set_defaults(temp_dir=False, threaded=True)
+parser.set_defaults(temp_dir=False, multi_pass=True, verbose=False)
 args = parser.parse_args()
 
 from pathlib import Path
@@ -37,29 +39,29 @@ out_dir = Path(args.out_dir)
 if not out_dir.is_dir():
     raise FileNotFoundError('Output directory either does not exist or is a file')
 
-if args.threaded:
-    print('Using threaded counting code')
-    threaded = 'thread'
+if args.multi_pass:
+    if args.verbose:
+        print('using multi-pass backend')
+    backend = 'multi-pass'
 else:
-    print('unthreaded')
-    threaded = None
-
+    backend = None
+ 
 scanName = 'data_scan{:010}_'.format(scanNum)
 #scanName = 'data_scan{}_'.format(scanNum)
 
 #  Setup the data drive paths
 drives = []
-for ii in range(1,5):
-    #drives.append( (Path('/mnt/nvmedata{}/temp'.format(ii))))
+for ii in range(1, 6):
     drive_name = drive_prefix + '{}'.format(ii)
     if temp_dir:
         # Temporarily staged files
         drive_name += '/temp'
     drives.append(Path(drive_name))
 
-print('Looking for files in:')
-for d in drives:
-    print(d)
+if args.verbose:
+    print('Looking for files in:')
+    for d in drives:
+        print(d)
 
 dark0 = np.zeros((576, 576))
 gain0 = np.ones((576, 576),dtype=np.float32)
@@ -74,24 +76,30 @@ for drive in drives:
 # Sort the files
 iFiles = sorted(iFiles)
 
-print('Number of files = {}'.format(len(iFiles)))
+if args.verbose:
+    print('Number of files = {}'.format(len(iFiles)))
 
 # Electron count the data
-#print('NOTE: Using file version 4')
-sReader = stio.reader(iFiles,stio.FileVersion.VERSION5, backend=threaded)
+if args.verbose:
+    #print('NOTE: Using file version 4')
+    print(f'backend = {backend}')
+sReader = stio.reader(iFiles,stio.FileVersion.VERSION5, backend=backend)
 
-print('start counting')
+if args.verbose:
+    print('start counting')
 t0 = time.time()
 ee = stim.electron_count(sReader,dark0,gain=gain0,number_of_samples=1200,
-                                            verbose=True,threshold_num_blocks=20,
+                                            verbose=args.verbose,
+                                            threshold_num_blocks=20,
                                             xray_threshold_n_sigma=175,
                                             background_threshold_n_sigma=threshold)
 
 t1 = time.time()
 full_time = t1 - t0
-print('total time = {}'.format(full_time))
+if args.verbose:
+    print('total time = {}'.format(full_time))
 
-outPath = out_dir / Path('data_scan{}_th{}_electrons.h5'.format(scanNum, threshold))
+outPath = out_dir / Path('data_scan{}_id0000_electrons.h5'.format(scanNum))
 ii = 0
 
 # Test for existence of the file and change name instead of overwriting
@@ -102,18 +110,17 @@ if outPath.exists():
         outPath2 = outPath.with_name(outPath.stem + '_{:03d}.h5'.format(ii))
 else:
     outPath2 = outPath
+if args.verbose:
+    print('Saving to {}'.format(outPath2))
+stio.save_electron_counts(str(outPath2), ee)
 
 # Add meta data
-ee.metadata.update({
-    'user': {
-        'threshold sigma': threshold,
-        'scan number': scanNum,
-        'threaded': args.threaded,
-        'date processed': datetime.now().strftime('%Y/%m/%d %H:%M:%S'),
-        'process time (s)': full_time,
-    }
-})
+with h5py.File(outPath2,'a') as f0:
+    user_group = f0.create_group('user')
+    user_group.attrs['threshold sigma'] = threshold
+    user_group.attrs['scan number'] = scanNum
+    user_group.attrs['date processed'] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    user_group.attrs['process time (s)'] = full_time 
 
-print('Saving to {}'.format(outPath2))
-stio.save_electron_counts(str(outPath2), ee)
-print('done')
+if args.verbose:
+    print('done')
