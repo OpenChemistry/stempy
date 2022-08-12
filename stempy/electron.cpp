@@ -368,7 +368,7 @@ ElectronCountedData electronCount(
         if (std::is_integral<FrameType>::value) {
           frame[j] -= darkReference[j];
         } else {
-          frame[j] = frame[i] * gain[i] - darkReference[j];
+          frame[j] = frame[j] * gain[j] - darkReference[j];
         }
         // Threshold the electron events
         if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
