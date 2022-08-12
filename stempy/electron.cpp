@@ -460,29 +460,52 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                               xRayThreshold, scanDimensions);
 }
 
-template <typename FrameType, bool applyGlobalDark = true, bool applyGain = true>
+template <typename FrameType, bool applyGlobalDark = true,
+          bool applyGain = true>
 void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
-                  const float globalDark[], const float gain[])
+                  float optimizedMean, double backgroundThreshold,
+                  double xRayThreshold, const float globalDark[],
+                  const float gain[], bool useMean = true)
 {
   auto height = frameDimensions.first;
   auto width = frameDimensions.second;
-  auto numberOfPixels = height * width;
 
+  // If the width is an odd number, give the right side the extra one
   auto leftSize = width / 2;
   auto rightSize = width - leftSize;
 
-  auto mean = [&frame](size_t start, size_t stop)
-  {
-    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) / static_cast<double>(stop - start);
+  // Function to compute the mean for a given range in the frame
+  using FrameVecType = std::vector<FrameType>;
+  auto mean = [](const FrameVecType& frame, size_t start, size_t stop) {
+    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) /
+           static_cast<double>(stop - start);
   };
 
-  // We can choose here between mean and median
-  decltype(mean) statFunc = mean;
+  // Function to compute the median for a given range in the frame
+  auto median = [](const FrameVecType& frame, size_t start, size_t stop) {
+    // Need to make a copy of the data. We will sort it.
+    std::vector<FrameType> v(frame.begin() + start, frame.begin() + stop);
+    size_t n = v.size() / 2;
+    std::nth_element(v.begin(), v.begin() + n, v.end());
+    if (v.size() & 1) {
+      // The size is odd
+      return static_cast<double>(v[n]);
+    } else {
+      // The size is even. Need to average the middle two.
+      auto it = max_element(v.begin(), v.begin() + n);
+      return (*it + v[n]) / static_cast<double>(2.0);
+    }
+  };
 
-  double optimized_mean = 20;
-  auto apply = [&](size_t start, size_t stop)
-  {
-    auto statResult = statFunc(start, stop);
+  double (*statFunc)(const FrameVecType&, size_t, size_t);
+  if (useMean) {
+    statFunc = mean;
+  } else {
+    statFunc = median;
+  }
+
+  auto apply = [&](size_t start, size_t stop) {
+    auto statResult = statFunc(frame, start, stop);
 
     for (size_t i = start; i < stop; ++i) {
       // Apply global dark if needed
@@ -491,12 +514,17 @@ void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
       )();
 
       // Apply row dark algorithm
-      frame[i] = optimized_mean * frame[i] / statResult;
+      frame[i] *= optimizedMean / statResult;
 
       // Apply gain if needed
       static_if<applyGlobalDark>(
         [&]() { frame[i] *= gain[i]; }
       )();
+
+      // Threshold the electron events
+      if (frame[i] <= backgroundThreshold || frame[i] >= xRayThreshold) {
+        frame[i] = 0;
+      }
     }
   };
 
