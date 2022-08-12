@@ -100,7 +100,7 @@ private:
   double m_upper;
 };
 
-struct ApplyGainSubtractAndThreshold : public Threshold
+struct ApplySubtractGainAndThreshold : public Threshold
 {
   using CountingHandle = vtkm::cont::ArrayHandleCounting<vtkm::Id>;
 
@@ -113,13 +113,13 @@ struct ApplyGainSubtractAndThreshold : public Threshold
   VTKM_EXEC void operator()(FrameType& val, double background, float gain) const
   {
 
-    val = static_cast<FrameType>(val * gain - static_cast<float>(background));
+    val = static_cast<FrameType>((val - static_cast<float>(background)) * gain);
 
     Threshold::operator()(val);
   }
 
   VTKM_CONT
-  ApplyGainSubtractAndThreshold(double lower, double upper)
+  ApplySubtractGainAndThreshold(double lower, double upper)
     : Threshold(lower, upper){};
 
 private:
@@ -208,7 +208,7 @@ std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
           darkReferenceData, frameDimensions.first * frameDimensions.second);
 
         invoke(
-          ApplyGainSubtractAndThreshold{ backgroundThreshold, xRayThreshold },
+          ApplySubtractGainAndThreshold{ backgroundThreshold, xRayThreshold },
           cellSet, frameHandle, darkRefHandle, gainRefHandle);
       },
       [&] {
@@ -368,7 +368,7 @@ ElectronCountedData electronCount(
         if (std::is_integral<FrameType>::value) {
           frame[j] -= darkReference[j];
         } else {
-          frame[j] = frame[j] * gain[j] - darkReference[j];
+          frame[j] = (frame[j] - darkReference[j]) * gain[j];
         }
         // Threshold the electron events
         if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
@@ -507,14 +507,13 @@ std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
        j++) {
     // Subtract darkfield reference and apply gain if we have one, this will
     // be based on our template type, it can be evaluated a compile time.
-    if (std::is_integral<FrameType>::value) {
-      static_if<dark>(
-        [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
-    } else {
-      frame[j] = frame[j] * gain[j];
-      static_if<dark>(
-        [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
+    static_if<dark>(
+      [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
+
+    if (not std::is_integral<FrameType>::value) {
+      frame[j] *= gain[j];
     }
+
     // Threshold the electron events
     if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
       frame[j] = 0;
