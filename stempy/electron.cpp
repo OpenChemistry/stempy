@@ -460,6 +460,41 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                               xRayThreshold, scanDimensions);
 }
 
+template <typename FrameType>
+void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions)
+{
+  auto height = frameDimensions.first;
+  auto width = frameDimensions.second;
+  auto numberOfPixels = height * width;
+
+  auto leftSize = width / 2;
+  auto rightSize = width - leftSize;
+
+  auto mean = [&frame](size_t start, size_t stop)
+  {
+    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) / static_cast<double>(stop - start);
+  };
+
+  // We can choose here between mean and median
+  decltype(mean) statFunc = mean;
+
+  double optimized_mean = 20;
+  auto apply = [&frame, optimized_mean, &statFunc](size_t start, size_t stop)
+  {
+    auto statResult = statFunc(start, stop);
+    std::transform(frame.begin() + start, frame.begin() + stop, frame.begin() + start,
+                   [](FrameType x) { return optimized_mean * x / statResult; });
+  };
+
+  // Loop over the rows one at a time, applying the algorithm to the left
+  // and right sides of the row.
+  for (uint32_t row = 0; row < height; ++row) {
+    auto i = row * width;
+    apply(i, i + leftSize);
+    apply(i + leftSize, i + leftSize + rightSize);
+  }
+}
+
 template <typename FrameType, bool dark = true>
 std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
                                     Dimensions2D frameDimensions,
