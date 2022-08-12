@@ -460,8 +460,9 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                               xRayThreshold, scanDimensions);
 }
 
-template <typename FrameType>
-void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions)
+template <typename FrameType, bool applyGlobalDark = true, bool applyGain = true>
+void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
+                  const float globalDark[], const float gain[])
 {
   auto height = frameDimensions.first;
   auto width = frameDimensions.second;
@@ -479,11 +480,24 @@ void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions)
   decltype(mean) statFunc = mean;
 
   double optimized_mean = 20;
-  auto apply = [&frame, optimized_mean, &statFunc](size_t start, size_t stop)
+  auto apply = [&](size_t start, size_t stop)
   {
     auto statResult = statFunc(start, stop);
-    std::transform(frame.begin() + start, frame.begin() + stop, frame.begin() + start,
-                   [](FrameType x) { return optimized_mean * x / statResult; });
+
+    for (size_t i = start; i < stop; ++i) {
+      // Apply global dark if needed
+      static_if<applyGlobalDark>(
+        [&]() { frame[i] -= globalDark[i]; }
+      )();
+
+      // Apply row dark algorithm
+      frame[i] = optimized_mean * frame[i] / statResult;
+
+      // Apply gain if needed
+      static_if<applyGlobalDark>(
+        [&]() { frame[i] *= gain[i]; }
+      )();
+    }
   };
 
   // Loop over the rows one at a time, applying the algorithm to the left
