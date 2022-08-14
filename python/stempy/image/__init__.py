@@ -239,22 +239,18 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
 
     # Special case for threaded reader
     if isinstance(reader, (SectorThreadedReader, SectorThreadedMultiPassReader)):
-        args = [reader]
+        options = _image.ElectronCountOptions()
 
-        if darkreference is not None:
-            args = args + [darkreference]
+        options.dark_reference = darkreference
+        options.threshold_number_of_blocks = threshold_num_blocks
+        options.number_of_samples = number_of_samples
+        options.background_threshold_n_sigma = background_threshold_n_sigma
+        options.x_ray_threshold_n_sigma = xray_threshold_n_sigma
+        options.gain = gain
+        options.scan_dimensions = scan_dimensions
+        options.verbose = verbose
 
-        # Now add the other args
-        args = args + [threshold_num_blocks, number_of_samples,
-                       background_threshold_n_sigma, xray_threshold_n_sigma]
-
-        # add the gain arg if we have been given one.
-        if gain is not None:
-            args.append(gain)
-
-        args = args + [scan_dimensions, verbose]
-
-        data = _image.electron_count(*args)
+        data = _image.electron_count(reader, options)
     else:
         deprecation_message = (
             'Using a reader in electron_count() that is not a '
@@ -267,7 +263,6 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         blocks = []
         for i in range(threshold_num_blocks):
             blocks.append(next(reader))
-
 
         if darkreference is not None and hasattr(darkreference, '_image'):
             darkreference = darkreference._image
@@ -306,19 +301,16 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         # Reset the reader
         reader.reset()
 
-        args = [reader.begin(), reader.end()]
+        options = _image.ElectronCountOptionsClassic()
 
-        if darkreference is not None:
-            args.append(darkreference)
+        # Do we need to convert this to a numpy array?
+        options.dark_reference = darkreference
+        options.background_threshold = background_threshold
+        options.x_ray_threshold = xray_threshold
+        options.gain = gain
+        options.scan_dimensions = scan_dimensions
 
-        args = args + [background_threshold, xray_threshold]
-
-        if gain is not None:
-            args.append(gain)
-
-        args = args + [scan_dimensions]
-
-        data = _image.electron_count(*args)
+        data = _image.electron_count(reader.begin(), reader.end(), options)
 
     # Convert to numpy array
     num_scans = len(data.data)
