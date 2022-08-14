@@ -45,6 +45,9 @@ struct ElectronCountOptionsClassic
   double xRayThreshold = DBL_MAX;
   float* gain = nullptr;
   Dimensions2D scanDimensions = { 0, 0 };
+  bool applyRowDarkSubtraction = false;
+  float optimizedMean = 0;
+  bool applyRowDarkUseMean = true;
 };
 
 struct ElectronCountOptions
@@ -57,6 +60,8 @@ struct ElectronCountOptions
   float* gain = nullptr;
   Dimensions2D scanDimensions = { 0, 0 };
   bool verbose = false;
+  bool applyRowDarkSubtraction = false;
+  bool applyRowDarkUseMean = true;
 };
 
 template <typename InputIt>
@@ -74,7 +79,8 @@ int getSampleBlocksPerRank(int worldSize, int rank,
                            int thresholdNumberOfBlocks);
 void gatherBlocks(int worldSize, int rank, std::vector<Block>& blocks);
 void gatherEvents(int worldSize, int rank, Events& events);
-void broadcastThresholds(double& background, double& xRay);
+void broadcastThresholds(double& background, double& xRay,
+                         double& optimizedMean);
 
 #endif
 }

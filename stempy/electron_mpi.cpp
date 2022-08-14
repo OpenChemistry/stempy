@@ -173,9 +173,10 @@ void gatherBlocks(int worldSize, int rank, std::vector<Block>& blocks)
   }
 }
 
-void broadcastThresholds(double& background, double& xRay)
+void broadcastThresholds(double& background, double& xRay,
+                         double& optimizedMean)
 {
-  std::vector<double> thresholds = { background, xRay };
+  std::vector<double> thresholds = { background, xRay, optimizedMean };
 
   // Broadcast the thresholds
   MPI_Bcast(thresholds.data(), thresholds.size(), MPI_DOUBLE, 0,
@@ -183,6 +184,7 @@ void broadcastThresholds(double& background, double& xRay)
 
   background = thresholds[0];
   xRay = thresholds[1];
+  optimizedMean = thresholds[2];
 }
 
 int getSampleBlocksPerRank(int worldSize, int rank, int thresholdNumberOfBlocks)

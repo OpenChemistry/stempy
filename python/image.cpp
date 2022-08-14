@@ -60,6 +60,9 @@ struct ElectronCountOptionsClassicPy
   double xRayThreshold = DBL_MAX;
   py::array_t<float> gain;
   Dimensions2D scanDimensions = { 0, 0 };
+  bool applyRowDarkSubtraction = false;
+  float optimizedMean = 0;
+  bool applyRowDarkUseMean = true;
 
   ElectronCountOptionsClassic toCpp() const
   {
@@ -70,6 +73,9 @@ struct ElectronCountOptionsClassicPy
     options.backgroundThreshold = this->backgroundThreshold;
     options.xRayThreshold = this->xRayThreshold;
     options.scanDimensions = this->scanDimensions;
+    options.applyRowDarkSubtraction = this->applyRowDarkSubtraction;
+    options.optimizedMean = this->optimizedMean;
+    options.applyRowDarkUseMean = this->applyRowDarkUseMean;
 
     if (this->darkReference.size() > 1) {
       py::buffer_info buf = this->darkReference.request();
@@ -95,6 +101,8 @@ struct ElectronCountOptionsPy
   py::array_t<float> gain;
   Dimensions2D scanDimensions = { 0, 0 };
   bool verbose = false;
+  bool applyRowDarkSubtraction = false;
+  bool applyRowDarkUseMean = true;
 
   ElectronCountOptions toCpp() const
   {
@@ -109,6 +117,8 @@ struct ElectronCountOptionsPy
     options.xRayThresholdNSigma = this->xRayThresholdNSigma;
     options.scanDimensions = this->scanDimensions;
     options.verbose = this->verbose;
+    options.applyRowDarkSubtraction = this->applyRowDarkSubtraction;
+    options.applyRowDarkUseMean = this->applyRowDarkUseMean;
 
     if (this->darkReference.size() > 1) {
       py::buffer_info buf = this->darkReference.request();
@@ -423,7 +433,13 @@ PYBIND11_MODULE(_image, m)
                    &ElectronCountOptionsClassicPy::xRayThreshold)
     .def_readwrite("gain", &ElectronCountOptionsClassicPy::gain)
     .def_readwrite("scan_dimensions",
-                   &ElectronCountOptionsClassicPy::scanDimensions);
+                   &ElectronCountOptionsClassicPy::scanDimensions)
+    .def_readwrite("apply_row_dark_subtraction",
+                   &ElectronCountOptionsClassicPy::applyRowDarkSubtraction)
+    .def_readwrite("optimized_mean",
+                   &ElectronCountOptionsClassicPy::optimizedMean)
+    .def_readwrite("apply_row_dark_use_mean",
+                   &ElectronCountOptionsClassicPy::applyRowDarkUseMean);
 
   py::class_<ElectronCountOptionsPy>(m, "ElectronCountOptions",
                                      py::buffer_protocol())
@@ -439,7 +455,11 @@ PYBIND11_MODULE(_image, m)
                    &ElectronCountOptionsPy::xRayThresholdNSigma)
     .def_readwrite("gain", &ElectronCountOptionsPy::gain)
     .def_readwrite("scan_dimensions", &ElectronCountOptionsPy::scanDimensions)
-    .def_readwrite("verbose", &ElectronCountOptionsPy::verbose);
+    .def_readwrite("verbose", &ElectronCountOptionsPy::verbose)
+    .def_readwrite("apply_row_dark_subtraction",
+                   &ElectronCountOptionsPy::applyRowDarkSubtraction)
+    .def_readwrite("apply_row_dark_use_mean",
+                   &ElectronCountOptionsPy::applyRowDarkUseMean);
 
   m.def("electron_count",
         (ElectronCountedDataPyArray(*)(StreamReader::iterator,

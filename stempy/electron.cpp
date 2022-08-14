@@ -154,12 +154,10 @@ private:
 };
 
 template <typename FrameType, bool dark = true>
-std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
-                                            Dimensions2D frameDimensions,
-                                            const float* darkReferenceData,
-                                            const float* gain,
-                                            double backgroundThreshold,
-                                            double xRayThreshold)
+std::vector<uint32_t> maximalPointsParallel(
+  std::vector<FrameType>& frame, Dimensions2D frameDimensions,
+  const float* darkReferenceData, const float* gain, double backgroundThreshold,
+  double xRayThreshold, bool applyPreprocessing)
 {
   // Build the data set
   vtkm::cont::CellSetStructured<2> cellSet;
@@ -176,64 +174,159 @@ std::vector<uint32_t> maximalPointsParallel(std::vector<FrameType>& frame,
 
   vtkm::cont::Invoker invoke;
 
-  // Call the correct worklet based on whether we are applying a gain, which in
-  // term determines the type, so can be evaluated a compile time.
-  // First no gain
-  if (std::is_integral<FrameType>::value) {
-    // Background subtraction and thresholding
+  if (applyPreprocessing) {
+    // Call the correct worklet based on whether we are applying a gain, which
+    // in term determines the type, so can be evaluated a compile time. First no
+    // gain
+    if (std::is_integral<FrameType>::value) {
+      // Background subtraction and thresholding
 
-    // static if to determine if we are going to subtract dark reference
-    static_if<dark>(
-      [&]() {
-        auto darkRefHandle = vtkm::cont::make_ArrayHandle(
-          darkReferenceData, frameDimensions.first * frameDimensions.second);
+      // static if to determine if we are going to subtract dark reference
+      static_if<dark>(
+        [&]() {
+          auto darkRefHandle = vtkm::cont::make_ArrayHandle(
+            darkReferenceData, frameDimensions.first * frameDimensions.second);
 
-        invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold },
-               cellSet, frameHandle, darkRefHandle);
-      },
-      [&] {
-        invoke(Threshold{ backgroundThreshold, xRayThreshold }, cellSet,
-               frameHandle);
-      })();
-  }
-  // We are applying a gain
-  else {
-    auto gainRefHandle = vtkm::cont::make_ArrayHandle(
-      gain, frameDimensions.first * frameDimensions.second);
-    // Apply gain, background subtraction and thresholding
-    // static if to determine if we are going to subtract dark reference
-    static_if<dark>(
-      [&]() {
-        auto darkRefHandle = vtkm::cont::make_ArrayHandle(
-          darkReferenceData, frameDimensions.first * frameDimensions.second);
-
-        invoke(
-          ApplySubtractGainAndThreshold{ backgroundThreshold, xRayThreshold },
-          cellSet, frameHandle, darkRefHandle, gainRefHandle);
-      },
-      [&] {
-        invoke(ApplyGainAndThreshold{ backgroundThreshold, xRayThreshold },
-               cellSet, frameHandle, gainRefHandle);
-      })();
-  }
-    // Find maximal pixels
-    invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
-
-    // Convert to std::vector<uint32_t>
-    auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
-    std::vector<uint32_t> outputVec;
-    for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
-      if (maximalPixelsPortal.Get(i))
-        outputVec.push_back(i);
+          invoke(SubtractAndThreshold{ backgroundThreshold, xRayThreshold },
+                 cellSet, frameHandle, darkRefHandle);
+        },
+        [&] {
+          invoke(Threshold{ backgroundThreshold, xRayThreshold }, cellSet,
+                 frameHandle);
+        })();
     }
+    // We are applying a gain
+    else {
+      auto gainRefHandle = vtkm::cont::make_ArrayHandle(
+        gain, frameDimensions.first * frameDimensions.second);
+      // Apply gain, background subtraction and thresholding
+      // static if to determine if we are going to subtract dark reference
+      static_if<dark>(
+        [&]() {
+          auto darkRefHandle = vtkm::cont::make_ArrayHandle(
+            darkReferenceData, frameDimensions.first * frameDimensions.second);
 
-    // Done
-    return outputVec;
+          invoke(
+            ApplySubtractGainAndThreshold{ backgroundThreshold, xRayThreshold },
+            cellSet, frameHandle, darkRefHandle, gainRefHandle);
+        },
+        [&] {
+          invoke(ApplyGainAndThreshold{ backgroundThreshold, xRayThreshold },
+                 cellSet, frameHandle, gainRefHandle);
+        })();
+    }
   }
+
+  // Find maximal pixels
+  invoke(IsMaximalPixel{}, cellSet, frameHandle, maximalPixels);
+
+  // Convert to std::vector<uint32_t>
+  auto maximalPixelsPortal = maximalPixels.GetPortalConstControl();
+  std::vector<uint32_t> outputVec;
+  for (vtkm::Id i = 0; i < maximalPixelsPortal.GetNumberOfValues(); ++i) {
+    if (maximalPixelsPortal.Get(i))
+      outputVec.push_back(i);
+  }
+
+  // Done
+  return outputVec;
+}
 } // end namespace
 #endif
 
 namespace stempy {
+
+template <typename FrameType, bool applyGlobalDark>
+void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
+                  float optimizedMean, double backgroundThreshold,
+                  double xRayThreshold, const float globalDark[],
+                  const float gain[], bool useMean)
+{
+  auto height = frameDimensions.first;
+  auto width = frameDimensions.second;
+
+  // If the width is an odd number, give the right side the extra one
+  auto leftSize = width / 2;
+  auto rightSize = width - leftSize;
+
+  // Function to compute the mean for a given range in the frame
+  using FrameVecType = std::vector<FrameType>;
+  auto mean = [](const FrameVecType& frame, size_t start, size_t stop) {
+    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) /
+           static_cast<double>(stop - start);
+  };
+
+  // Function to compute the median for a given range in the frame
+  auto median = [](const FrameVecType& frame, size_t start, size_t stop) {
+    // Need to make a copy of the data. We will sort it.
+    std::vector<FrameType> v(frame.begin() + start, frame.begin() + stop);
+    size_t n = v.size() / 2;
+    std::nth_element(v.begin(), v.begin() + n, v.end());
+    if (v.size() & 1) {
+      // The size is odd
+      return static_cast<double>(v[n]);
+    } else {
+      // The size is even. Need to average the middle two.
+      auto it = max_element(v.begin(), v.begin() + n);
+      return (*it + v[n]) / static_cast<double>(2.0);
+    }
+  };
+
+  double (*statFunc)(const FrameVecType&, size_t, size_t);
+  if (useMean) {
+    statFunc = mean;
+  } else {
+    statFunc = median;
+  }
+
+  auto apply = [&](size_t start, size_t stop) {
+    auto statResult = statFunc(frame, start, stop);
+
+    for (size_t i = start; i < stop; ++i) {
+      // Apply global dark if needed
+      static_if<applyGlobalDark>([&]() { frame[i] -= globalDark[i]; })();
+
+      // Apply row dark algorithm
+      frame[i] *= optimizedMean / statResult;
+
+      // Apply gain if needed
+      // This should be evaluated at compile-time
+      if (!std::is_integral<FrameType>::value) {
+        frame[i] *= gain[i];
+      }
+
+      // Threshold the electron events
+      if (frame[i] <= backgroundThreshold || frame[i] >= xRayThreshold) {
+        frame[i] = 0;
+      }
+    }
+  };
+
+  // Loop over the rows one at a time, applying the algorithm to the left
+  // and right sides of the row.
+  for (uint32_t row = 0; row < height; ++row) {
+    auto i = row * width;
+    apply(i, i + leftSize);
+    apply(i + leftSize, i + leftSize + rightSize);
+  }
+}
+
+template <typename FrameType>
+void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
+                  float optimizedMean, double backgroundThreshold,
+                  double xRayThreshold, const float globalDark[],
+                  const float gain[], bool useMean)
+{
+  if (globalDark) {
+    applyRowDark<FrameType, true>(frame, frameDimensions, optimizedMean,
+                                  backgroundThreshold, xRayThreshold,
+                                  globalDark, gain, useMean);
+  } else {
+    applyRowDark<FrameType, false>(frame, frameDimensions, optimizedMean,
+                                   backgroundThreshold, xRayThreshold,
+                                   globalDark, gain, useMean);
+  }
+}
 
 // Implementation of modulus that "wraps" for negative numbers
 inline uint16_t mod(uint16_t x, uint16_t y)
@@ -322,6 +415,9 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
   auto xRayThreshold = options.xRayThreshold;
   auto* gain = options.gain;
   auto scanDimensions = options.scanDimensions;
+  auto applyRowDarkSubtraction = options.applyRowDarkSubtraction;
+  auto optimizedMean = options.optimizedMean;
+  auto applyRowDarkUseMean = options.applyRowDarkUseMean;
 
   if (first == last) {
     std::ostringstream msg;
@@ -362,25 +458,38 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
                                   frameStart + frameDimensions.first *
                                                  frameDimensions.second);
 
+      bool applyPreprocessing = !applyRowDarkSubtraction;
+
+      if (applyRowDarkSubtraction) {
+        // Pre-processing will be done in here
+        applyRowDark(frame, frameDimensions, optimizedMean, backgroundThreshold,
+                     xRayThreshold, darkReference, gain, applyRowDarkUseMean);
+      }
+
 #ifdef VTKm
       events[block.header.imageNumbers[i]][0] =
         maximalPointsParallel<FrameType, dark>(
           frame, frameDimensions, darkReference, gain, backgroundThreshold,
-          xRayThreshold);
+          xRayThreshold, applyPreprocessing);
 #else
-      for (int j = 0; j < frameDimensions.first * frameDimensions.second; j++) {
-        // Subtract darkfield reference and apply gain if we have one, this will
-        // be based on our template type, it can be evaluated a compile time.
-        if (std::is_integral<FrameType>::value) {
-          frame[j] -= darkReference[j];
-        } else {
-          frame[j] = (frame[j] - darkReference[j]) * gain[j];
-        }
-        // Threshold the electron events
-        if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
-          frame[j] = 0;
+      if (applyPreprocessing) {
+        for (int j = 0; j < frameDimensions.first * frameDimensions.second;
+             j++) {
+          // Subtract darkfield reference and apply gain if we have one, this
+          // will be based on our template type, it can be evaluated a compile
+          // time.
+          if (std::is_integral<FrameType>::value) {
+            frame[j] -= darkReference[j];
+          } else {
+            frame[j] = (frame[j] - darkReference[j]) * gain[j];
+          }
+          // Threshold the electron events
+          if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
+            frame[j] = 0;
+          }
         }
       }
+
       // Now find the maximal events
       events[block.header.imageNumbers[i]][0] =
         maximalPoints<FrameType>(frame, frameDimensions);
@@ -415,107 +524,38 @@ ElectronCountedData electronCount(InputIt first, InputIt last,
   }
 }
 
-template <typename FrameType, bool applyGlobalDark = true,
-          bool applyGain = true>
-void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
-                  float optimizedMean, double backgroundThreshold,
-                  double xRayThreshold, const float globalDark[],
-                  const float gain[], bool useMean = true)
+template <typename FrameType, bool dark = true>
+std::vector<uint32_t> electronCount(
+  std::vector<FrameType>& frame, Dimensions2D frameDimensions,
+  const float darkReference[], double backgroundThreshold, double xRayThreshold,
+  const float gain[], bool applyRowDarkSubtraction, float optimizedMean,
+  bool applyRowDarkUseMean)
 {
-  auto height = frameDimensions.first;
-  auto width = frameDimensions.second;
+  if (applyRowDarkSubtraction) {
+    // Perform all pre-processing within the applyRowDark method
+    applyRowDark(frame, frameDimensions, optimizedMean, backgroundThreshold,
+                 xRayThreshold, darkReference, gain, applyRowDarkUseMean);
 
-  // If the width is an odd number, give the right side the extra one
-  auto leftSize = width / 2;
-  auto rightSize = width - leftSize;
-
-  // Function to compute the mean for a given range in the frame
-  using FrameVecType = std::vector<FrameType>;
-  auto mean = [](const FrameVecType& frame, size_t start, size_t stop) {
-    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) /
-           static_cast<double>(stop - start);
-  };
-
-  // Function to compute the median for a given range in the frame
-  auto median = [](const FrameVecType& frame, size_t start, size_t stop) {
-    // Need to make a copy of the data. We will sort it.
-    std::vector<FrameType> v(frame.begin() + start, frame.begin() + stop);
-    size_t n = v.size() / 2;
-    std::nth_element(v.begin(), v.begin() + n, v.end());
-    if (v.size() & 1) {
-      // The size is odd
-      return static_cast<double>(v[n]);
-    } else {
-      // The size is even. Need to average the middle two.
-      auto it = max_element(v.begin(), v.begin() + n);
-      return (*it + v[n]) / static_cast<double>(2.0);
-    }
-  };
-
-  double (*statFunc)(const FrameVecType&, size_t, size_t);
-  if (useMean) {
-    statFunc = mean;
   } else {
-    statFunc = median;
-  }
+    // Perform the standard pre-processing
+    for (unsigned j = 0; j < frameDimensions.first * frameDimensions.second;
+         j++) {
+      // Subtract darkfield reference and apply gain if we have one, this will
+      // be based on our template type, it can be evaluated a compile time.
+      static_if<dark>(
+        [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
 
-  auto apply = [&](size_t start, size_t stop) {
-    auto statResult = statFunc(frame, start, stop);
-
-    for (size_t i = start; i < stop; ++i) {
-      // Apply global dark if needed
-      static_if<applyGlobalDark>(
-        [&]() { frame[i] -= globalDark[i]; }
-      )();
-
-      // Apply row dark algorithm
-      frame[i] *= optimizedMean / statResult;
-
-      // Apply gain if needed
-      static_if<applyGlobalDark>(
-        [&]() { frame[i] *= gain[i]; }
-      )();
+      if (not std::is_integral<FrameType>::value) {
+        frame[j] *= gain[j];
+      }
 
       // Threshold the electron events
-      if (frame[i] <= backgroundThreshold || frame[i] >= xRayThreshold) {
-        frame[i] = 0;
+      if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
+        frame[j] = 0;
       }
     }
-  };
-
-  // Loop over the rows one at a time, applying the algorithm to the left
-  // and right sides of the row.
-  for (uint32_t row = 0; row < height; ++row) {
-    auto i = row * width;
-    apply(i, i + leftSize);
-    apply(i + leftSize, i + leftSize + rightSize);
   }
-}
 
-template <typename FrameType, bool dark = true>
-std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
-                                    Dimensions2D frameDimensions,
-                                    const float darkReference[],
-                                    double backgroundThreshold,
-                                    double xRayThreshold, const float gain[])
-{
-
-  for (unsigned j = 0; j < frameDimensions.first * frameDimensions.second;
-       j++) {
-    // Subtract darkfield reference and apply gain if we have one, this will
-    // be based on our template type, it can be evaluated a compile time.
-    static_if<dark>(
-      [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
-
-    if (not std::is_integral<FrameType>::value) {
-      frame[j] *= gain[j];
-    }
-
-    // Threshold the electron events
-    if (frame[j] <= backgroundThreshold || frame[j] >= xRayThreshold) {
-      frame[j] = 0;
-    }
-  }
   // Now find the maximal events
   return maximalPoints<FrameType>(frame, frameDimensions);
 }
@@ -533,6 +573,8 @@ ElectronCountedData electronCount(Reader* reader,
   auto* gain = options.gain;
   auto scanDimensions = options.scanDimensions;
   auto verbose = options.verbose;
+  auto applyRowDarkSubtraction = options.applyRowDarkSubtraction;
+  auto applyRowDarkUseMean = options.applyRowDarkUseMean;
 
   // This is where we will save the electron events as the calculated
   // Outer vector is scan position, middle vector is a frame at that
@@ -550,6 +592,7 @@ ElectronCountedData electronCount(Reader* reader,
   // These hold the optimized thresholds.
   double backgroundThreshold;
   double xRayThreshold;
+  double optimizedMean;
 
   // Mutexes to control/protect counting process
   std::mutex sampleMutex;
@@ -568,7 +611,8 @@ ElectronCountedData electronCount(Reader* reader,
 #endif
 
   auto countBlock = [&events, &electronCounting, &backgroundThreshold,
-                     &xRayThreshold, darkReference, gain,
+                     &xRayThreshold, &optimizedMean, darkReference, gain,
+                     &applyRowDarkSubtraction, &applyRowDarkUseMean,
                      &positionMutexes](Block& b) {
     auto data = b.data.get();
     auto frameDimensions = b.header.frameDimensions;
@@ -581,7 +625,8 @@ ElectronCountedData electronCount(Reader* reader,
 
       auto frameEvents = electronCount<FrameType, dark>(
         frame, frameDimensions, darkReference, backgroundThreshold,
-        xRayThreshold, gain);
+        xRayThreshold, gain, applyRowDarkSubtraction, optimizedMean,
+        applyRowDarkUseMean);
 
       auto position = b.header.imageNumbers[i];
       auto& eventsForPosition = events[position];
@@ -675,9 +720,10 @@ ElectronCountedData electronCount(Reader* reader,
 
   backgroundThreshold = threshold.backgroundThreshold;
   xRayThreshold = threshold.xRayThreshold;
+  optimizedMean = threshold.optimizedMean;
 
 #ifdef USE_MPI
-  broadcastThresholds(backgroundThreshold, xRayThreshold);
+  broadcastThresholds(backgroundThreshold, xRayThreshold, optimizedMean);
 #endif
 
   // Now setup  electron count output
@@ -711,7 +757,8 @@ ElectronCountedData electronCount(Reader* reader,
                                                   frameDimensions.second);
       auto frameEvents = electronCount<FrameType, dark>(
         frame, frameDimensions, darkReference, backgroundThreshold,
-        xRayThreshold, gain);
+        xRayThreshold, gain, applyRowDarkSubtraction, optimizedMean,
+        applyRowDarkUseMean);
       auto position = b.header.imageNumbers[j];
       events[position].push_back(std::move(frameEvents));
     }
