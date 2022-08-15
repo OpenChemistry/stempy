@@ -545,7 +545,7 @@ std::vector<uint32_t> electronCount(
       static_if<dark>(
         [&]() { frame[j] -= static_cast<FrameType>(darkReference[j]); })();
 
-      if (not std::is_integral<FrameType>::value) {
+      if (!std::is_integral<FrameType>::value) {
         frame[j] *= gain[j];
       }
 
