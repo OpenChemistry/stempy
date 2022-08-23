@@ -463,15 +463,26 @@ def test_multiple_frames_per_scan_position():
         'scan_shape': (4, 4),
         'frame_shape': (2, 2),
         'sparse_slicing': False,
+        'allow_full_expand': True,
     }
     test_bin_scans_array = SparseArray(**kwargs)
     binned = test_bin_scans_array.bin_scans(2)
 
     assert binned.shape == (2, 2, 2, 2)
+    assert binned.num_frames_per_scan == 4
     assert np.array_equal(binned[0, 0], [[3, 2], [1, 0]])
     assert np.array_equal(binned[0, 1], [[0, 0], [2, 2]])
     assert np.array_equal(binned[1, 0], [[2, 2], [0, 0]])
     assert np.array_equal(binned[1, 1], [[0, 0], [2, 2]])
+
+    # Ensure we can bin again
+    binned_twice = binned.bin_scans(2)
+    assert binned_twice.shape == (1, 1, 2, 2)
+    assert binned_twice.num_frames_per_scan == 16
+
+    # Ensure binning 4x is equal to binning 2x twice
+    binned_4x = test_bin_scans_array.bin_scans(4)
+    assert np.array_equal(binned_4x[:], binned_twice[:])
 
 
 def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2,
