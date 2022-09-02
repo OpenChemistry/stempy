@@ -497,7 +497,8 @@ class SparseArray:
         all_positions_reshaped = all_positions.reshape(
             new_scan_shape[0], bin_factor, new_scan_shape[1], bin_factor)
 
-        new_data_shape = (np.prod(new_scan_shape), bin_factor**2)
+        new_data_shape = (np.prod(new_scan_shape),
+                          bin_factor**2 * self.num_frames_per_scan)
         new_data = np.empty(new_data_shape, dtype=object)
         for i in range(new_scan_shape[0]):
             for j in range(new_scan_shape[1]):
