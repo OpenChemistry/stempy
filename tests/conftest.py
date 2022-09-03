@@ -116,3 +116,52 @@ def cropped_multi_frames_v2(cropped_multi_frames_data_v2):
 @pytest.fixture
 def cropped_multi_frames_v3(cropped_multi_frames_data_v3):
     return SparseArray.from_hdf5(cropped_multi_frames_data_v3, dtype=np.uint16)
+
+@pytest.fixture
+def simulate_sparse_array(scan_size, frame_size, center, how_sparse, disk_size):
+    """Make a ndarray with sparse disk.
+    scan_size: Real space scan size (pixels)
+    frame_size: detector size (pixels)
+    center: the center of the disk in diffraction space
+    how_sparse: Percent sparseness (0-1). Large number means fewer electrons per frame
+    disk_size: The radius in pixels of the diffraction disk
+    
+    """ 
+    
+#     scan_size = (100, 100)
+#     frame_size = (100,100)
+#     center = (30, 70)
+#     how_sparse = .8 # 0-1; larger is less electrons
+#     disk_size = 10 # disk radius in pixels
+
+    YY, XX = np.mgrid[0:frame_size[0], 0:frame_size[1]]
+    RR = np.sqrt((YY-center[1])**2 + (XX-center[0])**2)
+
+    RR[RR <= disk_size] = 1
+    RR[RR > disk_size] = 0
+
+    sparse = np.random.rand(scan_size[0],scan_size[1],frame_size[0],frame_size[1]) * RR
+
+    sparse[sparse >= how_sparse] = 1
+    sparse[sparse < how_sparse] = 0
+
+    sparse = sparse.astype(np.uint8)
+    
+    new_data = np.empty((sparse.shape[0],sparse.shape[1]), dtype=object)
+    for j in range(sparse.shape[0]):
+        for k in range(sparse.shape[1]):
+            events = np.ravel_multi_index(np.where(sparse[j,k,:,:] == 1),frame_size)
+            new_data[j,k] = events
+
+    new_data = new_data.reshape(new_data.shape[0]*new_data.shape[1])
+
+    kwargs = {
+        'data': new_data,
+        'scan_shape': sparse.shape[0:2],
+        'frame_shape': sparse.shape[2:4],
+        'dtype': sparse.dtype,
+        'sparse_slicing': True,
+        'allow_full_expand': False,
+    }
+
+    return SparseArray(**kwargs)
