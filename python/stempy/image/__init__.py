@@ -394,15 +394,17 @@ def maximum_diffraction_pattern(reader, darkreference=None):
 
 def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
     """Compute center of mass (COM) for counted data directly from sparse (single)
-        electron data. Empty frames will have the average COM value of all frames. There is an option to crop to a
-        smaller region around the initial full frame COM to improve finding the center of the zero beam.
+        electron data. Empty frames will have COM set to NAN. There is an option to crop to a
+        smaller region around the initial full frame COM to improve finding the center of the zero beam. If the
+        cropped region has no counts in it then the frame is considered empty and COM will be NAN.
+        
         :param array: A SparseArray of the electron counted data
         :type array: stempy.io.SparseArray
         :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
                         the zero beam
         :type crop_to: tuple of ints of length 2
-        :param init_center: The initial center to use before cropping. If this is not set then the center of mass
-                            of the each full frame will be the initial center.
+        :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applie around 
+                            the center of mass of the each full frame.
         :type init_center: tuple of ints of length 2
         :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
                              of the the entire data set. If this is False they will be set to np.NAN.
@@ -414,54 +416,50 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
         """
     com = np.zeros((2, array.num_scans), np.float32)
     for scan_position, frames in enumerate(array.data):
-        # Combine the sparse arrays into one array that we will use
+        # Combine the sparse arrays into one array.
+        # This takes care of multiple frames per probe position
         ev = np.hstack(frames)
 
         if len(ev) > 0:
             x = ev // array.frame_shape[0]
             y = ev % array.frame_shape[1]
-
-            if init_center:
-                comx0, comy0 = init_center
-            else:
-                # Center of mass of the full frame
-                mm0 = len(ev)
+            mm0 = len(ev)
+            
+            if init_center is None:
+                # Initialize center as full frame COM
                 comx0 = np.sum(x) / mm0
                 comy0 = np.sum(y) / mm0
+            else:
+                comx0 = init_center[0]
+                comy0 = init_center[1]
+            
             if crop_to is not None:
-                # Crop around the center
+                # Crop around the initial center
                 keep = (x > comx0 - crop_to[0]) & (x <= comx0 + crop_to[0]) & (y > comy0 - crop_to[1]) & (
                         y <= comy0 + crop_to[1])
                 x = x[keep]
                 y = y[keep]
                 mm = len(x)
                 if mm > 0:
-                    # Counts are inside cropped region
-                    comx = np.sum(x)
-                    comy = np.sum(y)
-                    comx = comx / mm
-                    comy = comy / mm
+                    # Some counts found inside cropped region
+                    comx = np.sum(x) / mm
+                    comy = np.sum(y) / mm
                 else:
-                    # No counts. Use full frame COM
-                    comx = comx0
-                    comy = comy0
+                    # No counts in cropped region.
+                    # Set as NAN
+                    comx = np.nan
+                    comy = np.nan
             else:
-                comx = comx0
-                comy = comy0
+                # Center of mass of the full frame
+                comx = np.sum(x) / mm0
+                comy = np.sum(y) / mm0
+            
             com[:, scan_position] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
-
         else:
             com[:, scan_position] = (np.nan, np.nan)  # empty frame
 
     com = com.reshape((2, *array.scan_shape))
-
-    if replace_nans:
-        # Replace nan's with average without copying
-        # This is true by default
-        com_mean = np.nanmean(com, axis=(1, 2))
-        np.nan_to_num(com[0, :, :], nan=com_mean[0], copy=False)
-        np.nan_to_num(com[1, :, :], nan=com_mean[1], copy=False)
-
+    
     return com
 
 
