@@ -118,22 +118,23 @@ def cropped_multi_frames_v3(cropped_multi_frames_data_v3):
     return SparseArray.from_hdf5(cropped_multi_frames_data_v3, dtype=np.uint16)
 
 @pytest.fixture
-def simulate_sparse_array(scan_size, frame_size, center, how_sparse, disk_size):
+def simulate_sparse_array():
+    
     """Make a ndarray with sparse disk.
     scan_size: Real space scan size (pixels)
     frame_size: detector size (pixels)
     center: the center of the disk in diffraction space
     how_sparse: Percent sparseness (0-1). Large number means fewer electrons per frame
     disk_size: The radius in pixels of the diffraction disk
-    
+    crop_to: The radius to crop to
     """ 
     
-#     scan_size = (100, 100)
-#     frame_size = (100,100)
-#     center = (30, 70)
-#     how_sparse = .8 # 0-1; larger is less electrons
-#     disk_size = 10 # disk radius in pixels
-
+    scan_size = (100, 100)
+    frame_size = (100,100)
+    center = (30, 70)
+    how_sparse = .8 # 0-1; larger is less electrons
+    disk_size = 10 # disk radius in pixels
+    
     YY, XX = np.mgrid[0:frame_size[0], 0:frame_size[1]]
     RR = np.sqrt((YY-center[1])**2 + (XX-center[0])**2)
 
@@ -162,6 +163,8 @@ def simulate_sparse_array(scan_size, frame_size, center, how_sparse, disk_size):
         'dtype': sparse.dtype,
         'sparse_slicing': True,
         'allow_full_expand': False,
+        
     }
-
-    return SparseArray(**kwargs)
+    sp = SparseArray(**kwargs)
+    sp._validate()
+    return sp

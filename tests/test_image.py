@@ -1,3 +1,5 @@
+import pytest
+
 import numpy as np
 
 from stempy.image import com_dense, com_sparse, radial_sum_sparse
@@ -43,16 +45,18 @@ def test_radial_sum_sparse(sparse_array_10x10):
 
     assert np.array_equal(rr[0, 0, :], [0, 6, 0, 0, 3])
 
-def test_com_sparse_parameters():
-    sp = simulate_sparse_array((100,100), (100,100), (30,70), (0.8), (10))
+def test_com_sparse_parameters(simulate_sparse_array):
+    
+    sp = simulate_sparse_array #((100,100), (100,100), (30,70), (0.8), (10))
+    breakpoint()
     
     # Test no inputs. This should be the full frame COM
     com0 = com_sparse(sp)
-    assert int(com0[0,].mean()) == 30
+    assert round(com0[0,].mean()) == 30
     
     # Test crop_to input. Initial COM should be full frame COM
     com1 = com_sparse(sp, crop_to=10)
-    assert int(com1[0,].mean()) == 30
+    assert round(com1[0,].mean()) == 30
     
     # Test crop_to and init_center input.
     # No counts will be in the center so all positions will be np.nan
