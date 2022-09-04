@@ -48,14 +48,13 @@ def test_radial_sum_sparse(sparse_array_10x10):
 def test_com_sparse_parameters(simulate_sparse_array):
     
     sp = simulate_sparse_array #((100,100), (100,100), (30,70), (0.8), (10))
-    breakpoint()
     
     # Test no inputs. This should be the full frame COM
     com0 = com_sparse(sp)
     assert round(com0[0,].mean()) == 30
     
     # Test crop_to input. Initial COM should be full frame COM
-    com1 = com_sparse(sp, crop_to=10)
+    com1 = com_sparse(sp, crop_to=(10,10))
     assert round(com1[0,].mean()) == 30
     
     # Test crop_to and init_center input.
