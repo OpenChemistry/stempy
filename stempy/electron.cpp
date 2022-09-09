@@ -252,8 +252,8 @@ void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
   // Function to compute the mean for a given range in the frame
   using FrameVecType = std::vector<FrameType>;
   auto mean = [](const FrameVecType& frame, size_t start, size_t stop) {
-    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0) /
-           static_cast<double>(stop - start);
+    return std::accumulate(frame.begin() + start, frame.begin() + stop, 0.0f) /
+           static_cast<float>(stop - start);
   };
 
   // Function to compute the median for a given range in the frame
@@ -264,15 +264,15 @@ void applyRowDark(std::vector<FrameType>& frame, Dimensions2D frameDimensions,
     std::nth_element(v.begin(), v.begin() + n, v.end());
     if (v.size() & 1) {
       // The size is odd
-      return static_cast<double>(v[n]);
+      return static_cast<float>(v[n]);
     } else {
       // The size is even. Need to average the middle two.
       auto it = max_element(v.begin(), v.begin() + n);
-      return (*it + v[n]) / static_cast<double>(2.0);
+      return (*it + v[n]) / 2.0f;
     }
   };
 
-  double (*statFunc)(const FrameVecType&, size_t, size_t);
+  float (*statFunc)(const FrameVecType&, size_t, size_t);
   if (useMean) {
     statFunc = mean;
   } else {
