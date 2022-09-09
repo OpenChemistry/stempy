@@ -254,6 +254,29 @@ class SparseArray:
             # Write out the metadata
             save_dict_to_h5(self.metadata, f.require_group('metadata'))
 
+    def to_dense(self):
+        """Create and return a fully dense version of the sparse array
+
+        If the array shape is large, this may cause the system to
+        run out of memory.
+
+        This is equivalent to `array[:]` if `allow_full_expand` is `True`
+        and `sparse_slicing` is `False`.
+
+        :return: the fully dense array
+        :rtype: np.ndarray
+        """
+        prev_allow_full_expand = self.allow_full_expand
+        prev_sparse_slicing = self.sparse_slicing
+
+        self.allow_full_expand = True
+        self.sparse_slicing = False
+        try:
+            return self[:]
+        finally:
+            self.allow_full_expand = prev_allow_full_expand
+            self.sparse_slicing = prev_sparse_slicing
+
     @property
     def shape(self):
         """The full shape of the data (scan shape + frame shape)
