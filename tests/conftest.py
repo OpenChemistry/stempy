@@ -126,7 +126,7 @@ def simulate_sparse_array():
     center: the center of the disk in diffraction space
     how_sparse: Percent sparseness (0-1). Large number means fewer electrons per frame
     disk_size: The radius in pixels of the diffraction disk
-    crop_to: The radius to crop to
+    
     """ 
     
     scan_size = (100, 100)
@@ -141,20 +141,21 @@ def simulate_sparse_array():
     RR[RR <= disk_size] = 1
     RR[RR > disk_size] = 0
 
-    sparse = np.random.rand(scan_size[0],scan_size[1],frame_size[0],frame_size[1]) * RR
+    sparse = np.random.rand(scan_size[0],scan_size[1],frame_size[0],frame_size[1], num_frames) * RR[:,:,None]
 
     sparse[sparse >= how_sparse] = 1
     sparse[sparse < how_sparse] = 0
 
     sparse = sparse.astype(np.uint8)
     
-    new_data = np.empty((sparse.shape[0],sparse.shape[1]), dtype=object)
+    new_data = np.empty((sparse.shape[0],sparse.shape[1], num_frames), dtype=object)
     for j in range(sparse.shape[0]):
         for k in range(sparse.shape[1]):
-            events = np.ravel_multi_index(np.where(sparse[j,k,:,:] == 1),frame_size)
-            new_data[j,k] = events
+            for i in range(num_frames):
+                events = np.ravel_multi_index(np.where(sparse[j,k,:,:,i] == 1),frame_size)
+                new_data[j,k,i] = events
 
-    new_data = new_data.reshape(new_data.shape[0]*new_data.shape[1])
+    new_data = new_data.reshape(new_data.shape[0]*new_data.shape[1],num_frames)
 
     kwargs = {
         'data': new_data,
@@ -163,8 +164,6 @@ def simulate_sparse_array():
         'dtype': sparse.dtype,
         'sparse_slicing': True,
         'allow_full_expand': False,
-        
     }
-    sp = SparseArray(**kwargs)
-    sp._validate()
-    return sp
+    
+    return SparseArray(**kwargs)
