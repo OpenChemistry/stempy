@@ -134,6 +134,7 @@ def simulate_sparse_array():
     center = (30, 70)
     how_sparse = .8 # 0-1; larger is less electrons
     disk_size = 10 # disk radius in pixels
+    num_frames = 2
     
     YY, XX = np.mgrid[0:frame_size[0], 0:frame_size[1]]
     RR = np.sqrt((YY-center[1])**2 + (XX-center[0])**2)
