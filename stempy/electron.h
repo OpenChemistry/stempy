@@ -1,6 +1,8 @@
 #ifndef STEMPY_ELECTRON_H_
 #define STEMPY_ELECTRON_H_
 
+#include <cfloat>
+
 #include "image.h"
 
 namespace stempy {
@@ -36,90 +38,39 @@ struct ElectronCountedData
   Dimensions2D frameDimensions = { 0, 0 };
 };
 
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<float>& darkreference,
-                                  double backgroundThreshold,
-                                  double xRayThreshold,
-                                  Dimensions2D scanDimensions = { 0, 0 });
+struct ElectronCountOptionsClassic
+{
+  float* darkReference = nullptr;
+  double backgroundThreshold = DBL_MIN;
+  double xRayThreshold = DBL_MAX;
+  float* gain = nullptr;
+  Dimensions2D scanDimensions = { 0, 0 };
+  bool applyRowDarkSubtraction = false;
+  float optimizedMean = 0;
+  bool applyRowDarkUseMean = true;
+};
+
+struct ElectronCountOptions
+{
+  float* darkReference = nullptr;
+  int thresholdNumberOfBlocks = 1;
+  int numberOfSamples = 20;
+  double backgroundThresholdNSigma = 4;
+  double xRayThresholdNSigma = 10;
+  float* gain = nullptr;
+  Dimensions2D scanDimensions = { 0, 0 };
+  bool verbose = false;
+  bool applyRowDarkSubtraction = false;
+  bool applyRowDarkUseMean = true;
+};
 
 template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const float darkreference[],
-                                  double backgroundThreshold,
-                                  double xRayThreshold,
-                                  Dimensions2D scanDimensions = { 0, 0 });
-
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  Image<float>& darkreference,
-                                  double backgroundThreshold,
-                                  double xRayThreshold, const float gain[],
-                                  Dimensions2D scanDimensions = { 0, 0 });
-
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  const float darkreference[],
-                                  double backgroundThreshold,
-                                  double xRayThreshold, const float gain[],
-                                  Dimensions2D scanDimensions = { 0, 0 });
-
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  double backgroundThreshold,
-                                  double xRayThreshold, const float gain[],
-                                  Dimensions2D scanDimensions = { 0, 0 });
-
-template <typename InputIt>
-ElectronCountedData electronCount(InputIt first, InputIt last,
-                                  double backgroundThreshold,
-                                  double xRayThreshold,
-                                  Dimensions2D scanDimensions = { 0, 0 });
+                                  const ElectronCountOptionsClassic& options);
 
 template <typename Reader>
-ElectronCountedData electronCount(Reader* reader, Image<float>& darkreference,
-                                  int thresholdNumberOfBlocks = 1,
-                                  int numberOfSamples = 20,
-                                  double backgroundThresholdNSigma = 4,
-                                  double xRayThresholdNSigma = 10,
-                                  Dimensions2D scanDimensions = { 0, 0 },
-                                  bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(Reader* reader, const float darkreference[],
-                                  int thresholdNumberOfBlocks = 1,
-                                  int numberOfSamples = 20,
-                                  double backgroundThresholdNSigma = 4,
-                                  double xRayThresholdNSigma = 10,
-                                  Dimensions2D scanDimensions = { 0, 0 },
-                                  bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, Image<float>& darkreference, int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, const float darkreference[], int thresholdNumberOfBlocks = 1,
-  int numberOfSamples = 20, double backgroundThresholdNSigma = 4,
-  double xRayThresholdNSigma = 10, const float gain[] = nullptr,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  const float gain[] = nullptr, Dimensions2D scanDimensions = { 0, 0 },
-  bool verbose = false);
-
-template <typename Reader>
-ElectronCountedData electronCount(
-  Reader* reader, int thresholdNumberOfBlocks = 1, int numberOfSamples = 20,
-  double backgroundThresholdNSigma = 4, double xRayThresholdNSigma = 10,
-  Dimensions2D scanDimensions = { 0, 0 }, bool verbose = false);
+ElectronCountedData electronCount(Reader* reader,
+                                  const ElectronCountOptions& options);
 
 #ifdef USE_MPI
 
@@ -128,7 +79,8 @@ int getSampleBlocksPerRank(int worldSize, int rank,
                            int thresholdNumberOfBlocks);
 void gatherBlocks(int worldSize, int rank, std::vector<Block>& blocks);
 void gatherEvents(int worldSize, int rank, Events& events);
-void broadcastThresholds(double& background, double& xRay);
+void broadcastThresholds(double& background, double& xRay,
+                         double& optimizedMean);
 
 #endif
 }

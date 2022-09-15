@@ -100,20 +100,21 @@ CalculateThresholdsResults<FrameType> calculateThresholds(
       // For now just use the index, the image number don't seem to work, in the
       // current data set. In the future we should be using the image number.
 
+      auto value = blockData[randomFrameIndex * numberOfPixels + j];
+
       // This will be evaluated a compile time.
       if (std::is_integral<FrameType>::value) {
-        auto value = blockData[randomFrameIndex * numberOfPixels + j];
         static_if<dark>(
           [&]() { value -= static_cast<int16_t>(darkReference[j]); })();
-        samples[i * numberOfPixels + j] = value;
       }
       // if not integral type then we know we have gain and need to multiple
       else {
-        auto value = blockData[randomFrameIndex * numberOfPixels + j] * gain[j];
         static_if<dark>(
           [&]() { value -= static_cast<float>(darkReference[j]); })();
-        samples[i * numberOfPixels + j] = value;
+        value *= gain[j];
       }
+
+      samples[i * numberOfPixels + j] = value;
     }
   }
 
