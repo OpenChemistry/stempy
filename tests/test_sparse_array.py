@@ -131,11 +131,7 @@ def test_bin_scans(sparse_array_small, full_array_small):
                                    shape[1] // factor, factor,
                                    shape[2], shape[3]).sum(axis=(1, 3))
 
-        # Expand our binned sparse array
-        binned.allow_full_expand = True
-        binned.sparse_slicing = False
-
-        assert np.array_equal(binned[:], full_binned)
+        assert np.array_equal(binned.to_dense(), full_binned)
 
         binned_with.append(factor)
 
@@ -166,11 +162,7 @@ def test_bin_frames(sparse_array_small, full_array_small):
                                    factor, shape[3] // factor,
                                    factor).sum(axis=(3, 5))
 
-        # Expand our binned sparse array
-        binned.allow_full_expand = True
-        binned.sparse_slicing = False
-
-        assert np.array_equal(binned[:], full_binned)
+        assert np.array_equal(binned.to_dense(), full_binned)
 
         binned_with.append(factor)
 

@@ -1,4 +1,3 @@
-import copy
 import io
 
 import numpy as np
@@ -70,6 +69,7 @@ def sparse_array_10x10():
 
     return SparseArray(aa, (2, 2), (11, 11))
 
+
 @pytest.fixture
 def sparse_array_small(electron_data_small):
     kwargs = {
@@ -90,15 +90,7 @@ def full_array_small(sparse_array_small):
     global cached_full_array_small
 
     if cached_full_array_small is None:
-        # Don't allow this fixture to modify the other fixture
-        array = copy.deepcopy(sparse_array_small)
-
-        # Have to change these so we won't return a SparseArray,
-        # and allow it to return a fully expanded array
-        array.sparse_slicing = False
-        array.allow_full_expand = True
-
-        cached_full_array_small = array[:]
+        cached_full_array_small = sparse_array_small.to_dense()
 
     return cached_full_array_small
 
