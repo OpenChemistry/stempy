@@ -50,6 +50,7 @@ struct Header {
   uint32_t imagesInBlock = 0, version = 0, timestamp = 0;
   uint32_t frameNumber = 0, scanNumber = 0;
   std::vector<uint32_t> imageNumbers;
+  std::vector<bool> complete;
 
 #ifdef USE_MPI
   template <class Archive>
@@ -521,7 +522,7 @@ private:
   uint32_t m_streamsSize = 0;
   // atomic to keep track of the header or frame being processed
   std::atomic<uint32_t> m_processed = { 0 };
-  std::atomic<uint32_t> m_missingSectors = { 0 };
+
 
   // Mutex to lock the map of frames at each scan position
   std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
@@ -569,7 +570,9 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
       b.header.scanDimensions = header.scanDimensions;
       b.header.imagesInBlock = 1;
       b.header.frameNumber = frameNumber;
-      b.header.imageNumbers.push_back(imageNumber);
+      b.header.imageNumbers.resize(1);
+      b.header.imageNumbers[0] = imageNumber;
+      b.header.complete.resize(1);
 
       b.header.frameDimensions = FRAME_DIMENSIONS;
 
@@ -581,6 +584,7 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
                                  b.header.frameDimensions.second,
                 0);
 
+      short sectors = 0;
       for (int j = 0; j < 4; j++) {
         auto& sectorLocation = frameMap[j];
 
@@ -589,8 +593,12 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
           std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
           sectorStream->stream->seekg(sectorLocation.offset);
           readSectorData(*sectorStream->stream, b, j);
+          sectors++;
         }
       }
+
+      // Mark if the frame is complete
+      b.header.complete[0] = sectors == 4;
 
       // Finally process the frame
       func(b);
