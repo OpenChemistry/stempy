@@ -34,7 +34,7 @@ struct ElectronCountedDataPyArray
   ElectronCountedDataPyArray(ElectronCountedData&& other)
   {
     data.resize(other.data.size());
-    for (auto i = 0; i < other.data.size(); ++i) {
+    for (size_t i = 0; i < other.data.size(); ++i) {
       data[i].reserve(other.data[i].size());
       for (auto& vec : other.data[i]) {
         data[i].push_back(vectorToPyArray(std::move(vec)));

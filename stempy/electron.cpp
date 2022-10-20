@@ -798,15 +798,15 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Find the maximum number of frames in a position, and make sure all
   // scan positions have this number of frames.
-  int maxNumFrames = 0;
-  for (int i = 0; i < events.size(); ++i) {
+  size_t maxNumFrames = 0;
+  for (size_t i = 0; i < events.size(); ++i) {
     if (events[i].size() > maxNumFrames) {
       maxNumFrames = events[i].size();
     }
   }
 
   // Now make sure they are all the same size
-  for (int i = 0; i < events.size(); ++i) {
+  for (size_t i = 0; i < events.size(); ++i) {
     events[i].resize(maxNumFrames);
   }
 
