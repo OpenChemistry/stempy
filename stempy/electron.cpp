@@ -601,6 +601,9 @@ ElectronCountedData electronCount(Reader* reader,
   // The sample blocks that will be used to calculate the thresholds
   std::vector<Block> sampleBlocks;
 
+  // The blocks that where not used for samples as they are incomplete
+  std::vector<Block> incompleteBlocks;
+
 #ifdef USE_MPI
   int rank, worldSize;
   initMpiWorldRank(worldSize, rank);
@@ -639,14 +642,23 @@ ElectronCountedData electronCount(Reader* reader,
   };
 
   auto counter = [&events, &electronCounting, &sampleMutex, &sampleCondition,
-                  &sampleBlocks, thresholdNumberOfBlocks,
+                  &sampleBlocks, &incompleteBlocks, thresholdNumberOfBlocks,
                   &countBlock](Block& b) {
     // If we are still collecting sample block for calculating the threshold
     if (!electronCounting) {
       std::unique_lock<std::mutex> sampleLock(sampleMutex);
       if (sampleBlocks.size() <
           static_cast<unsigned>(thresholdNumberOfBlocks)) {
-        sampleBlocks.push_back(std::move(b));
+
+        // Only use complete frames for samples, save the incomplete ones,
+        // so we can still electron count them.
+        if (b.header.complete[0]) {
+          sampleBlocks.push_back(std::move(b));
+        }
+        else {
+          incompleteBlocks.push_back(std::move(b));
+        }
+
         if (sampleBlocks.size() ==
             static_cast<unsigned>(thresholdNumberOfBlocks)) {
           sampleLock.unlock();
@@ -744,9 +756,10 @@ ElectronCountedData electronCount(Reader* reader,
   lock.unlock();
   sampleCondition.notify_all();
 
-  // Count the sample blocks
-  for (auto i = 0; i < thresholdNumberOfBlocks; i++) {
-    auto& b = sampleBlocks[i];
+  // lambda to process sample and incomplete blocks
+  auto countExtraBlock = [&events, &backgroundThreshold, &xRayThreshold,
+                          darkReference, gain, applyRowDarkSubtraction,
+                          optimizedMean, applyRowDarkUseMean] (Block& b) {
     auto data = b.data.get();
     auto frameDimensions = b.header.frameDimensions;
     for (unsigned j = 0; j < b.header.imagesInBlock; j++) {
@@ -762,6 +775,18 @@ ElectronCountedData electronCount(Reader* reader,
       auto position = b.header.imageNumbers[j];
       events[position].push_back(std::move(frameEvents));
     }
+  };
+
+  // Count the sample blocks
+  for (auto i = 0; i < thresholdNumberOfBlocks; i++) {
+    auto& b = sampleBlocks[i];
+    countExtraBlock(b);
+  }
+
+  // Count the incomplete blocks
+  for (size_t i = 0; i < incompleteBlocks.size(); i++) {
+    auto& b = incompleteBlocks[i];
+    countExtraBlock(b);
   }
 
   // Make sure all threads are finished before returning the result
@@ -773,15 +798,15 @@ ElectronCountedData electronCount(Reader* reader,
 
   // Find the maximum number of frames in a position, and make sure all
   // scan positions have this number of frames.
-  int maxNumFrames = 0;
-  for (int i = 0; i < events.size(); ++i) {
+  size_t maxNumFrames = 0;
+  for (size_t i = 0; i < events.size(); ++i) {
     if (events[i].size() > maxNumFrames) {
       maxNumFrames = events[i].size();
     }
   }
 
   // Now make sure they are all the same size
-  for (int i = 0; i < events.size(); ++i) {
+  for (size_t i = 0; i < events.size(); ++i) {
     events[i].resize(maxNumFrames);
   }
 
