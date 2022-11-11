@@ -461,8 +461,13 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
             com[:, scan_position] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
         else:
             com[:, scan_position] = (np.nan, np.nan)  # empty frame
-
+            
     com = com.reshape((2, *array.scan_shape))
+    
+    if replace_nans:
+        com_mean = np.nanmean(com, axis=(1,2))
+        np.nan_to_num(com[0,:,:], nan=com_mean[0], copy=False)
+        np.nan_to_num(com[1,:,:], nan=com_mean[1], copy=False)
     
     return com
 
