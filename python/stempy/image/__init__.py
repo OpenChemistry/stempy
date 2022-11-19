@@ -653,3 +653,51 @@ def _electron_counted_metadata_to_dict(metadata):
         ret[name] = getattr(metadata, name)
 
     return ret
+
+def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
+    """Calculate a virtual dark field image from a set of round virtual apertures in diffraction space.
+    Each aperture is defined by a center and radius and the final image is the sum of all of them.
+    
+    :param array: The SparseArray
+    :type array: SparseArray
+    
+    :param centers_x: The center of each round aperture as the row locations
+    :type centers_x: number or iterable
+    
+    :param centers_y: The center of each round aperture as the column locations
+    :type centers_y: number or iterable
+    
+    :param radii: The radius of each aperture.
+    :type radii: number or iterable
+    
+    :param plot: If set to True then the apertures are plotted as circles using plot_virtual_darkfield
+    :rype plot: bool
+    
+    :rtype: np.ndarray
+    
+    :example:
+    >>> sp = stempy.io.load_electron_counts('file.h5')
+    >>> dp2 = stempy.image.virtual_darkfile(sp,(288, 260), (288, 160), (10, 10)) # sum 2 apertures
+    >>> dp1 = stempy.image.virtual_darkfile(sp, 260, 160, 10) # 1 aperture
+    
+    """
+    
+    # Change to iterable if single value
+    if isinstance(centers_x, (int, float)):
+         centers_x = (centers_x,)
+    if isinstance(centers_y, (int, float)):
+         centers_y = (centers_y,)
+    if isinstance(radii, (int, float)):
+         radii = (radii,)
+
+    rs_image = np.zeros((array.shape[0] * sp.shape[1],), dtype=array.dtype)
+    for ii, events in enumerate(array.data):
+        for ev in events:
+            ev_rows = ev//array.frame_shape[0]
+            ev_cols = ev%array.frame_shape[1]
+            for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+                dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
+                rs_image[ii] += len(np.where(dist < rr)[0])
+    rs_image = rs_image.reshape(sp.shape[0:2])
+    
+    return rs_image
