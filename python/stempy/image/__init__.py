@@ -741,3 +741,23 @@ def plot_virtual_darkfield(array, centers_x, centers_y, radii, axes=None):
         C = Circle((cc_0,cc_1),rr,fc='none',ec='c')
         ax.add_patch(C)
     return ax
+
+def mask_real_space(array, mask):
+    """Calculate a diffraction pattern from an arbitrary set of positions defined in a mask in real space
+    
+    :param array: The sparse dataset
+    :type array: SparseArray
+    
+    :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in the sum. Must have the same scan shape as array
+    :type mask: np.ndarray
+    
+    :rtype: np.ndarray
+    """
+    assert array.scan_shape[0] == mask.shape[0] and array.scan_shape[1] == mask.shape[1]
+    dp_mask = np.zeros(np.prod(array.frame_shape), array.dtype)
+    mr = np.ravel_multi_index(np.where(mask), array.scan_shape)
+    for events in array.data[mr, :]:
+        for ev in events:
+            dp_mask[ev] += 1
+    dp_mask = dp_mask.reshape(sp.frame_shape)
+    return dp_mask
