@@ -701,3 +701,43 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
     rs_image = rs_image.reshape(sp.shape[0:2])
     
     return rs_image
+
+def plot_virtual_darkfield(array, centers_x, centers_y, radii, axes=None):
+    """Plot circles on the summed diffraction pattern corresponding to the position and size of virtual dark field apertures.
+    This has the same input as stempy.image.virtual_darkfield so users can check their input is physically correct.
+    
+    :param array: The SparseArray
+    :type array: SparseArray
+    
+    :param centers_x: The center of each round aperture as the row locations
+    :type centers_x: iterable
+    
+    :param centers_y: The center of each round aperture as the column locations
+    :type centers_y: iterable
+    
+    :param radii: The radius of each aperture. This has to be in the form (r0, )
+    :type radii: iterable
+    
+    :param axes: A matplotlib axes instance to use for the plotting. If None then a new plot is created.
+    :type axes: matplotlib.axes._subplots.AxesSubplot
+    
+    :rtype: matplotlib.axes._subplots.AxesSubplot
+    """
+    
+    from matplotlib.colors import LogNorm
+    
+    # Change to iterable if single value
+    if isinstance(centers_x, (int, float)):
+         centers_x = (centers_x,)
+    if isinstance(centers_y, (int, float)):
+         centers_y = (centers_y,)
+    if isinstance(radii, (int, float)):
+         radii = (radii,)
+    
+    if not axes:
+        fg, ax = plt.subplots(1, 1)
+    ax.imshow(array.sum(axis=(0, 1)), cmap='magma', norm=LogNorm())
+    for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+        C = Circle((cc_0,cc_1),rr,fc='none',ec='c')
+        ax.add_patch(C)
+    return ax
