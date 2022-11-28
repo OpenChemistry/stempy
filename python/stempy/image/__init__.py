@@ -698,7 +698,7 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
             for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
                 dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
                 rs_image[ii] += len(np.where(dist < rr)[0])
-    rs_image = rs_image.reshape(sp.shape[0:2])
+    rs_image = rs_image.reshape(array.shape[0:2])
     
     return rs_image
 
@@ -763,5 +763,5 @@ def mask_real_space(array, mask):
     for events in array.data[mr, :]:
         for ev in events:
             dp_mask[ev] += 1
-    dp_mask = dp_mask.reshape(sp.frame_shape)
+    dp_mask = dp_mask.reshape(array.frame_shape)
     return dp_mask
