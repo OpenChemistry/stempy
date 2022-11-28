@@ -723,7 +723,7 @@ def plot_virtual_darkfield(array, centers_x, centers_y, radii, axes=None):
     
     :rtype: matplotlib.axes._subplots.AxesSubplot
     """
-    
+    import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
     
     # Change to iterable if single value
