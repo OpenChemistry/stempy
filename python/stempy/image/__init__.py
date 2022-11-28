@@ -741,7 +741,7 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     
     # Place a circle at each apertue location
     for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
-        C = Circle((cc_0,cc_1),rr,fc='none',ec='c')
+        C = Circle((cc_0, cc_1), rr, fc='none', ec='c')
         axes.add_patch(C)
     
     return axes
