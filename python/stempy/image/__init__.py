@@ -702,12 +702,12 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
     
     return rs_image
 
-def plot_virtual_darkfield(array, centers_x, centers_y, radii, axes=None):
-    """Plot circles on the summed diffraction pattern corresponding to the position and size of virtual dark field apertures.
+def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
+    """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
     This has the same input as stempy.image.virtual_darkfield so users can check their input is physically correct.
     
-    :param array: The SparseArray
-    :type array: SparseArray
+    :param image: The diffraciton pattern to plot over
+    :type image: np.ndarray, 2D
     
     :param centers_x: The center of each round aperture as the row locations
     :type centers_x: iterable
@@ -735,12 +735,16 @@ def plot_virtual_darkfield(array, centers_x, centers_y, radii, axes=None):
          radii = (radii,)
     
     if not axes:
-        fg, ax = plt.subplots(1, 1)
-    ax.imshow(array.sum(axis=(0, 1)), cmap='magma', norm=LogNorm())
+        fg, axes = plt.subplots(1, 1)
+    
+    axes.imshow(image, cmap='magma', norm=LogNorm())
+    
+    # Place a circle at each apertue location
     for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
         C = Circle((cc_0,cc_1),rr,fc='none',ec='c')
-        ax.add_patch(C)
-    return ax
+        axes.add_patch(C)
+    
+    return axes
 
 def mask_real_space(array, mask):
     """Calculate a diffraction pattern from an arbitrary set of positions defined in a mask in real space
