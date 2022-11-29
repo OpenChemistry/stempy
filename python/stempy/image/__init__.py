@@ -690,7 +690,7 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
     if isinstance(radii, (int, float)):
          radii = (radii,)
 
-    rs_image = np.zeros((array.shape[0] * sp.shape[1],), dtype=array.dtype)
+    rs_image = np.zeros((array.shape[0] * array.shape[1],), dtype=array.dtype)
     for ii, events in enumerate(array.data):
         for ev in events:
             ev_rows = ev//array.frame_shape[0]
