@@ -725,7 +725,8 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
-    
+    from matplotlib.patches import Circle
+
     # Change to iterable if single value
     if isinstance(centers_x, (int, float)):
          centers_x = (centers_x,)
