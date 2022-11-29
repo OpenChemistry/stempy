@@ -677,8 +677,8 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
     
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
-    >>> dp2 = stempy.image.virtual_darkfile(sp,(288, 260), (288, 160), (10, 10)) # sum 2 apertures
-    >>> dp1 = stempy.image.virtual_darkfile(sp, 260, 160, 10) # 1 aperture
+    >>> dp2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
+    >>> dp1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
     
     """
     
