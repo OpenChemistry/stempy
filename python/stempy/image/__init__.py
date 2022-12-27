@@ -698,7 +698,7 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
             for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
                 dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
                 rs_image[ii] += len(np.where(dist < rr)[0])
-    rs_image = rs_image.reshape(array.shape[0:2])
+    rs_image = rs_image.reshape(array.scan_shape)
     
     return rs_image
 
