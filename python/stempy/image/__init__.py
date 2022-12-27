@@ -670,15 +670,12 @@ def virtual_darkfield(array, centers_x, centers_y, radii):
     :param radii: The radius of each aperture.
     :type radii: number or iterable
     
-    :param plot: If set to True then the apertures are plotted as circles using plot_virtual_darkfield
-    :rype plot: bool
-    
     :rtype: np.ndarray
     
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
-    >>> dp2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
-    >>> dp1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
+    >>> df2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
+    >>> df1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
     
     """
     
@@ -706,7 +703,7 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
     This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
     
-    :param image: The diffraciton pattern to plot over
+    :param image: The diffraction pattern to plot over
     :type image: np.ndarray, 2D
     
     :param centers_x: The center of each round aperture as the row locations
@@ -715,7 +712,7 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     :param centers_y: The center of each round aperture as the column locations
     :type centers_y: iterable
     
-    :param radii: The radius of each aperture. This has to be in the form (r0, )
+    :param radii: The radius of each aperture.
     :type radii: iterable
     
     :param axes: A matplotlib axes instance to use for the plotting. If None then a new plot is created.
@@ -725,7 +722,7 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
-    >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0,1), 260, 160, 10) # 1 aperture
+    >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0, 1), 260, 160, 10) # 1 aperture
     """
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
