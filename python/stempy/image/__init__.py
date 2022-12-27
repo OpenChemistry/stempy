@@ -654,7 +654,7 @@ def _electron_counted_metadata_to_dict(metadata):
 
     return ret
 
-def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
+def virtual_darkfield(array, centers_x, centers_y, radii):
     """Calculate a virtual dark field image from a set of round virtual apertures in diffraction space.
     Each aperture is defined by a center and radius and the final image is the sum of all of them.
     
@@ -704,7 +704,7 @@ def virtual_darkfield(array, centers_x, centers_y, radii, plot=False):
 
 def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
-    This has the same input as stempy.image.virtual_darkfield so users can check their input is physically correct.
+    This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
     
     :param image: The diffraciton pattern to plot over
     :type image: np.ndarray, 2D
@@ -722,6 +722,10 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     :type axes: matplotlib.axes._subplots.AxesSubplot
     
     :rtype: matplotlib.axes._subplots.AxesSubplot
+    
+    :example:
+    >>> sp = stempy.io.load_electron_counts('file.h5')
+    >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0,1), 260, 160, 10) # 1 aperture
     """
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
