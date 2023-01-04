@@ -653,3 +653,117 @@ def _electron_counted_metadata_to_dict(metadata):
         ret[name] = getattr(metadata, name)
 
     return ret
+
+def virtual_darkfield(array, centers_x, centers_y, radii):
+    """Calculate a virtual dark field image from a set of round virtual apertures in diffraction space.
+    Each aperture is defined by a center and radius and the final image is the sum of all of them.
+    
+    :param array: The SparseArray
+    :type array: SparseArray
+    
+    :param centers_x: The center of each round aperture as the row locations
+    :type centers_x: number or iterable
+    
+    :param centers_y: The center of each round aperture as the column locations
+    :type centers_y: number or iterable
+    
+    :param radii: The radius of each aperture.
+    :type radii: number or iterable
+    
+    :rtype: np.ndarray
+    
+    :example:
+    >>> sp = stempy.io.load_electron_counts('file.h5')
+    >>> df2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
+    >>> df1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
+    
+    """
+    
+    # Change to iterable if single value
+    if isinstance(centers_x, (int, float)):
+         centers_x = (centers_x,)
+    if isinstance(centers_y, (int, float)):
+         centers_y = (centers_y,)
+    if isinstance(radii, (int, float)):
+         radii = (radii,)
+
+    rs_image = np.zeros((array.shape[0] * array.shape[1],), dtype=array.dtype)
+    for ii, events in enumerate(array.data):
+        for ev in events:
+            ev_rows = ev // array.frame_shape[0]
+            ev_cols = ev % array.frame_shape[1]
+            for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+                dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
+                rs_image[ii] += len(np.where(dist < rr)[0])
+    rs_image = rs_image.reshape(array.scan_shape)
+    
+    return rs_image
+
+def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
+    """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
+    This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
+    
+    :param image: The diffraction pattern to plot over
+    :type image: np.ndarray, 2D
+    
+    :param centers_x: The center of each round aperture as the row locations
+    :type centers_x: iterable
+    
+    :param centers_y: The center of each round aperture as the column locations
+    :type centers_y: iterable
+    
+    :param radii: The radius of each aperture.
+    :type radii: iterable
+    
+    :param axes: A matplotlib axes instance to use for the plotting. If None then a new plot is created.
+    :type axes: matplotlib.axes._subplots.AxesSubplot
+    
+    :rtype: matplotlib.axes._subplots.AxesSubplot
+    
+    :example:
+    >>> sp = stempy.io.load_electron_counts('file.h5')
+    >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0, 1), 260, 160, 10) # 1 aperture
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+    from matplotlib.patches import Circle
+
+    # Change to iterable if single value
+    if isinstance(centers_x, (int, float)):
+         centers_x = (centers_x,)
+    if isinstance(centers_y, (int, float)):
+         centers_y = (centers_y,)
+    if isinstance(radii, (int, float)):
+         radii = (radii,)
+    
+    if not axes:
+        fg, axes = plt.subplots(1, 1)
+    
+    axes.imshow(image, cmap='magma', norm=LogNorm())
+    
+    # Place a circle at each apertue location
+    for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+        C = Circle((cc_0, cc_1), rr, fc='none', ec='c')
+        axes.add_patch(C)
+    
+    return axes
+
+def mask_real_space(array, mask):
+    """Calculate a diffraction pattern from an arbitrary set of positions defined in a mask in real space
+    
+    :param array: The sparse dataset
+    :type array: SparseArray
+    
+    :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in the sum. Must have the same scan shape as array
+    :type mask: np.ndarray
+    
+    :rtype: np.ndarray
+    """
+    assert array.scan_shape[0] == mask.shape[0] and array.scan_shape[1] == mask.shape[1]
+    dp_mask = np.zeros(np.prod(array.frame_shape), array.dtype)
+    mr = np.ravel_multi_index(np.where(mask), array.scan_shape)
+    for events in array.data[mr, :]:
+        for ev in events:
+            dp_mask[ev] += 1
+    dp_mask = dp_mask.reshape(array.frame_shape)
+    return dp_mask
