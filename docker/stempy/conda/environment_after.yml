@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - numpy=1.23
+  - deprecation
+  - click 
+  - imageio 
+  - ncempy
+  - h5py=3.6

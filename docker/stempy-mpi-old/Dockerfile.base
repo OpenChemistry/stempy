@@ -1,0 +1,45 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV installer=Miniconda3-py37_4.12.0-Linux-x86_64.sh
+ENV PATH=/opt/miniconda3/bin:$PATH
+ARG mpich=3.3
+ARG mpich_prefix=mpich-$mpich
+
+# Install deps
+RUN apt-get update              && \
+    apt-get install -y \
+    libeigen3-dev \
+    libssl1.0-dev \
+    git \
+    autoconf \
+    automake \
+    gcc \
+    g++ \
+    make \
+    gfortran \
+    wget \
+    zlib1g-dev \
+    libffi-dev \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    software-properties-common \
+    libhdf5-dev \
+    libsqlite3-dev \
+    gdb                           && \
+    apt-get clean all
+
+RUN mkdir /build/ && mkdir /source/
+
+RUN wget https://repo.anaconda.com/miniconda/$installer && \
+    /bin/bash $installer -b -p /opt/miniconda3          && \
+    rm -rf $installer                                   && \
+    conda install python=3.7.3                          && \
+    conda update conda                                  && \
+    conda install mamba -c conda-forge -y           
+
+# Build mpich
+RUN cd /build && wget https://www.mpich.org/static/downloads/3.3/mpich-3.3.tar.gz && \
+    tar xvzf mpich-3.3.tar.gz && cd /build/mpich-3.3 && \
+    ./configure && make -j4 && make install && make clean && rm /build/mpich-3.3.tar.gz

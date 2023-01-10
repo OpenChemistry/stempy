@@ -1,0 +1,26 @@
+FROM samwelborn/stempy-mpi-old-base:latest AS stempy
+
+ENV PATH=/opt/miniconda3/bin:$PATH
+WORKDIR /source
+ARG PYTHON_VERSION=3.7
+
+COPY ./conda/** ./
+
+# Build stempy
+RUN  mamba env update -n base -f /source/environment_before.yml                             && \
+  cd /source                                                                                && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git                         && \
+  mkdir -p /build/stempy                                                                    && \
+  cd /build/stempy                                                                          && \
+  cmake -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+  -Dstempy_ENABLE_VTKm:BOOL=OFF \
+  -Dstempy_ENABLE_MPI:BOOL=ON \
+  /source/stempy .                                                                          && \
+  make -j 16                                                                                && \
+  cp -r -L /build/stempy/lib/stempy \
+  /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages && \
+  rm -rf /source/stempy                                                                     && \
+  conda env update -n base -f /source/environment_after.yml
+
+RUN /sbin/ldconfig
+

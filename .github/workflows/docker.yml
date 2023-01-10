@@ -1,0 +1,89 @@
+name: docker
+
+on:
+  push:
+    branches:
+      - "master"
+      - "update-dockerfile-staging"
+
+jobs:
+  # Builds base image for stempy (no cuda) if Dockerfile.base has changed
+  build-base:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [stempy, stempy-mpi, stempy-mpi-old, stempy-mpi-mpich4]
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Determine if Dockerfile.base changed
+        id: changed-dockerfile-base
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            docker/${{ matrix.version }}/Dockerfile.base
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Build/push Dockerfile.base
+        uses: docker/build-push-action@v3
+        if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
+        with:
+          context: ./docker/${{ matrix.version }}
+          file: ./docker/${{ matrix.version }}/Dockerfile.base
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}-base:latest
+          cache-to: type=gha
+          cache-from: type=gha,mode=max
+          # build-args: |
+          #             PYTHON_VERSION=${{ secrets.JFROG_CREDS_USR }}
+          #             JFROG_PWD=${{ secrets.JFROG_CREDS_PSW }}
+
+# Builds stempy every time after build-base is done
+  Build-stempy:
+    runs-on: ubuntu-latest
+    needs: [build-base]
+    strategy:
+      matrix:
+        include:
+          - version: stempy
+          - version: stempy-mpi
+          - version: stempy
+            notebook: -ipykernel
+          - version: stempy-mpi-old
+          - version: stempy-mpi-mpich4
+      fail-fast: false
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      -
+        name: Build/push ${{ matrix.version }}${{matrix.notebook}}
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker/${{ matrix.version }}
+          file: ./docker/${{ matrix.version }}/Dockerfile.stempy${{matrix.notebook}}
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}${{matrix.notebook}}:latest

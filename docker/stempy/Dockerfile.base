@@ -1,0 +1,41 @@
+FROM ubuntu:jammy as base
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV installer=Miniconda3-py38_22.11.1-1-Linux-x86_64.sh
+ENV PATH=/opt/miniconda3/bin:$PATH
+
+WORKDIR /source
+
+RUN apt-get update                                      && \
+    apt-get upgrade --yes                               && \
+    apt-get install --yes    \
+    wget \          
+    libeigen3-dev \
+    git \
+    autoconf \
+    automake \
+    gcc \
+    g++ \
+    make \
+    gfortran \
+    zlib1g-dev \
+    libffi-dev \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    software-properties-common \
+    libhdf5-dev \
+    build-essential \
+    ninja-build \
+    libsqlite3-dev                                      && \
+    apt-get clean all                                   && \
+    apt-get clean all                                   && \
+    rm -rf /var/lib/apt/lists/*                         && \
+    mkdir /build/                                       
+
+RUN wget https://repo.anaconda.com/miniconda/$installer && \
+    /bin/bash $installer -b -p /opt/miniconda3          && \
+    rm -rf $installer                                   && \
+    conda install mamba -c conda-forge -y
+
+RUN /sbin/ldconfig

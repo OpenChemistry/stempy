@@ -5,3 +5,4 @@ __pycache__
 .vscode/*
 output/*
 .idea
+docs/build/*
