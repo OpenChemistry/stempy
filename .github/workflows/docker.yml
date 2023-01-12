@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: [stempy, stempy-mpi, stempy-mpi-old, stempy-mpi-mpich4]
+        version: [stempy, stempy-mpi, stempy-mpi-old, stempy-mpi-mpich4, stempy-mpi-mpich4-apt-jammy]
     steps:
       -
         name: Checkout
@@ -63,6 +63,7 @@ jobs:
             notebook: -ipykernel
           - version: stempy-mpi-old
           - version: stempy-mpi-mpich4
+          - version: stempy-mpi-mpich4-apt-jammy
       fail-fast: false
     steps:
       -

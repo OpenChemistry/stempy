@@ -1,11 +1,11 @@
-FROM samwelborn/stempy-mpi-mpich4-base:latest AS stempy
+FROM samwelborn/stempy-mpi-mpich4-apt-jammy-base:latest AS stempy
 
 WORKDIR /source
 ARG PYTHON_VERSION=3.9
 ENV PATH=/opt/miniconda3/bin:$PATH
-RUN rm -rf /source/*.yml
+
 COPY ./conda/** ./
-RUN /sbin/ldconfig
+
 # Build stempy
 RUN cd /source && mamba env update -n base -f /source/environment_before.yml                && \
   git clone --recursive https://github.com/OpenChemistry/stempy.git                         && \

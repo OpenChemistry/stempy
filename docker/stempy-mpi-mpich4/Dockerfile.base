@@ -1,13 +1,11 @@
 FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV installer=Miniconda3-py37_4.12.0-Linux-x86_64.sh
-ENV PATH=/opt/miniconda3/bin:$PATH
 ARG mpich=4.0.2
 ARG mpich_prefix=mpich-$mpich
 
 # Install deps
-RUN apt-get update              && \
+RUN apt-get update                  && \
     apt-get install -y \
     libeigen3-dev \
     libssl1.0-dev \
@@ -30,18 +28,24 @@ RUN apt-get update              && \
     gdb                           && \
     apt-get clean all
 
-RUN mkdir /build/ && mkdir /source/
+RUN mkdir /build/ && mkdir /source/           
 
+ARG PYTHON_VERSION=3.9
+ENV installer=Miniconda3-py39_22.11.1-1-Linux-x86_64.sh
+ENV PATH=/opt/miniconda3/bin:$PATH
+
+COPY ./conda/** ./
+# install conda
 RUN wget https://repo.anaconda.com/miniconda/$installer && \
     /bin/bash $installer -b -p /opt/miniconda3          && \
     rm -rf $installer                                   && \
-    conda install python=3.7.3                          && \
-    conda update conda                                  && \
-    conda install mamba -c conda-forge -y           
+    conda install python=${PYTHON_VERSION}              && \
+    conda update conda -y                               && \
+    conda update --all -y                               && \
+    conda install mamba -c conda-forge -y               
 
 # Build mpich
-RUN \
-    wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
+RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
     tar xvzf $mpich_prefix.tar.gz -C /build                                 && \
     rm -rf $mpich_prefix.tar.gz                                             && \
     cd /build/$mpich_prefix                                                 && \

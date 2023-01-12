@@ -9,4 +9,5 @@ dependencies:
   - imageio 
   - ncempy
   - h5py=2.10
-  - mpi4py
+  - pip:
+    - mpi4py==3.0.1
