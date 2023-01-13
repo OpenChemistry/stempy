@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-ARG MPI=OFF
+ARG MPI=MPI
 
 # Install deps
 RUN apt-get update && \
@@ -69,21 +69,21 @@ RUN mkdir -p /build/vtk-m && \
   make -j4
 
 # Build stempy
-COPY . /source/stempy
-
-RUN mkdir -p /build/stempy && \
-  cd /build/stempy && \
+RUN cd /source                                                                              && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git                         && \
+  mkdir -p /build/stempy                                                                    && \
+  cd /build/stempy                                                                          && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
-  -Dstempy_ENABLE_VTKm:BOOL=ON \
-  -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
+  -Dstempy_ENABLE_VTKm:BOOL=OFF \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
-  /source/stempy . && \
-  make -j4
+  /source/stempy .                                                                          && \
+  make -j 16                                                             
 
 # Install stempy
 RUN pip3 install -r /source/stempy/requirements.txt && \
   cp -r -L /build/stempy/lib/stempy /usr/local/lib/python3.7/site-packages && \
-  pip3 install matplotlib click imageio ncempy
+  pip3 install matplotlib click imageio ncempy                                              && \
+  rm -rf /source/stempy        
 
 RUN rm -rf /build
 

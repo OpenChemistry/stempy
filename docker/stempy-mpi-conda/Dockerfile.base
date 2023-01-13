@@ -1,18 +1,13 @@
-FROM ubuntu:jammy as base
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV installer=Miniconda3-py38_22.11.1-1-Linux-x86_64.sh
-ENV PATH=/opt/miniconda3/bin:$PATH
-ARG mpich=4.0.2
-ARG mpich_prefix=mpich-$mpich
 
-WORKDIR /source
-
-RUN apt-get update                                      && \
-    apt-get upgrade --yes                               && \
-    apt-get install --yes    \
-    wget \          
+# Install deps
+# Unsure if all of these are required
+RUN apt-get update                      && \
+    apt-get install -y \
     libeigen3-dev \
+    libssl1.0-dev \
     git \
     autoconf \
     automake \
@@ -20,6 +15,7 @@ RUN apt-get update                                      && \
     g++ \
     make \
     gfortran \
+    wget \
     zlib1g-dev \
     libffi-dev \
     apt-transport-https \
@@ -27,27 +23,35 @@ RUN apt-get update                                      && \
     gnupg \
     software-properties-common \
     libhdf5-dev \
-    build-essential \
-    ninja-build \
-    libsqlite3-dev                                      && \
-    apt-get clean all                                   && \
-    apt-get clean all                                   && \
-    rm -rf /var/lib/apt/lists/*                         && \
-    mkdir /build/                                       
+    libsqlite3-dev \
+    gdb                                 && \
+    apt-get clean all
 
+RUN mkdir /build/ && mkdir /source/           
+
+ARG PYTHON_VERSION=3.7.3
+ENV installer=Miniconda3-py37_4.12.0-Linux-x86_64.sh
+ENV PATH=/opt/miniconda3/bin:$PATH
+
+# Install conda
+# Update conda/update --all have to happen to stay specific to python 3.7.3
+# otherwise does not work
 RUN wget https://repo.anaconda.com/miniconda/$installer && \
     /bin/bash $installer -b -p /opt/miniconda3          && \
     rm -rf $installer                                   && \
-    conda install mamba -c conda-forge -y
+    conda install python=${PYTHON_VERSION}              && \
+    conda update conda -y                               && \
+    conda update --all -y                               && \ 
+    conda install mamba -c conda-forge -y               
 
 # Build mpich
-RUN \
-    wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
+ARG mpich=4.0.2
+ARG mpich_prefix=mpich-$mpich
+RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
     tar xvzf $mpich_prefix.tar.gz -C /build                                 && \
     rm -rf $mpich_prefix.tar.gz                                             && \
     cd /build/$mpich_prefix                                                 && \
-    ./configure FFLAGS=-fallow-argument-mismatch \
-    FCFLAGS=-fallow-argument-mismatch                                   && \
+    ./configure --disable-f77 --disable-fc --disable-fortran                && \
     make -j 16                                                              && \
     make install                                                            && \
     make clean                                                              && \

@@ -1,13 +1,11 @@
 channels:
   - conda-forge
 dependencies:
-  - python=3.7.3
-  - numpy
+  - python=3.9
   - pip
+  - numpy=1.23
   - deprecation
   - click 
   - imageio 
   - ncempy
-  - h5py=2.10
-  - pip:
-    - mpi4py==3.0.1
+  - h5py=3.6

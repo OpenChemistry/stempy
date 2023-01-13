@@ -9,8 +9,8 @@
     shifterimg pull openchemistry/stempy
    N.B. I have noticed that it takes sometime for shifter to realize that a new image is available, so sometimes you have to wait say 10 minutes after pushing to dockerhub, not sure why!
 
-# Information on GitHub Actions
+# GitHub Actions
 
-The GitHub Actions docker workflow (.github/workflows/docker.yml) will automatically build the images in docker/stempy and docker/stempy-mpi. The base image will be built only when "trigger-ci" is in the head commit or if Dockerfile.base changes in the commit. This is to save build time.
+The GitHub Actions docker workflow (.github/workflows/docker.yml) will automatically build the images in docker/stempy-conda-jammy, docker/stempy-mpi-conda, and stempy-mpi-conda-jammy. These images run with conda's python. The base image (`Docker.base`) will only be built if "trigger-ci" is in the head commit or if it changes in the commit. The workflow will check on these things, and then proceed to building the images for stempy. This significantly improves build time - we shouldn't have to build mpich every time. 
 
-These images contain a conda environment. 
+The original versions are also built with GHA in a separate job in the same docker GHA workflow.

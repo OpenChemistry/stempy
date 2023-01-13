@@ -1,17 +1,17 @@
-FROM samwelborn/stempy-base:latest AS stempy
+FROM openchemistry/stempy-base:latest-conda-jammy AS stempy
 
 ENV PATH=/opt/miniconda3/bin:$PATH
-WORKDIR /source
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.9
 COPY ./conda/** ./
+WORKDIR /source
 
-# Build stempy and add mpi4py and h5py to conda env
+# Build stempy
 RUN mamba env update -n base -f /source/environment_before.yml                              && \
   cd /source                                                                                && \
-  git clone --recursive -b update-dockerfile-staging https://github.com/swelborn/stempy.git && \
+  git clone --recursive https://github.com/OpenChemistry/stempy.git                         && \
   mkdir -p /build/stempy                                                                    && \
   cd /build/stempy                                                                          && \
-  cmake -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+  cmake -DCMAKE_BUILD_TYPE:STRING=Release \
   -Dstempy_ENABLE_VTKm:BOOL=OFF \
   -Dstempy_ENABLE_MPI:BOOL=OFF \
   /source/stempy .                                                                          && \
@@ -19,6 +19,7 @@ RUN mamba env update -n base -f /source/environment_before.yml                  
   cp -r -L /build/stempy/lib/stempy \                                                   
   /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages                                 && \
   rm -rf /source/stempy                                                                     && \
-  conda env update -n base -f /source/environment_ipykernel.yml --prune
+  mamba env update -n base -f /source/environment_after.yml                                 && \
+  conda clean -a -y -q
 
 RUN /sbin/ldconfig

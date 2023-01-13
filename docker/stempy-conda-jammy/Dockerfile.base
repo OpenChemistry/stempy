@@ -27,9 +27,8 @@ RUN apt-get update                                      && \
     libhdf5-dev \
     build-essential \
     ninja-build \
-    libsqlite3-dev \
-    mpich \
-    libmpich-dev                                        && \
+    libsqlite3-dev                                      && \
+    apt-get clean all                                   && \
     apt-get clean all                                   && \
     rm -rf /var/lib/apt/lists/*                         && \
     mkdir /build/                                       
