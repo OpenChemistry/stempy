@@ -1,14 +1,14 @@
-FROM openchemistry/stempy-mpi-base:latest-conda-jammy AS stempy
+ARG DOCKERHUB_ORG=DOCKERHUB_ORG
+FROM ${DOCKERHUB_ORG}/stempy-mpi-base:latest-conda-jammy AS stempy
 
+ARG DOCKERFILE_SUBDIR=DOCKERFILE_SUBDIR
 ENV PATH=/opt/miniconda3/bin:$PATH
 ARG PYTHON_VERSION=3.7
-COPY ./conda/** ./
 WORKDIR /source
+COPY . /source/stempy/
+ARG CONDA_ENV_DIR=/source/stempy/docker/${DOCKERFILE_SUBDIR}/conda
 
-# Build stempy
-RUN mamba env update -n base -f /source/environment_before.yml                              && \
-  cd /source                                                                                && \
-  git clone --recursive https://github.com/OpenChemistry/stempy.git                         && \
+RUN mamba env update -n base -f ${CONDA_ENV_DIR}/environment_before.yml                     && \
   mkdir -p /build/stempy                                                                    && \
   cd /build/stempy                                                                          && \
   cmake -DCMAKE_BUILD_TYPE:STRING=Release \
@@ -18,8 +18,8 @@ RUN mamba env update -n base -f /source/environment_before.yml                  
   make -j 16                                                                                && \
   cp -r -L /build/stempy/lib/stempy \
   /opt/miniconda3/lib/python${PYTHON_VERSION}/site-packages                                 && \
+  mamba env update -n base -f ${CONDA_ENV_DIR}/environment_after.yml                        && \
   rm -rf /source/stempy                                                                     && \
-  mamba env update -n base -f /source/environment_after.yml                                 && \
   conda clean -a -y -q
 
 RUN /sbin/ldconfig

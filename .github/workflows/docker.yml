@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - "master"
+  pull_request:
+    branches:
+      - "master"
 
 jobs:
   # Builds base image for stempy of various verions if Dockerfile.base has changed
@@ -25,6 +28,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          submodules: 'recursive'
       -
         name: Determine if Dockerfile.base changed
         id: changed-dockerfile-base
@@ -35,6 +39,7 @@ jobs:
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -46,10 +51,12 @@ jobs:
         uses: docker/build-push-action@v3
         if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
-          context: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}
+          context: .
           file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: | 
+                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
+          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
           cache-to: type=gha
           cache-from: type=gha,mode=max
 
@@ -77,6 +84,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          submodules: 'recursive'
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -90,10 +98,13 @@ jobs:
         name: Build/push ${{ matrix.version }}${{matrix.notebook}}
         uses: docker/build-push-action@v3
         with:
-          context: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}
+          context: .
           file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.stempy${{matrix.notebook}}
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
+          build-args: | 
+                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
+                      DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
 
   # Seperate job for building original version
   build-stempy-old:
@@ -111,6 +122,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          submodules: 'recursive'
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -127,8 +139,8 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}:latest
           build-args: |
                       MPI=${{ matrix.MPI }}
           cache-to: type=gha
@@ -139,7 +151,7 @@ jobs:
         if: ${{ matrix.version == 'stempy' }}
         uses: docker/build-push-action@v3
         with:
-          context: ./docker
+          context: .
           file: ./docker/Dockerfile.ipykernel
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.version }}-ipykernel:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-ipykernel:latest
