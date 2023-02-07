@@ -12,3 +12,5 @@ dependencies:
   - ipykernel=6.4.2
   - ipympl=0.8.6
   - matplotlib=3.4.3
+  - pip:
+    - cmake

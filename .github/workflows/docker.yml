@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "master"
+      - "update-dockerfile-staging"
   pull_request:
     branches:
       - "master"
@@ -23,6 +24,18 @@ jobs:
             tag-suffix: -conda-jammy
 
     steps:
+
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+        run: |
+          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+        if: ${{ github.event_name != 'pull_request' }}
+
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+        run: |
+          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+        if: ${{ github.event_name == 'pull_request' }}
       -
         name: Checkout
         uses: actions/checkout@v3
@@ -56,9 +69,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
           cache-to: type=gha
           cache-from: type=gha,mode=max
+
 
 # Builds stempy every time after build-base is done
   build-stempy:
@@ -85,9 +99,21 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+        run: |
+          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+        if: ${{ github.event_name != 'pull_request' }}
+
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+        run: |
+          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+        if: ${{ github.event_name == 'pull_request' }}
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -102,9 +128,9 @@ jobs:
           file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.stempy${{matrix.notebook}}
           build-args: | 
                       DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-                      DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}
+                      DOCKERHUB_ORG=${{ env.DOCKERHUB_ORG }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
 
   # Seperate job for building original version
   build-stempy-old:
@@ -123,9 +149,21 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: Sets DOCKERHUB_ORG if pushing to fork
+        run: |
+          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+        if: ${{ github.event_name != 'pull_request' }}
+
+      - 
+        name: Sets DOCKERHUB_ORG if  PR
+        run: |
+          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
+        if: ${{ github.event_name == 'pull_request' }}
       -
         name: Login to Docker Hub
         uses: docker/login-action@v2
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -140,7 +178,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}:latest
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}:latest
           build-args: |
                       MPI=${{ matrix.MPI }}
           cache-to: type=gha
@@ -154,4 +192,4 @@ jobs:
           context: .
           file: ./docker/Dockerfile.ipykernel
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ vars.DOCKERHUB_ORG }}/${{ matrix.version }}-ipykernel:latest
+          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-ipykernel:latest
