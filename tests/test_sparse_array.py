@@ -514,6 +514,69 @@ def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2,
         assert array.num_frames_per_scan == 2
 
 
+def test_advanced_indexing(sparse_array_small, full_array_small):
+    array = sparse_array_small
+    full = full_array_small
+
+    # First test advanced integer indexing
+    to_test = [
+        [[0]],
+        [[1], [14]],
+        [[10], [-1]],
+        [[10, 7, 3], [7, 0, 9]],
+        [[3, 2, 1], [0, 1, 2]],
+        [[-1, 4, -3], [-3, 8, 7]],
+        [[7], 4],
+        [3, [8]],
+        [[-1, 4, -3], slice(2, 18, 2)],
+        [3, 4, [3, 2, 1], [9, 8, 7]],
+        [slice(None), slice(None), [5, 45, 32], [-3, -7, 23]],
+        [slice(None), slice(2, 18, 2), slice(0, 100, 3), [-5, 1, 2]],
+    ]
+
+    def compare_with_sparse(full, sparse):
+        # This will fully expand the sparse array and perform a comparison
+        try:
+            if isinstance(sparse, SparseArray):
+                # This will be a SparseArray except for single frame cases
+                prev_allow_full_expand = sparse.allow_full_expand
+                prev_sparse_slicing = sparse.sparse_slicing
+
+                sparse.allow_full_expand = True
+                sparse.sparse_slicing = False
+
+            return np.array_equal(full, sparse[:])
+        finally:
+            if isinstance(sparse, SparseArray):
+                sparse.allow_full_expand = prev_allow_full_expand
+                sparse.sparse_slicing = prev_sparse_slicing
+
+    # First test sparse slicing
+    array.sparse_slicing = True
+    for index in to_test:
+        index = tuple(index)
+        assert compare_with_sparse(full[index], array[index])
+
+    # Now test dense slicing
+    array.sparse_slicing = False
+    for index in to_test:
+        index = tuple(index)
+        assert np.array_equal(full[index], array[index])
+
+    # Now test boolean indexing.
+    # We'll make some random masks for this.
+    rng = np.random.default_rng(0)
+
+    num_tries = 10
+    for i in range(num_tries):
+        scan_mask = rng.choice([True, False], array.scan_shape)
+        frame_mask = rng.choice([True, False], array.frame_shape)
+
+        array.sparse_slicing = True
+        # assert compare_with_sparse(full[scan_mask], array[scan_mask])
+        assert compare_with_sparse(full[scan_mask[0]], array[scan_mask[0]])
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 

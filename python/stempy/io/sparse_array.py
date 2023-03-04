@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import copy
 from functools import wraps
 import inspect
@@ -858,6 +859,38 @@ class SparseArray:
 
         max_length = len(self.shape) + 1
         raise ValueError(f'0 < len(indices) < {max_length} is required')
+
+    @staticmethod
+    def _is_advanced_indexing(obj):
+        """Look at the object to see if it is considered advanced indexing
+
+        We will follow the logic taken from here:
+        https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
+
+        "Advanced indexing is triggered when the selection object, obj, is a
+         non-tuple sequence object, an ndarray (of data type integer or bool),
+         or a tuple with at least one sequence object or ndarray (of data
+         type integer or bool)."
+        """
+
+        def is_int_or_bool_ndarray(x):
+            """Check if x is an ndarray of type int or bool"""
+            if not isinstance(x, np.ndarray):
+                return False
+
+            return issubclass(x.dtype.type, (np.integer, np.bool_))
+
+        if not isinstance(obj, tuple) and isinstance(obj, Sequence):
+            return True
+
+        if is_int_or_bool_ndarray(obj):
+            return True
+
+        if isinstance(obj, tuple):
+            return any(isinstance(x, Sequence) or is_int_or_bool_ndarray(x)
+                       for x in obj)
+
+        return False
 
 
 def _is_none_slice(x):
