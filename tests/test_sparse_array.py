@@ -632,6 +632,44 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     assert np.allclose(array[scan_mask].mean(axis='scan'),
                        full[scan_mask].mean(axis=(0,)))
 
+    # Now do some basic tests with multiple frames per scan
+    data = np.empty((2, 2), dtype=object)
+    data[0][0] = np.array([0])
+    data[0][1] = np.array([0, 2])
+    data[1][0] = np.array([0])
+    data[1][1] = np.array([0, 1])
+    kwargs = {
+        'data': data,
+        'scan_shape': (2, 1),
+        'frame_shape': (2, 2),
+        'sparse_slicing': False,
+        'allow_full_expand': True,
+    }
+    # The multiple frames per scan array
+    m_array = SparseArray(**kwargs)
+
+    # These are our expected expansions of the positions
+    position_zero = np.array([[2, 0], [1, 0]])
+    position_one = np.array([[2, 1], [0, 0]])
+
+    # Verify our assumption is true
+    assert np.array_equal(m_array[0, 0], position_zero)
+    assert np.array_equal(m_array[1, 0], position_one)
+
+    # Now test some simple fancy indexing
+    assert np.array_equal(m_array[[0], [0]][0], position_zero)
+    assert np.array_equal(m_array[[0, 1], [0]][0], position_zero)
+    assert np.array_equal(m_array[[0, 1], [0]][1], position_one)
+    assert np.array_equal(m_array[[1, 0], [0]][0], position_one)
+    assert np.array_equal(m_array[[1, 0], [0]][1], position_zero)
+    assert np.array_equal(m_array[0, 0, [0, 1], [0, 0]], [2, 1])
+    assert np.array_equal(m_array[0, 0, [[True, False], [True, False]]],
+                          [2, 1])
+    assert np.array_equal(m_array[0, 0, [[False, True], [False, True]]],
+                          [0, 0])
+    assert np.array_equal(m_array[[True, False], 0][0], position_zero)
+    assert np.array_equal(m_array[[False, True], 0][0], position_one)
+
 
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
