@@ -97,6 +97,26 @@ def test_sparse_slicing(sparse_array_small, full_array_small):
         assert len(was_tested) >= 5
 
 
+def test_frame_slicing(sparse_array_small, full_array_small):
+    array = sparse_array_small
+    full = full_array_small
+
+    # These are common use cases we want to make sure are supported
+    array.allow_full_expand = True
+    array.sparse_slicing = True
+
+    # First test the sparse slicing version
+    sliced = array[:, :, 100:200, 200:300]
+    sliced.sparse_slicing = False
+
+    assert np.array_equal(sliced[:], full[:, :, 100:200, 200:300])
+
+    # Now test the dense slicing version
+    array.sparse_slicing = False
+    assert np.array_equal(array[:, :, 100:200, 200:300],
+                          full[:, :, 100:200, 200:300])
+
+
 def test_arithmetic(sparse_array_small, full_array_small):
     array = sparse_array_small
     full = full_array_small
