@@ -241,9 +241,9 @@ def test_slice_shapes(sparse_array_small, full_array_small):
         assert array[0:1, :, :, :].shape == full[0:1, :, :, :].shape
         assert array[0:2, :, :, :].shape == full[0:2, :, :, :].shape
 
-        assert array[:, 0:, :, :].shape == full[:, 0:, :, :].shape
         assert array[:, 0:1, :, :].shape == full[:, 0:1, :, :].shape
         assert array[:, 0:2, :, :].shape == full[:, 0:2, :, :].shape
+        assert array[:, 0:3, :, :].shape == full[:, 0:3, :, :].shape
 
         assert array[:, :, 0, :].shape == full[:, :, 0, :].shape
         assert array[:, :, 0:1, :].shape == full[:, :, 0:1, :].shape
@@ -567,14 +567,50 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     # We'll make some random masks for this.
     rng = np.random.default_rng(0)
 
-    num_tries = 10
+    num_tries = 3
     for i in range(num_tries):
         scan_mask = rng.choice([True, False], array.scan_shape)
         frame_mask = rng.choice([True, False], array.frame_shape)
 
         array.sparse_slicing = True
-        # assert compare_with_sparse(full[scan_mask], array[scan_mask])
+        assert compare_with_sparse(full[scan_mask], array[scan_mask])
         assert compare_with_sparse(full[scan_mask[0]], array[scan_mask[0]])
+
+        assert compare_with_sparse(full[:, :, frame_mask], array[:, :, frame_mask])
+        assert compare_with_sparse(full[:, :, frame_mask[0]], array[:, :, frame_mask[0]])
+
+        array.sparse_slicing = False
+        assert np.array_equal(full[scan_mask], array[scan_mask])
+        assert np.array_equal(full[scan_mask[0]], array[scan_mask[0]])
+
+        assert np.array_equal(full[:, :, frame_mask], array[:, :, frame_mask])
+        assert np.array_equal(full[:, :, frame_mask[0]], array[:, :, frame_mask[0]])
+
+    # These should raise index errors
+    with pytest.raises(IndexError):
+        # Can't do advanced indexing for both the scan and the frame
+        # simultaneously.
+        array[scan_mask, frame_mask]
+
+    with pytest.raises(IndexError):
+        # Too many dimensions for the scan mask.
+        array[scan_mask[:, :, np.newaxis]]
+
+    with pytest.raises(IndexError):
+        # We don't allow 2D arrays that aren't boolean masks, because
+        # an extra dimension gets added, which doesn't make sense for us.
+        array[[[1, 2], [5, 4]]]
+
+    # Now test a few arithmetic operations combined with the indexing
+    array.sparse_slicing = True
+    assert np.array_equal(array[scan_mask].sum(axis='scan'),
+                          full[scan_mask].sum(axis=(0,)))
+    assert np.array_equal(array[scan_mask].min(axis='scan'),
+                          full[scan_mask].min(axis=(0,)))
+    assert np.array_equal(array[scan_mask].max(axis='scan'),
+                          full[scan_mask].max(axis=(0,)))
+    assert np.allclose(array[scan_mask].mean(axis='scan'),
+                       full[scan_mask].mean(axis=(0,)))
 
 
 # Test binning until this number
@@ -601,6 +637,6 @@ TEST_SLICES = [
      slice(None, None, 5)),
     (slice(3, None, 2), slice(5, None, 5), slice(4, None, 4),
      slice(20, None, 5)),
-    (slice(None, None, -1), slice(20, 4, -2), slice(4, None, -3),
+    (slice(20, 4, -2), slice(None, None, -1), slice(4, None, -3),
      slice(100, 3, -5)),
 ]
