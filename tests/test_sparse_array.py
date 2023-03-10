@@ -117,12 +117,27 @@ def test_frame_slicing(sparse_array_small, full_array_small):
                           full[:, :, 100:200, 200:300])
 
 
-def test_arithmetic(sparse_array_small, full_array_small):
+def test_scan_axes_arithmetic(sparse_array_small, full_array_small):
     array = sparse_array_small
     full = full_array_small
 
     ops = [np.sum, np.mean, np.max, np.min]
     axes = [(0, 1)]
+    for op in ops:
+        for axis in axes:
+            sparse_result = op(array, axis=axis)
+            full_result = op(full, axis=axis)
+            dtype = sparse_result.dtype
+            assert np.array_equal(sparse_result, full_result.astype(dtype))
+
+
+def test_frame_axes_arithmetic(sparse_array_small, full_array_small):
+    array = sparse_array_small
+    full = full_array_small
+
+    # We only support sum and mean right now for frame axes
+    ops = [np.sum, np.mean]
+    axes = [(2, 3)]
     for op in ops:
         for axis in axes:
             sparse_result = op(array, axis=axis)
@@ -281,14 +296,21 @@ def test_slice_sum(sparse_array_small, full_array_small):
     data = sparse_array_small
     full = full_array_small
 
-    assert np.array_equal(data[0, 0:1, :, :].sum(axis=0),
+    assert np.array_equal(data[0, 0:1, :, :].sum(axis='scan'),
                           full[0, 0:1, :, :].sum(axis=0))
-    assert np.array_equal(data[0:1, 0:1, :, :].sum(axis=(0, 1)),
+    assert np.array_equal(data[0:1, 0:1, :, :].sum(axis='scan'),
                           full[0:1, 0:1, :, :].sum(axis=(0, 1)))
-    assert np.array_equal(data[0:2, 0:2, :, :].sum(axis=(0, 1)),
+    assert np.array_equal(data[0:2, 0:2, :, :].sum(axis='scan'),
                           full[0:2, 0:2, :, :].sum(axis=(0, 1)))
     assert np.array_equal(data[0, 0, :, :].sum(),
                           full[0, 0, :, :].sum())
+
+    assert np.array_equal(data[:, :, 0:1, 0:2].sum(axis='frame'),
+                          full[:, :, 0:1, 0:2].sum(axis=(2, 3)))
+    assert np.array_equal(data[:, :, 100:200, 100:200].sum(axis='frame'),
+                          full[:, :, 100:200, 100:200].sum(axis=(2, 3)))
+    assert np.array_equal(data[:, :, 100:200:-3, 100:200:-3].sum(axis='frame'),
+                          full[:, :, 100:200:-3, 100:200:-3].sum(axis=(2, 3)))
 
 
 def test_scan_ravel(sparse_array_small, full_array_small):
@@ -301,6 +323,8 @@ def test_scan_ravel(sparse_array_small, full_array_small):
 
     # Perform a few simple tests on the raveled SparseArray
     assert np.array_equal(array.sum(axis=0), full.sum(axis=(0, 1)))
+    assert np.array_equal(array.sum(axis=(1, 2)),
+                          full.sum(axis=(2, 3)).ravel())
 
     full = full.reshape(expected_shape)
     for i in range(expected_shape[0]):
@@ -436,11 +460,16 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(array[1, 0, ::2, ::2], full[1, 0, ::2, ::2])
 
     # Test arithmetic
-    axis = (0, 1)
+    array.allow_full_expand = False
+    axis = 'scan'
     assert np.array_equal(array.sum(axis=axis), [[4, 1], [1, 0]])
     assert np.array_equal(array.max(axis=axis), [[2, 1], [1, 0]])
     assert np.array_equal(array.min(axis=axis), [[2, 0], [0, 0]])
     assert np.array_equal(array.mean(axis=axis), [[2, 0.5], [0.5, 0]])
+
+    axis = 'frame'
+    assert np.array_equal(array.sum(axis=axis), full.sum(axis=(2, 3)))
+    assert np.array_equal(array.mean(axis=axis), full.mean(axis=(2, 3)))
 
     # Test frame binning
     data = np.empty((2, 2), dtype=object)
@@ -631,6 +660,11 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
                           full[scan_mask].max(axis=(0,)))
     assert np.allclose(array[scan_mask].mean(axis='scan'),
                        full[scan_mask].mean(axis=(0,)))
+
+    assert np.array_equal(array[:, :, frame_mask].sum(axis='frame'),
+                          full[:, :, frame_mask].sum(axis=(2,)))
+    assert np.allclose(array[:, :, frame_mask].mean(axis='frame'),
+                       full[:, :, frame_mask].mean(axis=(2,)))
 
     # Now do some basic tests with multiple frames per scan
     data = np.empty((2, 2), dtype=object)
