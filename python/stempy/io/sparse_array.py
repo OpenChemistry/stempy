@@ -395,6 +395,14 @@ class SparseArray:
                 ret[unique] = np.maximum(ret[unique], counts)
             return ret.reshape(self.frame_shape)
 
+        if self._is_frame_axes(axis):
+            ret = np.zeros(self._scan_shape_flat, dtype=dtype)
+            for i, scan_frames in enumerate(self.data):
+                concatenated = np.concatenate(scan_frames)
+                unique, counts = np.unique(concatenated, return_counts=True)
+                ret[i] = np.max(counts)
+            return ret.reshape(self.scan_shape)
+
     @_arithmethic_decorators
     def min(self, axis=None, dtype=None, **kwargs):
         """Return the minimum along a given axis.
@@ -432,6 +440,19 @@ class SparseArray:
                 expanded[unique] = counts
                 ret[:] = np.minimum(ret, expanded)
             return ret.reshape(self.frame_shape)
+
+        if self._is_frame_axes(axis):
+            ret = np.full(self._scan_shape_flat, np.iinfo(dtype).max, dtype)
+            for i, scan_frames in enumerate(self.data):
+                concatenated = np.concatenate(scan_frames)
+                unique, counts = np.unique(concatenated, return_counts=True)
+                if len(counts) < self._frame_shape_flat[0]:
+                    # Some pixels are 0. The min must be zero.
+                    ret[i] = 0
+                else:
+                    # The min is equal to the minimum in the counts.
+                    ret[i] = np.min(counts)
+            return ret.reshape(self.scan_shape)
 
     @_arithmethic_decorators
     def sum(self, axis=None, dtype=None, **kwargs):

@@ -135,8 +135,7 @@ def test_frame_axes_arithmetic(sparse_array_small, full_array_small):
     array = sparse_array_small
     full = full_array_small
 
-    # We only support sum and mean right now for frame axes
-    ops = [np.sum, np.mean]
+    ops = [np.sum, np.mean, np.max, np.min]
     axes = [(2, 3)]
     for op in ops:
         for axis in axes:
@@ -470,6 +469,8 @@ def test_multiple_frames_per_scan_position():
     axis = 'frame'
     assert np.array_equal(array.sum(axis=axis), full.sum(axis=(2, 3)))
     assert np.array_equal(array.mean(axis=axis), full.mean(axis=(2, 3)))
+    assert np.array_equal(array.min(axis=axis), full.min(axis=(2, 3)))
+    assert np.array_equal(array.max(axis=axis), full.max(axis=(2, 3)))
 
     # Test frame binning
     data = np.empty((2, 2), dtype=object)
@@ -665,6 +666,10 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
                           full[:, :, frame_mask].sum(axis=(2,)))
     assert np.allclose(array[:, :, frame_mask].mean(axis='frame'),
                        full[:, :, frame_mask].mean(axis=(2,)))
+    assert np.array_equal(array[:, :, frame_mask].min(axis='frame'),
+                          full[:, :, frame_mask].min(axis=(2,)))
+    assert np.array_equal(array[:, :, frame_mask].max(axis='frame'),
+                          full[:, :, frame_mask].max(axis=(2,)))
 
     # Now do some basic tests with multiple frames per scan
     data = np.empty((2, 2), dtype=object)
