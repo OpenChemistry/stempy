@@ -395,6 +395,14 @@ class SparseArray:
                 ret[unique] = np.maximum(ret[unique], counts)
             return ret.reshape(self.frame_shape)
 
+        if self._is_frame_axes(axis):
+            ret = np.zeros(self._scan_shape_flat, dtype=dtype)
+            for i, scan_frames in enumerate(self.data):
+                concatenated = np.concatenate(scan_frames)
+                unique, counts = np.unique(concatenated, return_counts=True)
+                ret[i] = np.max(counts)
+            return ret.reshape(self.scan_shape)
+
     @_arithmethic_decorators
     def min(self, axis=None, dtype=None, **kwargs):
         """Return the minimum along a given axis.
@@ -433,6 +441,19 @@ class SparseArray:
                 ret[:] = np.minimum(ret, expanded)
             return ret.reshape(self.frame_shape)
 
+        if self._is_frame_axes(axis):
+            ret = np.full(self._scan_shape_flat, np.iinfo(dtype).max, dtype)
+            for i, scan_frames in enumerate(self.data):
+                concatenated = np.concatenate(scan_frames)
+                unique, counts = np.unique(concatenated, return_counts=True)
+                if len(counts) < self._frame_shape_flat[0]:
+                    # Some pixels are 0. The min must be zero.
+                    ret[i] = 0
+                else:
+                    # The min is equal to the minimum in the counts.
+                    ret[i] = np.min(counts)
+            return ret.reshape(self.scan_shape)
+
     @_arithmethic_decorators
     def sum(self, axis=None, dtype=None, **kwargs):
         """Return the sum along a given axis.
@@ -467,6 +488,13 @@ class SparseArray:
                     ret[sparse_frame] += 1
             return ret.reshape(self.frame_shape)
 
+        if self._is_frame_axes(axis):
+            ret = np.zeros(self._scan_shape_flat, dtype=dtype)
+            for i, scan_frames in enumerate(self.data):
+                for sparse_frame in scan_frames:
+                    ret[i] += len(sparse_frame)
+            return ret.reshape(self.scan_shape)
+
     @_arithmethic_decorators
     def mean(self, axis=None, dtype=None, **kwargs):
         """Return the mean along a given axis.
@@ -494,11 +522,19 @@ class SparseArray:
         if dtype is None:
             dtype = np.float32
 
+        # If the sum is specialized along this axis, this will be fast.
+        # Otherwise, the sum will perform a full expansion.
+        summed = self.sum(axis, dtype=dtype)
         mean_length = np.prod([self.shape[x] for x in axis])
-        if self._is_scan_axes(axis):
-            summed = self.sum(axis, dtype=dtype)
+
+        if isinstance(summed, np.ndarray):
+            # Divide in place to avoid a copy
             summed[:] /= mean_length
-            return summed
+        else:
+            # It's a scalar
+            summed /= mean_length
+
+        return summed
 
     def bin_scans(self, bin_factor, in_place=False):
         """Perform a binning on the scan dimensions
@@ -717,6 +753,9 @@ class SparseArray:
 
     def _is_scan_axes(self, axis):
         return tuple(sorted(axis)) == self.scan_axes
+
+    def _is_frame_axes(self, axis):
+        return tuple(sorted(axis)) == self.frame_axes
 
     def _split_slices(self, slices):
         """Split the slices into scan slices and frame slices
