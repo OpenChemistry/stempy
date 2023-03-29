@@ -126,5 +126,10 @@ PYBIND11_MODULE(_io, m)
     .def(py::init<const std::string&, int>(), py::arg("path"),
          py::arg("threads") = 0)
     .def(py::init<const std::vector<std::string>&, int>(), py::arg("files"),
-         py::arg("threads") = 0);
+         py::arg("threads") = 0)
+    .def("_load_frames", &SectorStreamMultiPassThreadedReader::loadFrames)
+    .def("_num_frames_per_scan",
+         &SectorStreamMultiPassThreadedReader::numFramesPerScan)
+    .def("_scan_dimensions",
+         &SectorStreamMultiPassThreadedReader::scanDimensions);
 }

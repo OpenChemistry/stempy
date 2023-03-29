@@ -64,7 +64,74 @@ class SectorThreadedReader(ReaderMixin, _threaded_reader):
     pass
 
 class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
-    pass
+    @property
+    def num_frames_per_scan(self):
+        """Get the number of frames per scan
+
+        It will be cached if it has already been computed. If not, all of
+        the header files must be read (which can take some time), and then
+        it will check how many frames each position has.
+        """
+        return self._num_frames_per_scan()
+
+    @property
+    def scan_shape(self):
+        """Get the scan shape
+
+        If it hasn't been done already, one header file will be read to
+        obtain this info.
+        """
+        scan_dimensions = self._scan_dimensions()
+        # We treat the "shape" as having reversed axes than the "dimensions"
+        return scan_dimensions[::-1]
+
+    def read_frames(self, scan_position, frames_slice=None):
+        """Read frames from the specified scan position and return them
+
+        The scan_position must be a tuple of a valid position in the
+        scan_shape.
+
+        The frames_slice object will be used as an index in numpy to
+        determine which frames need to be read. If None, all frames
+        will be returned.
+
+        Returns a list of blocks for the associated frames.
+        """
+        single_index = False
+
+        # First, get the number of frames per scan
+        num_frames = self.num_frames_per_scan
+
+        # Create an arange containing all frame positions
+        frames = np.arange(num_frames)
+
+        if frames_slice is not None:
+            if isinstance(frames_slice, (int, np.integer)):
+                frames_slice = [frames_slice]
+                single_index = True
+
+            # Slice into the frames object
+            try:
+                frames = frames[frames_slice]
+            except IndexError:
+                msg = (
+                    f'frames_slice "{frames_slice}" is invalid for '
+                    f'num_frames "{num_frames}"'
+                )
+                raise IndexError(msg)
+
+        blocks = []
+
+        raw_blocks = self._load_frames(scan_position, frames)
+        for b in raw_blocks:
+            block = namedtuple('Block', ['header', 'data'])
+            block._block = b
+            block.header = b.header
+            block.data = np.array(b, copy = False)[0]
+            blocks.append(block)
+
+        return blocks[0] if single_index else blocks
+
 
 def get_hdf5_reader(h5file):
     # the initialization is at the io.cpp

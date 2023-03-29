@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 
+#include <algorithm>
 #include <condition_variable>
 #include <fstream>
 #include <future>
@@ -15,6 +16,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -514,22 +516,80 @@ public:
   template <typename Functor>
   std::future<void> readAll(Functor& f);
 
+  // Read frames at a single scan position.
+  // This function will first read all of the headers if they have not been
+  // read yet (so that it may find the scan position that is requested).
+  // It will then read the specified frames at the frame position.
+  template <typename Functor>
+  void readFrames(Functor& func, Dimensions2D scanPosition,
+                  const std::vector<uint32_t>& frameIndices);
+
+  // Read the frames and return the associated blocks.
+  // This is the same as the readFrames() function, but its functor just
+  // saves a vector of the blocks.
+  std::vector<Block> loadFrames(Dimensions2D scanPosition,
+                                const std::vector<uint32_t>& frameIndices);
+
+  Dimensions2D scanDimensions()
+  {
+    readFirstHeader();
+    return m_scanDimensions;
+  }
+
+  uint32_t numFramesPerScan()
+  {
+    if (m_numFramesPerScan != 0) {
+      return m_numFramesPerScan;
+    }
+
+    // It hasn't been computed yet. We need to read the headers.
+    initializeScanMap();
+
+    uint32_t numFrames = 0;
+    for (size_t i = 0; i < m_scanMap.size(); ++i) {
+      if (m_scanMap[i].size() > numFrames) {
+        numFrames = m_scanMap[i].size();
+      }
+    }
+
+    m_numFramesPerScan = numFrames;
+    return numFrames;
+  }
+
 private:
   ScanMap m_scanMap;
+  uint32_t m_scanNumber = 0;
   uint32_t m_scanMapOffset = 0;
   uint32_t m_scanMapSize = 0;
   uint32_t m_streamsOffset = 0;
   uint32_t m_streamsSize = 0;
+  uint32_t m_numFramesPerScan = 0;
+  Dimensions2D m_scanDimensions;
+
   // atomic to keep track of the header or frame being processed
   std::atomic<uint32_t> m_processed = { 0 };
-
 
   // Mutex to lock the map of frames at each scan position
   std::vector<std::unique_ptr<std::mutex>> m_scanPositionMutexes;
 
   void readHeaders();
   template <typename Functor>
-  void processFrames(Functor& func, Header header);
+  void processFrames(Functor& func);
+
+  // Process a single frame
+  template <typename Functor>
+  void processFrame(Functor& func, uint32_t imageNumber, uint32_t frameNumber,
+                    std::array<SectorLocation, 4>& frameMap);
+
+  // Initialize the thread pool if needed (does nothing if already initialized)
+  void initializePool();
+
+  // Read the first header to save some settings internally.
+  // Does nothing if we have already read the first header.
+  void readFirstHeader();
+
+  // Initialize the scan map if needed (does nothing if already initialized)
+  void initializeScanMap();
 
 #ifdef USE_MPI
   int m_rank;
@@ -543,11 +603,55 @@ private:
 #endif
 };
 
+template <typename Functor>
+void SectorStreamMultiPassThreadedReader::processFrame(
+  Functor& func, uint32_t imageNumber, uint32_t frameNumber,
+  std::array<SectorLocation, 4>& frameMap)
+{
+  Block b;
+  b.header.version = version();
+  b.header.scanNumber = m_scanNumber;
+  b.header.scanDimensions = m_scanDimensions;
+  b.header.imagesInBlock = 1;
+  b.header.frameNumber = frameNumber;
+  b.header.imageNumbers.resize(1);
+  b.header.imageNumbers[0] = imageNumber;
+  b.header.complete.resize(1);
+
+  b.header.frameDimensions = FRAME_DIMENSIONS;
+
+  b.data.reset(new uint16_t[b.header.frameDimensions.first *
+                            b.header.frameDimensions.second],
+               std::default_delete<uint16_t[]>());
+  std::fill(b.data.get(),
+            b.data.get() +
+              b.header.frameDimensions.first * b.header.frameDimensions.second,
+            0);
+
+  short sectors = 0;
+  for (int j = 0; j < 4; j++) {
+    auto& sectorLocation = frameMap[j];
+
+    if (sectorLocation.sectorStream != nullptr) {
+      auto sectorStream = sectorLocation.sectorStream;
+      std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
+      sectorStream->stream->seekg(sectorLocation.offset);
+      readSectorData(*sectorStream->stream, b, j);
+      sectors++;
+    }
+  }
+
+  // Mark if the frame is complete
+  b.header.complete[0] = sectors == 4;
+
+  // Finally process the frame
+  func(b);
+}
+
 // Read the FrameMaps for scan and reconstruct the frame before performing the
 // processing
 template <typename Functor>
-void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
-                                                        Header header)
+void SectorStreamMultiPassThreadedReader::processFrames(Functor& func)
 {
   while (m_processed < m_scanMapOffset + m_scanMapSize) {
     auto imageNumber = m_processed++;
@@ -559,59 +663,38 @@ void SectorStreamMultiPassThreadedReader::processFrames(Functor& func,
 
     auto& frameMaps = m_scanMap[imageNumber];
 
-    // Iterate over frame maps for this scan position
+    // Find the frame numbers for these maps, and loop over them in order.
+    std::vector<uint32_t> frameNumbers;
     for (const auto& f : frameMaps) {
-      auto frameNumber = f.first;
-      auto& frameMap = f.second;
+      frameNumbers.push_back(f.first);
+    }
 
-      Block b;
-      b.header.version = version();
-      b.header.scanNumber = header.scanNumber;
-      b.header.scanDimensions = header.scanDimensions;
-      b.header.imagesInBlock = 1;
-      b.header.frameNumber = frameNumber;
-      b.header.imageNumbers.resize(1);
-      b.header.imageNumbers[0] = imageNumber;
-      b.header.complete.resize(1);
+    // Now sort them to make sure that we loop over them in a consistent order.
+    std::sort(frameNumbers.begin(), frameNumbers.end());
 
-      b.header.frameDimensions = FRAME_DIMENSIONS;
-
-      b.data.reset(new uint16_t[b.header.frameDimensions.first *
-                                b.header.frameDimensions.second],
-                   std::default_delete<uint16_t[]>());
-      std::fill(b.data.get(),
-                b.data.get() + b.header.frameDimensions.first *
-                                 b.header.frameDimensions.second,
-                0);
-
-      short sectors = 0;
-      for (int j = 0; j < 4; j++) {
-        auto& sectorLocation = frameMap[j];
-
-        if (sectorLocation.sectorStream != nullptr) {
-          auto sectorStream = sectorLocation.sectorStream;
-          std::unique_lock<std::mutex> lock(*sectorStream->mutex.get());
-          sectorStream->stream->seekg(sectorLocation.offset);
-          readSectorData(*sectorStream->stream, b, j);
-          sectors++;
-        }
-      }
-
-      // Mark if the frame is complete
-      b.header.complete[0] = sectors == 4;
-
-      // Finally process the frame
-      func(b);
+    // Iterate over frame maps for this scan position
+    for (size_t i = 0; i < frameNumbers.size(); ++i) {
+      auto frameNumber = frameNumbers[i];
+      auto& frameMap = frameMaps[frameNumber];
+      processFrame(func, imageNumber, frameNumber, frameMap);
     }
   }
 }
 
-template <typename Functor>
-std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
+inline void SectorStreamMultiPassThreadedReader::initializePool()
 {
-  m_pool = std::make_unique<ThreadPool>(m_threads);
+  if (!m_pool) {
+    m_pool = std::make_unique<ThreadPool>(m_threads);
+  }
+}
 
-  // Read one header to get scan size
+inline void SectorStreamMultiPassThreadedReader::readFirstHeader()
+{
+  if (m_scanMapSize != 0) {
+    // We must have already read the first header. Don't do it again.
+    return;
+  }
+
   auto stream = m_streams[0].stream.get();
   auto header = readHeader(*stream);
   // Reset the stream
@@ -619,7 +702,20 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   // Resize the vector to hold the frame sector locations for the scan
   m_scanMapSize = header.scanDimensions.first * header.scanDimensions.second;
-  m_scanMap.clear();
+  m_scanDimensions = header.scanDimensions;
+  m_scanNumber = header.scanNumber;
+}
+
+inline void SectorStreamMultiPassThreadedReader::initializeScanMap()
+{
+  initializePool();
+  readFirstHeader();
+
+  if (!m_scanMap.empty()) {
+    // It has already been initialized. Just return.
+    return;
+  }
+
   m_scanMap.resize(m_scanMapSize);
 
   // Allocate the mutexes
@@ -657,11 +753,82 @@ std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
 
   // Reset counter
   m_processed = m_scanMapOffset;
+}
+
+template <typename Functor>
+void SectorStreamMultiPassThreadedReader::readFrames(
+  Functor& func, Dimensions2D scanPosition,
+  const std::vector<uint32_t>& frameIndices)
+{
+  // This will only initialize the scan map if it hasn't already been
+  // initialized.
+  initializeScanMap();
+
+  // Unravel the scan position to an image number
+  // NOTE: we need to swap dimensions when unraveling this scan position,
+  // because the position is specified that way.
+  auto imageNumber =
+    scanPosition.first * m_scanDimensions.first + scanPosition.second;
+
+  if (imageNumber >= m_scanMap.size()) {
+    std::ostringstream msg;
+    msg << "Image number " << imageNumber << " is out of bounds! "
+        << "Scan position provided was (" << scanPosition.first << ", "
+        << scanPosition.second << "), and scan shape is ("
+        << m_scanDimensions.second << ", " << m_scanDimensions.first << ").";
+    throw std::invalid_argument(msg.str());
+  }
+
+  auto& frameMaps = m_scanMap[imageNumber];
+
+  // Find the frame numbers for these maps, and loop over them in order.
+  std::vector<uint32_t> frameNumbers;
+  for (const auto& f : frameMaps) {
+    frameNumbers.push_back(f.first);
+  }
+
+  // Now sort them to make sure that we loop over them in a consistent order.
+  std::sort(frameNumbers.begin(), frameNumbers.end());
+
+  for (size_t i = 0; i < frameIndices.size(); ++i) {
+    auto idx = frameIndices[i];
+    if (idx >= frameNumbers.size()) {
+      std::ostringstream msg;
+      msg << "Frame index " << idx << " for image number " << imageNumber
+          << " is out of bounds! "
+          << "The number of frames is: " << frameNumbers.size();
+      throw std::invalid_argument(msg.str());
+    }
+
+    auto frameNumber = frameNumbers[idx];
+    auto& frameMap = frameMaps[frameNumber];
+    processFrame(func, imageNumber, frameNumber, frameMap);
+  }
+}
+
+inline std::vector<Block> SectorStreamMultiPassThreadedReader::loadFrames(
+  Dimensions2D scanPosition, const std::vector<uint32_t>& frameIndices)
+{
+  std::vector<Block> ret;
+
+  // For the functor, we will just append the blocks and return them.
+  auto functor = [&ret](Block& b) { ret.push_back(b); };
+
+  readFrames(functor, scanPosition, frameIndices);
+
+  return ret;
+}
+
+template <typename Functor>
+std::future<void> SectorStreamMultiPassThreadedReader::readAll(Functor& func)
+{
+  initializePool();
+  initializeScanMap();
 
   // Now enqueue lambda's to read the frames and run processing
   for (int i = 0; i < m_threads; i++) {
-    m_futures.emplace_back(m_pool->enqueue(
-      [this, &func, header]() { processFrames(func, header); }));
+    m_futures.emplace_back(
+      m_pool->enqueue([this, &func]() { processFrames(func); }));
   }
 
   // Return a future that is resolved once the processing is complete
