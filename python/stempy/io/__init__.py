@@ -88,8 +88,8 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
     def read_frames(self, scan_position, frames_slice=None):
         """Read frames from the specified scan position and return them
 
-        The scan_position must be a tuple of a valid position in the
-        scan_shape.
+        The scan_position is either a tuple of a valid position in the
+        scan_shape, or an integer that is a flattened index of the position.
 
         The frames_slice object will be used as an index in numpy to
         determine which frames need to be read. If None, all frames
@@ -97,7 +97,22 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
 
         Returns a list of blocks for the associated frames.
         """
-        single_index = False
+        if isinstance(scan_position, (list, tuple)):
+            # Unravel the scan position
+            scan_shape = self.scan_shape
+            if (any(not 0 <= scan_position[i] < scan_shape[i]
+                    for i in range(len(scan_position)))):
+                raise IndexError(
+                    f'Invalid position {scan_position} '
+                    f'for scan_shape {scan_shape}'
+                )
+
+            image_number = scan_position[0] * scan_shape[1] + scan_position[1]
+        else:
+            # Should just be an integer representing the image number
+            image_number = scan_position
+
+        single_index_frame = False
 
         # First, get the number of frames per scan
         num_frames = self.num_frames_per_scan
@@ -108,7 +123,7 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
         if frames_slice is not None:
             if isinstance(frames_slice, (int, np.integer)):
                 frames_slice = [frames_slice]
-                single_index = True
+                single_index_frame = True
 
             # Slice into the frames object
             try:
@@ -122,15 +137,15 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
 
         blocks = []
 
-        raw_blocks = self._load_frames(scan_position, frames)
+        raw_blocks = self._load_frames(image_number, frames)
         for b in raw_blocks:
             block = namedtuple('Block', ['header', 'data'])
             block._block = b
             block.header = b.header
-            block.data = np.array(b, copy = False)[0]
+            block.data = np.array(b, copy=False)[0]
             blocks.append(block)
 
-        return blocks[0] if single_index else blocks
+        return blocks[0] if single_index_frame else blocks
 
 
 def get_hdf5_reader(h5file):

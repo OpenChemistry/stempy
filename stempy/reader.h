@@ -521,13 +521,13 @@ public:
   // read yet (so that it may find the scan position that is requested).
   // It will then read the specified frames at the frame position.
   template <typename Functor>
-  void readFrames(Functor& func, Dimensions2D scanPosition,
+  void readFrames(Functor& func, uint32_t imageNumber,
                   const std::vector<uint32_t>& frameIndices);
 
   // Read the frames and return the associated blocks.
   // This is the same as the readFrames() function, but its functor just
   // saves a vector of the blocks.
-  std::vector<Block> loadFrames(Dimensions2D scanPosition,
+  std::vector<Block> loadFrames(uint32_t imageNumber,
                                 const std::vector<uint32_t>& frameIndices);
 
   Dimensions2D scanDimensions()
@@ -757,25 +757,17 @@ inline void SectorStreamMultiPassThreadedReader::initializeScanMap()
 
 template <typename Functor>
 void SectorStreamMultiPassThreadedReader::readFrames(
-  Functor& func, Dimensions2D scanPosition,
+  Functor& func, uint32_t imageNumber,
   const std::vector<uint32_t>& frameIndices)
 {
   // This will only initialize the scan map if it hasn't already been
   // initialized.
   initializeScanMap();
 
-  // Unravel the scan position to an image number
-  // NOTE: we need to swap dimensions when unraveling this scan position,
-  // because the position is specified that way.
-  auto imageNumber =
-    scanPosition.first * m_scanDimensions.first + scanPosition.second;
-
   if (imageNumber >= m_scanMap.size()) {
     std::ostringstream msg;
     msg << "Image number " << imageNumber << " is out of bounds! "
-        << "Scan position provided was (" << scanPosition.first << ", "
-        << scanPosition.second << "), and scan shape is ("
-        << m_scanDimensions.second << ", " << m_scanDimensions.first << ").";
+        << "There are " << m_scanMap.size() << " scans.\n";
     throw std::invalid_argument(msg.str());
   }
 
@@ -807,14 +799,14 @@ void SectorStreamMultiPassThreadedReader::readFrames(
 }
 
 inline std::vector<Block> SectorStreamMultiPassThreadedReader::loadFrames(
-  Dimensions2D scanPosition, const std::vector<uint32_t>& frameIndices)
+  uint32_t imageNumber, const std::vector<uint32_t>& frameIndices)
 {
   std::vector<Block> ret;
 
   // For the functor, we will just append the blocks and return them.
   auto functor = [&ret](Block& b) { ret.push_back(b); };
 
-  readFrames(functor, scanPosition, frameIndices);
+  readFrames(functor, imageNumber, frameIndices);
 
   return ret;
 }
