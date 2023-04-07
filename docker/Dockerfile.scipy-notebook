@@ -27,7 +27,7 @@ RUN apt-get update && \
 
 # Install CMake
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add - && \
-  apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
+  apt-add-repository 'deb https://apt.kitware.com/ubuntu/ jammy main' && \
   apt-get update && \
   apt-get install -y cmake && \
   apt-get clean all && \
@@ -50,7 +50,7 @@ RUN mkdir -p build/stempy && \
 
 # Install stempy
 RUN pip install -r source/stempy/requirements.txt && \
-    cp -r -L build/stempy/lib/stempy /opt/conda/lib/python3.9/site-packages
+    cp -r -L build/stempy/lib/stempy /opt/conda/lib/python3.10/site-packages
 
 RUN rm -rf build
 
