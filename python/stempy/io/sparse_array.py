@@ -1,8 +1,8 @@
+from collections.abc import Sequence
 import copy
+from functools import wraps
 import inspect
 import sys
-from collections.abc import Sequence
-from functools import wraps
 
 import numpy as np
 
