@@ -204,7 +204,7 @@ class SparseArray:
         if version >= 3:
             # Convert to int to avoid integer division that results in 
             # a float
-            frames_per_scan = len(data) // int(np.prod(scan_shape))
+            frames_per_scan = len(data) // np.prod(scan_shape, dtype=int)
             # Need to reshape the data, as it was flattened before saving
             data = data.reshape((np.prod(scan_shape), frames_per_scan))
 
