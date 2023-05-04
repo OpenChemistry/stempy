@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.19)
 project(stempy)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(stempy_CMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${stempy_CMAKE_DIR})
 
 include(InstallLocation)
 include(CMakeDependentOption)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -19,10 +21,6 @@ endif()
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-include_directories(SYSTEM
-  ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ThreadPool
 )
 
 find_package(Threads)
@@ -125,6 +123,12 @@ if (stempy_ENABLE_HDF5 AND NOT ("${HDF5_VERSION}" VERSION_LESS 1.12.0))
   target_compile_options(stem PRIVATE "-DH5Ovisit_vers=1")
 endif()
 
+target_include_directories(stem
+  PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR};${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ThreadPool>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR};${CMAKE_INSTALL_INCLUDEDIR}/thirdparty/ThreadPool>"
+)
+
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(stem
@@ -155,9 +159,42 @@ if (NOT SKBUILD)
 endif()
 install(TARGETS stem LIBRARY DESTINATION "${_python_module_install_dir}")
 
+install(TARGETS stem
+        EXPORT stempyTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(FILES stempy/reader.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/image.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/electron.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES thirdparty/ThreadPool/ThreadPool.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/thirdparty/ThreadPool)
+
 set(VTKm ${VTKm_FOUND})
 set(ENABLE_HDF5 ${HDF5_FOUND})
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
+configure_file("${stempy_CMAKE_DIR}/config.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/config.h" @ONLY)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/config.h" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(EXPORT stempyTargets
+      FILE stempyTargets.cmake
+      NAMESPACE stempy::
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stempy
+)
+
+# Also run export(...) so we can use from a build directory as well
+export(TARGETS stem NAMESPACE stempy:: FILE stempyTargets.cmake)
+
+configure_package_config_file(${stempy_CMAKE_DIR}/stempyConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/stempyConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stempy
+)
+
+install(FILES
+          "${CMAKE_CURRENT_BINARY_DIR}/stempyConfig.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/stempy
+)
 
 add_subdirectory(python)
