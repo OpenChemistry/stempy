@@ -304,3 +304,55 @@ if COMPILED_WITH_HDF5:
         :type format: SectorReader.H5Format
         """
         reader.to_hdf5(path, format)
+
+def get_scan_path(directory, scan_num=None, scan_id=None, th=None):
+    """ Get the file path for a 4D Camera scan on NERSC using the scan number, 
+    the Distiller scan id, and/or threshold. scan_id should always
+    be unique and is the best option to load a dataset.
+    
+    A ValueError is raised if more than one file matches the input. Then the user
+    needs to input more information to narrow down the choices.
+    
+    Parameters
+    ----------
+    directory : pathlib.Path or str
+        The path to the directory containing the file.
+    scan_id : int, optional
+        The Distiller scan id.
+    scan_num : int, optional
+        The 4D Camera scan number. Optional
+    th : float, optional
+        The threshold for counting. This was added to the filename in older files.
+        
+    Returns
+    -------
+    : tuple
+        The tuple contains the file that matches the input information and the 
+        scan_num and scan_id as a tuple.
+    """
+    if scan_id is not None:
+        # This should be unique
+        file_path = list(directory.glob(f'*_id{scan_id}*.h5'))
+    elif scan_num is not None:
+        # older files might include the threshold (th)
+        if th is not None:
+            file_path = list(directory.glob('data_scan{}_th{}_electrons.h5'.format(scan_num, th)))
+        else:
+            file_path = list(directory.glob('data_scan{}*electrons.h5'.format(scan_num)))
+    else:
+        raise TypeError('Missing scan_num or scan_id input.')
+
+    if len(file_path) > 1:
+        raise ValueError('Multiple files match that input. Add scan_id to be more specific.')
+    elif len(file_path) == 1:
+        file_path = file_path[0]
+        # Determine the scan_id and scan_num for use later (i.e. getting DM4 file)
+        spl = file_path.name.split('_')
+        for ii in spl:
+            if 'id' in ii:
+                scan_id = int(ii[len('id'):])
+            elif 'scan' in ii:
+                scan_num = int(ii[len('scan'):])
+    else:
+        raise FileNotFoundError('No file with those parameters can be found.')
+    return file_path, scan_num, scan_id
