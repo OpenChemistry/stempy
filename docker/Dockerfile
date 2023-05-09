@@ -9,11 +9,14 @@ RUN apt-get update && \
   libssl1.0-dev \
   git \
   autoconf \
+  libtool \
   automake \
   gcc \
   g++ \
   make \
   gfortran \
+  libopenblas-dev \
+  liblapack-dev \
   wget \
   zlib1g-dev \
   libffi-dev \
@@ -52,6 +55,11 @@ RUN cd /build && wget https://bitbucket.org/mpi4py/mpi4py/downloads/mpi4py-3.0.1
 
 RUN cd /build/mpi4py-3.0.1 && python3 setup.py build && python3 setup.py install
 
+# Build BigMPI
+RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
+  tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
+  ./autogen.sh && ./configure && make -j4 && make install && make clean && rm /build/master.tar.gz
+
 # Build VTK-m
 RUN cd /source && \
   wget https://gitlab.kitware.com/vtk/vtk-m/-/archive/v1.5.0/vtk-m-v1.5.0.tar.gz && \
@@ -77,6 +85,8 @@ RUN mkdir -p /build/stempy && \
   -Dstempy_ENABLE_VTKm:BOOL=ON \
   -DVTKm_DIR:PATH=/build/vtk-m/lib/cmake/vtkm-1.5 \
   -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
+  -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
   /source/stempy . && \
   make -j4
 
