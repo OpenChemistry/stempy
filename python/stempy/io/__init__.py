@@ -336,9 +336,9 @@ def get_scan_path(directory, scan_num=None, scan_id=None, th=None):
     elif scan_num is not None:
         # older files might include the threshold (th)
         if th is not None:
-            file_path = list(directory.glob('data_scan{}_th{}_electrons.h5'.format(scan_num, th)))
+            file_path = list(directory.glob(f'data_scan{scan_num}_th{th}_electrons.h5'))
         else:
-            file_path = list(directory.glob('data_scan{}*electrons.h5'.format(scan_num)))
+            file_path = list(directory.glob(f'data_scan{scan_num}*electrons.h5'))
     else:
         raise TypeError('Missing scan_num or scan_id input.')
 
