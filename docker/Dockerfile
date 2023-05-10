@@ -58,7 +58,7 @@ RUN cd /build/mpi4py-3.0.1 && python3 setup.py build && python3 setup.py install
 # Build BigMPI
 RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
   tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
-  ./autogen.sh && ./configure && make -j4 && make install && make clean && rm /build/master.tar.gz
+  ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
 
 # Build VTK-m
 RUN cd /source && \
