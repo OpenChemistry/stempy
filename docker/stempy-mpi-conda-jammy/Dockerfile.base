@@ -25,6 +25,7 @@ RUN apt-get update                                      && \
     libhdf5-dev \
     build-essential \
     ninja-build \
+    libarchive \
     libsqlite3-dev \
     libopenblas-dev \
     liblapack-dev \
@@ -38,6 +39,7 @@ RUN apt-get update                                      && \
 # Install conda
 # Update conda and update --all have to happen to stay specific to python 3.7.3
 # otherwise does not work
+ARG PYTHON_VERSION=3.7.3
 ENV installer=Miniconda3-py37_4.12.0-Linux-x86_64.sh
 ENV PATH=/opt/miniconda3/bin:$PATH
 RUN wget https://repo.anaconda.com/miniconda/$installer && \
