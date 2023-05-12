@@ -2,6 +2,7 @@
 #include "reader.h"
 #include "streamview.h"
 
+#include <bigmpi.h>
 #include <cereal/archives/binary.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/array.hpp>
@@ -36,18 +37,18 @@ void serializeBlocks(std::vector<Block>& blocks, std::ostream* stream)
 void receivePartialMap(Events& events, std::vector<char>& recvBuffer)
 {
   MPI_Status status;
-  // Probe for an incoming message from rank zero
-  MPI_Probe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
 
-  // Get the message size
-  int msgSize;
-  MPI_Get_count(&status, MPI_BYTE, &msgSize);
+  // First get the message size
+  size_t msgSize;
+  MPI_Recv(&msgSize, 1, MPI_UINT64_T, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD,
+           MPI_STATUS_IGNORE);
 
   // Resize our buffer
   recvBuffer.resize(msgSize);
 
-  MPI_Recv(recvBuffer.data(), recvBuffer.size(), MPI_BYTE, MPI_ANY_SOURCE, 0,
-           MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  // Now receive the data using BigMPI
+  MPIX_Recv_x(recvBuffer.data(), recvBuffer.size(), MPI_BYTE, MPI_ANY_SOURCE, 0,
+              MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
   StreamView view(recvBuffer.data(), recvBuffer.size());
   std::istream stream(&view);
@@ -79,12 +80,18 @@ void sendPartialMap(Events& events)
   emp::ContiguousStream eventsContiguousStream;
   serializeEvents(partialEventMap, &eventsContiguousStream);
 
-  if (eventsContiguousStream.GetSize() > INT_MAX) {
+  // BigMPI uses size_t for MPI_Count, so we have up to SIZE_MAX
+  if (eventsContiguousStream.GetSize() > SIZE_MAX) {
     throw std::runtime_error("Data too large to send using MPI.");
   }
 
-  MPI_Send(eventsContiguousStream.GetData(), eventsContiguousStream.GetSize(),
-           MPI_BYTE, 0, 0, MPI_COMM_WORLD);
+  // First send the size
+  auto size = eventsContiguousStream.GetSize();
+  MPI_Send(&size, 1, MPI_UINT64_T, 0, 0, MPI_COMM_WORLD);
+
+  // Now send the data using BigMPI
+  MPIX_Send_x(eventsContiguousStream.GetData(),
+              eventsContiguousStream.GetSize(), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
 }
 
 void gatherEvents(int worldSize, int rank, Events& events)

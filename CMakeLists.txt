@@ -55,6 +55,9 @@ if (stempy_ENABLE_MPI)
   include_directories(
     SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/Empirical/include
   )
+
+  find_package(BigMPI REQUIRED)
+  list(APPEND _libs bigmpi::bigmpi)
 endif()
 set(USE_MPI ${MPI_FOUND})
 
