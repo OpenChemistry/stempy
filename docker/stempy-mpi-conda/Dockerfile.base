@@ -24,6 +24,9 @@ RUN apt-get update                      && \
     software-properties-common \
     libhdf5-dev \
     libsqlite3-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libtool \
     gdb                                 && \
     apt-get clean all
 
@@ -57,5 +60,10 @@ RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
     make clean                                                              && \
     cd ..                                                                   && \
     rm -rf $mpich_prefix                                                    
+
+# Build BigMPI
+RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
+  tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
+  ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
 
 RUN /sbin/ldconfig

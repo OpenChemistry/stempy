@@ -26,6 +26,9 @@ RUN apt-get update                                      && \
     build-essential \
     ninja-build \
     libsqlite3-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libtool \
     mpich \
     libmpich-dev                                        && \
     apt-get clean all                                   && \
@@ -43,6 +46,11 @@ RUN wget https://repo.anaconda.com/miniconda/$installer && \
     conda install python=${PYTHON_VERSION}              && \
     conda update conda -y                               && \
     conda update --all -y                               && \
-    conda install mamba -c conda-forge -y     
+    conda install mamba -c conda-forge -y
+
+# Build BigMPI
+RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
+  tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
+  ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz     
 
 RUN /sbin/ldconfig
