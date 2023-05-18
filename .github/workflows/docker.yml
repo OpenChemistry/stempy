@@ -3,8 +3,8 @@ name: docker
 on:
   push:
     branches:
-      - "master"
-      - "update-dockerfile-staging"
+      # - "master"
+      - "new-docker-gha"
   pull_request:
     branches:
       - "master"
@@ -24,24 +24,20 @@ jobs:
             tag-suffix: -conda-jammy
 
     steps:
-
-      - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
       -
         name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: 'Setup Docker Environment'
+        uses: ./.github/actions/docker_setup
+        with:
+          github_event_name: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
       -
         name: Determine if Dockerfile.base changed
         id: changed-dockerfile-base
@@ -49,16 +45,6 @@ jobs:
         with:
           files: |
             docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
       -
         name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
@@ -100,26 +86,13 @@ jobs:
           fetch-depth: 0
           submodules: 'recursive'
       - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
+        name: 'Setup Docker Environment'
+        uses: ./.github/actions/docker_setup
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+          github_event_name: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
       -
         name: Build/push ${{ matrix.version }}${{matrix.notebook}}
         uses: docker/build-push-action@v3
@@ -150,26 +123,13 @@ jobs:
           fetch-depth: 0
           submodules: 'recursive'
       - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
+        name: 'Setup Docker Environment'
+        uses: ./.github/actions/docker_setup
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+          github_event_name: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
       
       - # Building base versions using original dockerfile
         name: Build/push ${{ matrix.version }}
