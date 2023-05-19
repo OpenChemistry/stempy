@@ -14,15 +14,12 @@ jobs:
   build-base:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - version: stempy
-            tag-suffix: -conda-jammy
-          - version: stempy-mpi
-            tag-suffix: -conda
-          - version: stempy-mpi
-            tag-suffix: -conda-jammy
-
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        mpi: ['ON', 'OFF']
+        base-image: ['ubuntu:bionic', 'ubuntu:jammy']
+ 
     steps:
       -
         name: Checkout
@@ -44,23 +41,48 @@ jobs:
         uses: tj-actions/changed-files@v35
         with:
           files: |
-            docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
+            docker/stempy/Dockerfile.base
+      - 
+        name: Set up environment variables for python version
+        id: set-conda-env
+        run: |
+          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
+          PYTHON_VERSION_NODOT=$(echo ${{ matrix.python-version }} | tr -d .)
+          echo "PYTHON_VERSION_NODOT=${PYTHON_VERSION_NODOT}" >> $GITHUB_ENV
+          PLATFORM=x86_64
+          MINICONDA_URL=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][0]' ./docker/stempy/conda-mappings.json)
+          echo "MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_URL}" >> $GITHUB_ENV
+          SHA256SUM=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][1]' ./docker/stempy/conda-mappings.json)
+          echo "SHA256SUM=${SHA256SUM}" >> $GITHUB_ENV
+      - 
+        name: Set up other environment variables
+        id: set-tag-vars
+        run: |
+          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          BASE_IMAGE_VERSION="${{ matrix.base-image }}"
+          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}" >> $GITHUB_ENV
+          echo "TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
+          echo "MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)" >> $GITHUB_ENV
       -
         name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
         if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
           context: .
-          file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
+          file: ./docker/stempy/Dockerfile.base
           push: ${{ github.event_name != 'pull_request' }}
           build-args: | 
-                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
+                      SHA256SUM=${{ env.SHA256SUM }}
+                      PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+                      MINICONDA_URL=${{ env.MINICONDA_URL }}
+                      BASE_IMAGE=${{ matrix.base-image }}
+          tags: ${{ env.DOCKERHUB_ORG }}/stempy${{ env.MPI_TAG }}:py${{ env.PYTHON_VERSION_NODOT }}-${{ env.BASE_IMAGE_VERSION }}-base
+          target: ${{ env.TARGET }}
           cache-to: type=gha
           cache-from: type=gha,mode=max
 
 
-# Builds stempy every time after build-base is done
+#Builds stempy every time after build-base is done
   build-stempy:
     runs-on: ubuntu-latest
     needs: [build-base]
@@ -93,6 +115,15 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
+      - 
+        name: Set up base image name
+        id: set-tag-vars
+        run: |
+          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          BASE_IMAGE_VERSION="${{ matrix.base-image }}"
+          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}" >> $GITHUB_ENV
+          echo "TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
+          echo "MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)" >> $GITHUB_ENV
       -
         name: Build/push ${{ matrix.version }}${{matrix.notebook}}
         uses: docker/build-push-action@v3

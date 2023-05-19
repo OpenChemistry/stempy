@@ -1,0 +1,54 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as base
+
+ENV DEBIAN_FRONTEND noninteractive
+
+WORKDIR /build
+
+# Install common packages
+COPY ./docker/stempy/apt-packages-common.txt /tmp/apt-packages-common.txt
+RUN apt-get update                                      && \
+    apt-get upgrade --yes                               && \
+    apt-get install --yes                                  \
+    $(cat /tmp/apt-packages-common.txt)                 && \
+    apt-get clean all                                   && \
+    rm -rf /var/lib/apt/lists/*                             
+
+# Install miniconda
+ARG PYTHON_VERSION
+ARG MINICONDA_URL
+ARG SHA256SUM
+ENV PATH=/opt/conda/bin:$PATH
+RUN wget "${MINICONDA_URL}" -O miniconda.sh -q                      && \
+    echo "${SHA256SUM} miniconda.sh" > shasum                       && \
+    sha256sum --check --status shasum                               && \
+    bash miniconda.sh -b -p /opt/conda                              && \
+    rm miniconda.sh shasum                                          && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc         && \
+    echo "conda activate base" >> ~/.bashrc                         && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete            && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete       && \
+    conda clean -afy                                                && \
+    conda install python=${PYTHON_VERSION} -y                       && \
+    conda update conda -y                                           && \
+    conda update --all -y                                           && \
+    conda install mamba -c conda-forge -y
+
+FROM base as mpi
+
+# Build mpich
+ARG mpich=4.0.2
+ARG mpich_prefix=mpich-$mpich
+RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
+    tar xvzf $mpich_prefix.tar.gz -C /build                                 && \
+    rm -rf $mpich_prefix.tar.gz                                             && \
+    cd /build/$mpich_prefix                                                 && \
+    ./configure --disable-f77 --disable-fc --disable-fortran                && \
+    make -j 16                                                              && \
+    make install                                                            && \
+    make clean                                                              && \
+    cd ..                                                                   && \
+    rm -rf $mpich_prefix 
+
+RUN /sbin/ldconfig
