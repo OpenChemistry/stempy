@@ -11,7 +11,7 @@ on:
 
 jobs:
   # Builds base image for stempy of various verions if Dockerfile.base has changed
-  build-base:
+  build-stempy:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -19,6 +19,8 @@ jobs:
         python-version: ['3.7', '3.8', '3.9', '3.10']
         mpi: ['ON', 'OFF']
         base-image: ['ubuntu:bionic', 'ubuntu:jammy']
+        ipykernel: ['', 'ipykernel']
+        dev: ['', 'dev']
  
     steps:
       -
@@ -41,7 +43,9 @@ jobs:
         uses: tj-actions/changed-files@v35
         with:
           files: |
-            docker/stempy/Dockerfile.base
+            ./docker/stempy/Dockerfile.base
+            ./docker/stempy/conda-mappings.json
+            ./docker/stempy/apt-packages-common.txt
       - 
         name: Set up environment variables for python version
         id: set-conda-env
@@ -58,11 +62,30 @@ jobs:
         name: Set up other environment variables
         id: set-tag-vars
         run: |
-          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           BASE_IMAGE_VERSION="${{ matrix.base-image }}"
-          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}" >> $GITHUB_ENV
-          echo "TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
-          echo "MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)" >> $GITHUB_ENV
+          BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}
+          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION}" >> $GITHUB_ENV
+          echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
+
+          # Image tagging
+          MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)
+          echo "MPI_TAG=${MPI_TAG}" >> $GITHUB_ENV
+
+          DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)
+          echo "DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)" >> $GITHUB_ENV
+          echo "RELEASE_OR_DEBUG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "Debug"; else echo "Release"; fi)" >> $GITHUB_ENV
+
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "COMMIT=${COMMIT}" >> $GITHUB_ENV
+
+          IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == "ipykernel" ]]; then echo "-ipykernel"; else echo ""; fi)
+          echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
+
+          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base
+          echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
+
+          TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-${COMMIT}${DEV_TAG}
+          echo "TAG=${TAG}" >> $GITHUB_ENV          
       -
         name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
@@ -76,65 +99,29 @@ jobs:
                       PYTHON_VERSION=${{ env.PYTHON_VERSION }}
                       MINICONDA_URL=${{ env.MINICONDA_URL }}
                       BASE_IMAGE=${{ matrix.base-image }}
-          tags: ${{ env.DOCKERHUB_ORG }}/stempy${{ env.MPI_TAG }}:py${{ env.PYTHON_VERSION_NODOT }}-${{ env.BASE_IMAGE_VERSION }}-base
-          target: ${{ env.TARGET }}
-          cache-to: type=gha
-          cache-from: type=gha,mode=max
-
-
-#Builds stempy every time after build-base is done
-  build-stempy:
-    runs-on: ubuntu-latest
-    needs: [build-base]
-    strategy:
-      matrix:
-        include:
-          - version: stempy
-            tag-suffix: -conda-jammy
-          - version: stempy
-            tag-suffix: -conda-jammy
-            notebook: -ipykernel
-          - version: stempy-mpi
-            tag-suffix: -conda
-          - version: stempy-mpi
-            tag-suffix: -conda-jammy
-
-      fail-fast: false
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'recursive'
+          tags: ${{ env.BASE_TAG }}
+          target: ${{ env.BASE_TARGET }}
+          cache-to: type=gha, mode=max
+          cache-from: type=gha, mode=max
       - 
-        name: 'Setup Docker Environment'
-        uses: ./.github/actions/docker_setup
-        with:
-          github_event_name: ${{ github.event_name }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
-      - 
-        name: Set up base image name
-        id: set-tag-vars
-        run: |
-          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          BASE_IMAGE_VERSION="${{ matrix.base-image }}"
-          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}" >> $GITHUB_ENV
-          echo "TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
-          echo "MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)" >> $GITHUB_ENV
-      -
-        name: Build/push ${{ matrix.version }}${{matrix.notebook}}
+        name: Build/push Dockerfile.stempy
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.stempy${{matrix.notebook}}
-          build-args: | 
-                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-                      DOCKERHUB_ORG=${{ env.DOCKERHUB_ORG }}
+          file: ./docker/stempy/Dockerfile.stempy
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
+          build-args: | 
+                      PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+                      BASE_IMAGE=${{ env.BASE_TAG }}
+                      RELEASE_OR_DEBUG=${{ env.RELEASE_OR_DEBUG }}
+                      MPI=${{ matrix.mpi }}
+                      MPI_TAG=${{ env.MPI_TAG }}
+                      IPYKERNEL=${{ matrix.ipykernel }}
+                      TARGET=${{ env.BASE_TARGET }}
+          tags: ${{ env.TAG }}
+          target: build
+          cache-to: type=gha, mode=max
+          cache-from: type=gha, mode=max
 
   # Seperate job for building original version
   build-stempy-old:

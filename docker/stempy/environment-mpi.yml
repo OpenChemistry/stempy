@@ -1,0 +1,16 @@
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - deprecation
+  - click 
+  - imageio 
+  - ncempy
+  - ld_impl_linux-64
+# IPYKERNEL
+  - pip:
+    - cmake
+    - h5py
+    - mpi4py

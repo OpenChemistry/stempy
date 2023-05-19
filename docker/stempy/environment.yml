@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+dependencies:
+  - python=3.x
+  - pip
+  - numpy
+  - deprecation
+  - click 
+  - imageio 
+  - ncempy
+# IPYKERNEL
+  - pip:
+    - cmake
+    - h5py
