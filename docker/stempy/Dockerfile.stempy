@@ -1,12 +1,13 @@
 ARG BASE_IMAGE
-ARG TARGET
-FROM ${BASE_IMAGE} as base
+FROM ${BASE_IMAGE} as build
 
 ENV DEBIAN_FRONTEND noninteractive
 
 ARG PYTHON_VERSION
 ARG IPYKERNEL
 ARG MPI_TAG
+ARG MPI
+ARG RELEASE_OR_DEBUG
 
 WORKDIR /source
 
@@ -22,17 +23,6 @@ RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
     sed -i "s/python=.*/python=${PYTHON_VERSION}/" environment.yml && \
     cat environment.yml
 
-FROM base as mpi
-# Build BigMPI
-RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
-  tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
-  ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
-
-FROM ${TARGET} as build
-
-ARG MPI
-ARG RELEASE_OR_DEBUG
-ARG PYTHON_VERSION
 COPY . /source/stempy/
 RUN mamba env update -n base -f environment.yml                                             && \
   mkdir -p /build/stempy                                                                    && \

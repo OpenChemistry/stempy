@@ -6,6 +6,7 @@ gcc
 g++
 git
 gnupg
+libarchive-dev
 libeigen3-dev
 libffi-dev
 libhdf5-dev

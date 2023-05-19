@@ -21,6 +21,9 @@ jobs:
         base-image: ['ubuntu:bionic', 'ubuntu:jammy']
         ipykernel: ['', 'ipykernel']
         dev: ['', 'dev']
+        exclude:
+          - python-version: '3.10'
+            ipykernel: 'ipykernel'
  
     steps:
       -
@@ -53,9 +56,11 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
           PYTHON_VERSION_NODOT=$(echo ${{ matrix.python-version }} | tr -d .)
           echo "PYTHON_VERSION_NODOT=${PYTHON_VERSION_NODOT}" >> $GITHUB_ENV
+
           PLATFORM=x86_64
           MINICONDA_URL=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][0]' ./docker/stempy/conda-mappings.json)
           echo "MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_URL}" >> $GITHUB_ENV
+          
           SHA256SUM=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][1]' ./docker/stempy/conda-mappings.json)
           echo "SHA256SUM=${SHA256SUM}" >> $GITHUB_ENV
       - 
@@ -81,7 +86,7 @@ jobs:
           IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == "ipykernel" ]]; then echo "-ipykernel"; else echo ""; fi)
           echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
 
-          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base
+          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base${DEV_TAG}
           echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
 
           TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-${COMMIT}${DEV_TAG}
@@ -99,6 +104,7 @@ jobs:
                       PYTHON_VERSION=${{ env.PYTHON_VERSION }}
                       MINICONDA_URL=${{ env.MINICONDA_URL }}
                       BASE_IMAGE=${{ matrix.base-image }}
+                      DEV=${{ matrix.dev }}
           tags: ${{ env.BASE_TAG }}
           target: ${{ env.BASE_TARGET }}
           cache-to: type=gha, mode=max
@@ -117,7 +123,6 @@ jobs:
                       MPI=${{ matrix.mpi }}
                       MPI_TAG=${{ env.MPI_TAG }}
                       IPYKERNEL=${{ matrix.ipykernel }}
-                      TARGET=${{ env.BASE_TARGET }}
           tags: ${{ env.TAG }}
           target: build
           cache-to: type=gha, mode=max

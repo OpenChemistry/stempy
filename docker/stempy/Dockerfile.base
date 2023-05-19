@@ -7,7 +7,15 @@ WORKDIR /build
 
 # Install common packages
 COPY ./docker/stempy/apt-packages-common.txt /tmp/apt-packages-common.txt
-RUN apt-get update                                      && \
+# Install dev packages if DEV is set
+COPY ./docker/stempy/apt-packages-dev.txt /tmp/apt-packages-dev.txt
+ARG DEV
+RUN if [ "$DEV" = "dev" ]; then \
+        cat /tmp/apt-packages-common.txt /tmp/apt-packages-dev.txt > /tmp/apt-packages.txt; \
+    else \
+        cp /tmp/apt-packages-common.txt /tmp/apt-packages.txt; \
+    fi                                                  && \
+    apt-get update                                      && \
     apt-get upgrade --yes                               && \
     apt-get install --yes                                  \
     $(cat /tmp/apt-packages-common.txt)                 && \
@@ -30,10 +38,13 @@ RUN wget "${MINICONDA_URL}" -O miniconda.sh -q                      && \
     find /opt/conda/ -follow -type f -name '*.a' -delete            && \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete       && \
     conda clean -afy                                                && \
-    conda install python=${PYTHON_VERSION} -y                       && \
-    conda update conda -y                                           && \
-    conda update --all -y                                           && \
+    conda install python=${PYTHON_VERSION} libarchive \
+        --force-reinstall -y -c conda-forge                         && \
+    conda update conda -y -c conda-forge                            && \
+    conda update --all -y -c conda-forge                            && \
     conda install mamba -c conda-forge -y
+
+RUN /sbin/ldconfig
 
 FROM base as mpi
 
@@ -49,6 +60,13 @@ RUN wget https://www.mpich.org/static/downloads/$mpich/$mpich_prefix.tar.gz && \
     make install                                                            && \
     make clean                                                              && \
     cd ..                                                                   && \
-    rm -rf $mpich_prefix 
+    rm -rf $mpich_prefix                                                    
+
+RUN /sbin/ldconfig
+
+# Build BigMPI
+RUN cd /build && wget https://github.com/jeffhammond/BigMPI/archive/refs/heads/master.tar.gz && \
+  tar zxvf master.tar.gz  && cd /build/BigMPI-master && \
+  ./autogen.sh && ./configure --with-pic && make -j4 && make install && make clean && rm /build/master.tar.gz
 
 RUN /sbin/ldconfig
