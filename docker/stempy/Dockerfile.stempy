@@ -1,0 +1,42 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as build
+
+ENV DEBIAN_FRONTEND noninteractive
+
+ARG PYTHON_VERSION
+ARG IPYKERNEL
+ARG MPI_TAG
+ARG MPI
+ARG RELEASE_OR_DEBUG
+
+WORKDIR /source
+
+COPY ./docker/stempy/environment${MPI_TAG}.yml /source/environment.yml
+COPY ./docker/stempy/ipykernel-extras.yml /source/ipykernel-extras.yml
+
+# Add ipkernel dependencies into yml 
+RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
+    cp environment.yml temp.yml && \
+    perl -pe 's/# IPYKERNEL/`cat ipykernel-extras.yml`/ge' temp.yml > environment.yml && \
+    rm temp.yml; \
+    fi || true && \
+    sed -i "s/python=.*/python=${PYTHON_VERSION}/" environment.yml && \
+    cat environment.yml
+
+COPY . /source/stempy/
+RUN mamba env update -n base -f environment.yml                                             && \
+  mkdir -p /build/stempy                                                                    && \
+  cd /build/stempy                                                                          && \
+  cmake -DCMAKE_BUILD_TYPE:STRING=${RELEASE_OR_DEBUG} \
+  -Dstempy_ENABLE_VTKm:BOOL=OFF \
+  -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+  -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
+  -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
+  /source/stempy .                                                                          && \
+  make -j 16                                                                                && \
+  cp -r -L /build/stempy/lib/stempy \                                                   
+  /opt/conda/lib/python${PYTHON_VERSION}/site-packages                                      && \
+  rm -rf /source/stempy                                                                     && \
+  conda clean -ayq
+
+RUN /sbin/ldconfig

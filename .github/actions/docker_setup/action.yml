@@ -1,0 +1,32 @@
+name: 'Setup Workflow'
+description: 'Set up environment and Docker settings'
+
+inputs:
+  github_event_name:
+    description: 'GitHub Event Name'
+    required: true
+  DOCKERHUB_USERNAME:
+    description: 'DockerHub Username'
+    required: true
+  DOCKERHUB_TOKEN:
+    description: 'DockerHub Token'
+    required: true
+  DOCKERHUB_ORG:
+    description: 'DockerHub Organization'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set DOCKERHUB_ORG
+      run: |
+        echo "DOCKERHUB_ORG=${{ inputs.DOCKERHUB_ORG == '' && 'openchemistry' || inputs.DOCKERHUB_ORG }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      if: ${{ github.event_name != 'pull_request' }}
+      with:
+        username: ${{ inputs.DOCKERHUB_USERNAME }}
+        password: ${{ inputs.DOCKERHUB_TOKEN }}
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2

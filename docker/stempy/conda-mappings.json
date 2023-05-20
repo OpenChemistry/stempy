@@ -1,0 +1,82 @@
+{
+    "x86_64": {
+        "39": [
+            "Miniconda3-py39_23.3.1-0-Linux-x86_64.sh",
+            "1564571a6a06a9999a75a6c65d63cb82911fc647e96ba5b729f904bf00c177d3"
+        ],
+        "38": [
+            "Miniconda3-py38_23.3.1-0-Linux-x86_64.sh",
+            "d1f3a4388c1a6fd065e32870f67abc39eb38f4edd36c4947ec7411e32311bd59"
+        ],
+        "310": [
+            "Miniconda3-py310_23.3.1-0-Linux-x86_64.sh",
+            "aef279d6baea7f67940f16aad17ebe5f6aac97487c7c03466ff01f4819e5a651"
+        ],
+        "37": [
+            "Miniconda3-py37_23.1.0-1-Linux-x86_64.sh",
+            "fc96109ea96493e31f70abbc5cae58e80634480c0686ab46924549ac41176812"
+        ],
+        "27": [
+            "Miniconda2-py27_4.8.3-Linux-x86_64.sh",
+            "b820dde1a0ba868c4c948fe6ace7300a252b33b5befd078a15d4a017476b8979"
+        ]
+    },
+    "s390x": {
+        "39": [
+            "Miniconda3-py39_23.3.1-0-Linux-s390x.sh",
+            "d0b658566edd239dd50fc28ab1d3a57b8b0da707481b3b18c27d11273c4fdb5a"
+        ],
+        "38": [
+            "Miniconda3-py38_23.3.1-0-Linux-s390x.sh",
+            "e4d83bb9f0900c9128504f7e3c4d3b9e5eaf3b87c4bb5190a3086947e92bd3fa"
+        ],
+        "310": [
+            "Miniconda3-py310_23.3.1-0-Linux-s390x.sh",
+            "ed4f51afc967e921ff5721151f567a4c43c4288ac93ec2393c6238b8c4891de8"
+        ],
+        "37": [
+            "Miniconda3-py37_23.1.0-1-Linux-s390x.sh",
+            "72a8fa9aca5abaf99771110746b1345a33d390c9b29a7b4daffe6a2ff00f2366"
+        ]
+    },
+    "ppc64le": {
+        "39": [
+            "Miniconda3-py39_23.3.1-0-Linux-ppc64le.sh",
+            "d2bcef86812863adaf11fcda6df829aa508760cbde4a19174cf0fec03e8498f5"
+        ],
+        "38": [
+            "Miniconda3-py38_23.3.1-0-Linux-ppc64le.sh",
+            "8aa819800ba3ec88ad8518a9e4fc71ada8087547300fc53527c4ecc8072a4d50"
+        ],
+        "310": [
+            "Miniconda3-py310_23.3.1-0-Linux-ppc64le.sh",
+            "b3de538cd542bc4f5a2f2d2a79386288d6e04f0e1459755f3cefe64763e51d16"
+        ],
+        "37": [
+            "Miniconda3-py37_23.1.0-1-Linux-ppc64le.sh",
+            "d2de534bfa46aa34ef0b115a309de7e8a681683af65faf86bcee6a00460f07be"
+        ],
+        "27": [
+            "Miniconda2-py27_4.8.3-Linux-ppc64le.sh",
+            "23473678afb15a6ed87045ce6490463420aed9c249607fb389a788e95335bb28"
+        ]
+    },
+    "aarch64": {
+        "39": [
+            "Miniconda3-py39_23.3.1-0-Linux-aarch64.sh",
+            "e93ccab720b57f821e0d758f54e9aee9bd2f0ea931ebb26b78d866704437a296"
+        ],
+        "38": [
+            "Miniconda3-py38_23.3.1-0-Linux-aarch64.sh",
+            "ad491ebad6efec7470fe2139c8b407a895cb2c828b3233b97da6e4f22cae0cde"
+        ],
+        "310": [
+            "Miniconda3-py310_23.3.1-0-Linux-aarch64.sh",
+            "6950c7b1f4f65ce9b87ee1a2d684837771ae7b2e6044e0da9e915d1dee6c924c"
+        ],
+        "37": [
+            "Miniconda3-py37_23.1.0-1-Linux-aarch64.sh",
+            "31c1d635fae931b7c0687018cc87e918e8098ed5dd5e76a658e10c57e00ef864"
+        ]
+    }
+}

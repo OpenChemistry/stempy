@@ -3,134 +3,130 @@ name: docker
 on:
   push:
     branches:
-      - "master"
-      - "update-dockerfile-staging"
+      # - "master"
+      - "new-docker-gha"
   pull_request:
     branches:
       - "master"
 
 jobs:
   # Builds base image for stempy of various verions if Dockerfile.base has changed
-  build-base:
+  build-stempy:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - version: stempy
-            tag-suffix: -conda-jammy
-          - version: stempy-mpi
-            tag-suffix: -conda
-          - version: stempy-mpi
-            tag-suffix: -conda-jammy
-
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        mpi: ['ON', 'OFF']
+        base-image: ['ubuntu:bionic', 'ubuntu:jammy']
+        ipykernel: ['', 'ipykernel']
+        dev: ['', 'dev']
+        exclude:
+          - python-version: '3.10'
+            ipykernel: 'ipykernel'
+ 
     steps:
-
-      - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
       -
         name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: 'recursive'
+      - 
+        name: 'Setup Docker Environment'
+        uses: ./.github/actions/docker_setup
+        with:
+          github_event_name: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
       -
         name: Determine if Dockerfile.base changed
         id: changed-dockerfile-base
         uses: tj-actions/changed-files@v35
         with:
           files: |
-            docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+            ./docker/stempy/Dockerfile.base
+            ./docker/stempy/conda-mappings.json
+            ./docker/stempy/apt-packages-common.txt
+      - 
+        name: Set up environment variables for python version
+        id: set-conda-env
+        run: |
+          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
+          PYTHON_VERSION_NODOT=$(echo ${{ matrix.python-version }} | tr -d .)
+          echo "PYTHON_VERSION_NODOT=${PYTHON_VERSION_NODOT}" >> $GITHUB_ENV
+
+          PLATFORM=x86_64
+          MINICONDA_URL=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][0]' ./docker/stempy/conda-mappings.json)
+          echo "MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_URL}" >> $GITHUB_ENV
+          
+          SHA256SUM=$(jq -r --arg platform "$PLATFORM" --arg version "$PYTHON_VERSION_NODOT" '.[$platform][$version][1]' ./docker/stempy/conda-mappings.json)
+          echo "SHA256SUM=${SHA256SUM}" >> $GITHUB_ENV
+      - 
+        name: Set up other environment variables
+        id: set-tag-vars
+        run: |
+          BASE_IMAGE_VERSION="${{ matrix.base-image }}"
+          BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION##*:}
+          echo "BASE_IMAGE_VERSION=${BASE_IMAGE_VERSION}" >> $GITHUB_ENV
+          echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "mpi"; else echo "base"; fi)" >> $GITHUB_ENV
+
+          # Image tagging
+          MPI_TAG=$(if [[ "${{ matrix.mpi }}" == "ON" ]]; then echo "-mpi"; else echo ""; fi)
+          echo "MPI_TAG=${MPI_TAG}" >> $GITHUB_ENV
+
+          DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)
+          echo "DEV_TAG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "-dev"; else echo ""; fi)" >> $GITHUB_ENV
+          echo "RELEASE_OR_DEBUG=$(if [[ "${{ matrix.dev }}" == "dev" ]]; then echo "Debug"; else echo "Release"; fi)" >> $GITHUB_ENV
+
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "COMMIT=${COMMIT}" >> $GITHUB_ENV
+
+          IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == "ipykernel" ]]; then echo "-ipykernel"; else echo ""; fi)
+          echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
+
+          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-base${DEV_TAG}
+          echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
+
+          TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${BASE_IMAGE_VERSION}-${COMMIT}${DEV_TAG}
+          echo "TAG=${TAG}" >> $GITHUB_ENV          
       -
         name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
         if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
           context: .
-          file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.base
+          file: ./docker/stempy/Dockerfile.base
           push: ${{ github.event_name != 'pull_request' }}
           build-args: | 
-                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}-base:latest${{ matrix.tag-suffix }}
-          cache-to: type=gha
-          cache-from: type=gha,mode=max
-
-
-# Builds stempy every time after build-base is done
-  build-stempy:
-    runs-on: ubuntu-latest
-    needs: [build-base]
-    strategy:
-      matrix:
-        include:
-          - version: stempy
-            tag-suffix: -conda-jammy
-          - version: stempy
-            tag-suffix: -conda-jammy
-            notebook: -ipykernel
-          - version: stempy-mpi
-            tag-suffix: -conda
-          - version: stempy-mpi
-            tag-suffix: -conda-jammy
-
-      fail-fast: false
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'recursive'
+                      SHA256SUM=${{ env.SHA256SUM }}
+                      PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+                      MINICONDA_URL=${{ env.MINICONDA_URL }}
+                      BASE_IMAGE=${{ matrix.base-image }}
+                      DEV=${{ matrix.dev }}
+          tags: ${{ env.BASE_TAG }}
+          target: ${{ env.BASE_TARGET }}
+          cache-to: type=gha, mode=max
+          cache-from: type=gha, mode=max
       - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      -
-        name: Build/push ${{ matrix.version }}${{matrix.notebook}}
+        name: Build/push Dockerfile.stempy
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/${{ matrix.version }}${{ matrix.tag-suffix}}/Dockerfile.stempy${{matrix.notebook}}
-          build-args: | 
-                      DOCKERFILE_SUBDIR=${{ matrix.version }}${{ matrix.tag-suffix}}
-                      DOCKERHUB_ORG=${{ env.DOCKERHUB_ORG }}
+          file: ./docker/stempy/Dockerfile.stempy
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.DOCKERHUB_ORG }}/${{ matrix.version }}${{matrix.notebook}}:latest${{ matrix.tag-suffix}}
+          build-args: | 
+                      PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+                      BASE_IMAGE=${{ env.BASE_TAG }}
+                      RELEASE_OR_DEBUG=${{ env.RELEASE_OR_DEBUG }}
+                      MPI=${{ matrix.mpi }}
+                      MPI_TAG=${{ env.MPI_TAG }}
+                      IPYKERNEL=${{ matrix.ipykernel }}
+          tags: ${{ env.TAG }}
+          target: build
+          cache-to: type=gha, mode=max
+          cache-from: type=gha, mode=max
 
   # Seperate job for building original version
   build-stempy-old:
@@ -150,26 +146,13 @@ jobs:
           fetch-depth: 0
           submodules: 'recursive'
       - 
-        name: Sets DOCKERHUB_ORG if pushing to fork
-        run: |
-          echo "DOCKERHUB_ORG=${{ vars.DOCKERHUB_ORG }}" >> $GITHUB_ENV
-        if: ${{ github.event_name != 'pull_request' }}
-
-      - 
-        name: Sets DOCKERHUB_ORG if  PR
-        run: |
-          echo "DOCKERHUB_ORG=openchemistry" >> $GITHUB_ENV
-        if: ${{ github.event_name == 'pull_request' }}
-      -
-        name: Login to Docker Hub
-        uses: docker/login-action@v2
-        if: ${{ github.event_name != 'pull_request' }}
+        name: 'Setup Docker Environment'
+        uses: ./.github/actions/docker_setup
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+          github_event_name: ${{ github.event_name }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
       
       - # Building base versions using original dockerfile
         name: Build/push ${{ matrix.version }}
