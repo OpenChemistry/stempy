@@ -33,6 +33,7 @@ struct ElectronCountedDataPyArray
 
   ElectronCountedDataPyArray(ElectronCountedData&& other)
   {
+    py::gil_scoped_acquire acquire;
     data.resize(other.data.size());
     for (size_t i = 0; i < other.data.size(); ++i) {
       data[i].reserve(other.data[i].size());
