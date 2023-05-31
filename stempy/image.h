@@ -2,16 +2,9 @@
 #define stempyimages_h
 
 #include "mask.h"
-#include "reader.h"
 
 #include <memory>
 #include <vector>
-
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-
-namespace py = pybind11;
 
 namespace stempy {
 
