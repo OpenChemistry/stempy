@@ -169,6 +169,7 @@ install(TARGETS stem
 
 install(FILES stempy/reader.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/image.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
+install(FILES stempy/mask.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES stempy/electron.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/stempy)
 install(FILES thirdparty/ThreadPool/ThreadPool.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/thirdparty/ThreadPool)
 
