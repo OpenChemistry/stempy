@@ -54,53 +54,54 @@ jobs:
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
           PYTHON_VERSION_NODOT=$(echo ${{ matrix.python-version }} | tr -d .)
           echo "PYTHON_VERSION_NODOT=${PYTHON_VERSION_NODOT}" >> $GITHUB_ENV
-          - name: Set up other environment variables
-          id: set-tag-vars
-          run: |
-            echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == 'ON' ]]; then 
-              echo 'mpi' 
-            else 
-              echo 'base' 
-            fi)" >> $GITHUB_ENV
+      - name: Set up other environment variables
+        id: set-tag-vars
+        run: |
+          echo "BASE_TARGET=$(if [[ "${{ matrix.mpi }}" == 'ON' ]]; then 
+            echo 'mpi' 
+          else 
+            echo 'base' 
+          fi)" >> $GITHUB_ENV
 
-            MPI_TAG=$(if [[ "${{ matrix.mpi }}" == 'ON' ]]; then 
-              echo '-mpi' 
-            else 
-              echo '' 
-            fi)
-            echo "MPI_TAG=${MPI_TAG}" >> $GITHUB_ENV
+          MPI_TAG=$(if [[ "${{ matrix.mpi }}" == 'ON' ]]; then 
+            echo '-mpi' 
+          else 
+            echo '' 
+          fi)
+          echo "MPI_TAG=${MPI_TAG}" >> $GITHUB_ENV
 
-            DEV_TAG=$(if [[ "${{ matrix.dev }}" == 'dev' ]]; then 
-              echo '-dev' 
-            else 
-              echo '' 
-            fi)
-            echo "DEV_TAG=${DEV_TAG}" >> $GITHUB_ENV
+          DEV_TAG=$(if [[ "${{ matrix.dev }}" == 'dev' ]]; then 
+            echo '-dev' 
+          else 
+            echo '' 
+          fi)
+          echo "DEV_TAG=${DEV_TAG}" >> $GITHUB_ENV
 
-            echo "RELEASE_OR_DEBUG=$(if [[ "${{ matrix.dev }}" == 'dev' ]]; then 
-              echo 'Debug' 
-            else 
-              echo 'Release' 
-            fi)" >> $GITHUB_ENV
+          echo "RELEASE_OR_DEBUG=$(if [[ "${{ matrix.dev }}" == 'dev' ]]; then 
+            echo 'Debug' 
+          else 
+            echo 'Release' 
+          fi)" >> $GITHUB_ENV
 
-            COMMIT=$(git rev-parse --short HEAD)
-            echo "COMMIT=${COMMIT}" >> $GITHUB_ENV
+          COMMIT=$(git rev-parse --short HEAD)
+          echo "COMMIT=${COMMIT}" >> $GITHUB_ENV
 
-            IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == 'ipykernel' ]]; then 
-              echo '-ipykernel' 
-            else 
-              echo '' 
-            fi)
-            echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
+          IPYKERNEL_TAG=$(if [[ "${{ matrix.ipykernel }}" == 'ipykernel' ]]; then 
+            echo '-ipykernel' 
+          else 
+            echo '' 
+          fi)
 
-            BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-base${DEV_TAG}
-            echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
+          echo "IPYKERNEL_TAG=${IPYKERNEL_TAG}" >> $GITHUB_ENV
 
-            TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${COMMIT}${DEV_TAG}
-            echo "TAG=${TAG}" >> $GITHUB_ENV
+          BASE_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-base${DEV_TAG}
+          echo "BASE_TAG=${BASE_TAG}" >> $GITHUB_ENV
 
-            LATEST_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:latest${DEV_TAG}
-            echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
+          TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:py${{ env.PYTHON_VERSION_NODOT }}-${COMMIT}${DEV_TAG}
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+
+          LATEST_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:latest${DEV_TAG}
+          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
       - name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
