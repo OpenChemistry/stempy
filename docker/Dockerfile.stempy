@@ -20,7 +20,8 @@ RUN mkdir -p /build/stempy                                                      
     -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
     -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
     /source/stempy .                                                                          && \
-    make -j 16                                                                                && \
+    cmake --build .                                                                           && \
+    cmake --install .                                                                         && \
     cp -r -L /build/stempy/lib/stempy \                                                   
     /usr/local/lib/python${PYTHON_VERSION}/site-packages                                      
 
