@@ -3,8 +3,7 @@ name: docker
 on:
   push:
     branches:
-      # - "master"
-      - 'gha-final'
+      - 'master'
   pull_request:
     branches:
       - 'master'
