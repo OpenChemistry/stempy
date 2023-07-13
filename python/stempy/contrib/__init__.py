@@ -1,5 +1,19 @@
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Tuple
+
+
+class FileSuffix(Enum):
+    STANDARD = ""
+    OFFSETS = "_offsets"
+    CENTERED = "_centered"
+
+
+suffix_to_filetype = {
+    FileSuffix.STANDARD: "h5",
+    FileSuffix.OFFSETS: "emd",
+    FileSuffix.CENTERED: "h5",
+}
 
 
 def check_only_one_filepath(file_path):
@@ -16,6 +30,7 @@ def get_scan_path_version_0(
     scan_num: Optional[int] = None,
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
+    file_suffix: FileSuffix = FileSuffix.STANDARD,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """
     Filename looks like: data_scan{scan_num}_id{scan_id}_electrons.h5
@@ -44,14 +59,16 @@ def get_scan_path_version_0(
     if scan_id is None and scan_num is None:
         raise TypeError("Either scan_num or scan_id must be provided.")
 
+    filetype = suffix_to_filetype[file_suffix]
+
     file_pattern = ""
     if scan_id is not None:
-        file_pattern = f"*_id{scan_id}*.h5"
+        file_pattern = f"*_id{scan_id}*{file_suffix.value}.{filetype}"
     elif scan_num is not None:
         file_pattern = (
-            f"data_scan{scan_num}_th{th}_electrons.h5"
+            f"data_scan{scan_num}_th{th}_electrons{file_suffix.value}.{filetype}"
             if th is not None
-            else f"data_scan{scan_num}*electrons.h5"
+            else f"data_scan{scan_num}*electrons{file_suffix.value}.{filetype}"
         )
 
     file_path = list(directory.glob(file_pattern))
@@ -70,7 +87,10 @@ def get_scan_path_version_0(
 
 
 def get_scan_path_version_1(
-    directory: Path, scan_num: Optional[int] = None, scan_id: Optional[int] = None
+    directory: Path,
+    scan_num: Optional[int] = None,
+    scan_id: Optional[int] = None,
+    file_suffix: FileSuffix = FileSuffix.STANDARD,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """
     File name looks like: FOURD_YYMMDD_HHMM_SSSSS_NNNNN.h5
@@ -100,10 +120,18 @@ def get_scan_path_version_1(
         raise TypeError("Either scan_num or scan_id must be provided.")
 
     file_pattern = ""
+    filetype = suffix_to_filetype[file_suffix]
     if scan_id is not None:
-        file_pattern = f"FOURD_*_{str(scan_id).zfill(5)}_*.h5"
+        if file_suffix == FileSuffix.STANDARD:
+            file_pattern = f"FOURD_*_{str(scan_id).zfill(5)}_?????.{filetype}"
+        else:
+            file_pattern = (
+                f"FOURD_*_{str(scan_id).zfill(5)}_?????{file_suffix.value}.{filetype}"
+            )
     elif scan_num is not None:
-        file_pattern = f"FOURD_*_*_{str(scan_num).zfill(5)}.h5"
+        file_pattern = (
+            f"FOURD_*_*_{str(scan_num).zfill(5)}{file_suffix.value}.{filetype}"
+        )
 
     file_path = list(directory.glob(file_pattern))
     check_only_one_filepath(file_path)
@@ -121,6 +149,7 @@ def get_scan_path(
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
     version: int = 1,
+    file_suffix: FileSuffix = FileSuffix.STANDARD,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """Get the file path for a 4D Camera scan on NERSC using the scan number,
     the Distiller scan id, and/or threshold. scan_id should always
@@ -150,9 +179,16 @@ def get_scan_path(
     """
     if version == 0:
         return get_scan_path_version_0(
-            directory, scan_num=scan_num, scan_id=scan_id, th=th
+            directory,
+            scan_num=scan_num,
+            scan_id=scan_id,
+            th=th,
+            file_suffix=file_suffix,
         )
     elif version == 1:
-        return get_scan_path_version_1(directory, scan_num, scan_id)
+        return get_scan_path_version_1(
+            directory, scan_num, scan_id, file_suffix=file_suffix
+        )
+
     else:
         raise NotImplementedError("Please enter version 0 or 1.")
