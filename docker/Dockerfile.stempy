@@ -27,6 +27,8 @@ RUN mkdir -p /build/stempy                                                      
 
 RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
     pip install -r /source/stempy/docker/requirements-ipykernel.txt; \
+    elif [ "${MPI}" = "ON" ]; then \
+    pip install -r /source/stempy/docker/requirements-mpi.txt; \
     else \
     pip install -r /source/stempy/docker/requirements-normal.txt; \
     fi                                                                                        && \
