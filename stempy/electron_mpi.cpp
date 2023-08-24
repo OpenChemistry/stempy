@@ -39,9 +39,9 @@ void receivePartialMap(Events& events, std::vector<char>& recvBuffer,
 {
   MPI_Status status;
 
-  // First get msg size using the source rank as the tag
+  // First get msg size using the source rank
   size_t msgSize;
-  MPI_Recv(&msgSize, 1, MPI_UINT64_T, sourceRank, sourceRank, MPI_COMM_WORLD,
+  MPI_Recv(&msgSize, 1, MPI_UINT64_T, sourceRank, 0, MPI_COMM_WORLD,
            MPI_STATUS_IGNORE);
 
   // Resize our buffer
@@ -49,7 +49,7 @@ void receivePartialMap(Events& events, std::vector<char>& recvBuffer,
 
   // Now receive the data using BigMPI
   MPIX_Recv_x(recvBuffer.data(), recvBuffer.size(), MPI_BYTE, sourceRank,
-              sourceRank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+              0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
   StreamView view(recvBuffer.data(), recvBuffer.size());
   std::istream stream(&view);
@@ -68,7 +68,7 @@ void receivePartialMap(Events& events, std::vector<char>& recvBuffer,
   }
 }
 
-void sendPartialMap(Events& events, int rank)
+void sendPartialMap(Events& events)
 {
   // Create a partial map of electron events
   SparseEventMap partialEventMap;
@@ -88,12 +88,11 @@ void sendPartialMap(Events& events, int rank)
 
   // First send the size
   auto size = eventsContiguousStream.GetSize();
-  MPI_Send(&size, 1, MPI_UINT64_T, 0, rank, MPI_COMM_WORLD);
+  MPI_Send(&size, 1, MPI_UINT64_T, 0, 0, MPI_COMM_WORLD);
 
   // Now send the data using BigMPI
   MPIX_Send_x(eventsContiguousStream.GetData(),
-              eventsContiguousStream.GetSize(), MPI_BYTE, 0, rank,
-              MPI_COMM_WORLD);
+              eventsContiguousStream.GetSize(), MPI_BYTE, 0, 0, MPI_COMM_WORLD);
 }
 
 void gatherEvents(int worldSize, int rank, Events& events)
@@ -114,7 +113,7 @@ void gatherEvents(int worldSize, int rank, Events& events)
   }
   // Send partial maps to rank 0
   else {
-    sendPartialMap(events, rank);
+    sendPartialMap(events);
   }
 }
 
