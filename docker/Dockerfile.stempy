@@ -1,0 +1,37 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as build
+
+ENV DEBIAN_FRONTEND noninteractive
+
+ARG PYTHON_VERSION
+ARG IPYKERNEL
+ARG MPI
+ARG RELEASE_OR_DEBUG
+
+COPY . /source/stempy/
+
+RUN pip install -r /source/stempy/requirements.txt
+
+RUN mkdir -p /build/stempy                                                                    && \
+    cd /build/stempy                                                                          && \
+    cmake -DCMAKE_BUILD_TYPE:STRING=${RELEASE_OR_DEBUG} \
+    -Dstempy_ENABLE_VTKm:BOOL=OFF \
+    -Dstempy_ENABLE_MPI:BOOL=${MPI} \
+    -DBIGMPI_INCLUDE_DIR:PATH=/usr/local/include \
+    -DBIGMPI_LIBRARY:PATH=/usr/local/lib/libbigmpi.a \
+    /source/stempy .                                                                          && \
+    cmake --build .                                                                           && \
+    cmake --install .                                                                         && \
+    cp -r -L /build/stempy/lib/stempy \                                                   
+    /usr/local/lib/python${PYTHON_VERSION}/site-packages                                      
+
+RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
+    pip install -r /source/stempy/docker/requirements-ipykernel.txt; \
+    elif [ "${MPI}" = "ON" ]; then \
+    pip install -r /source/stempy/docker/requirements-mpi.txt; \
+    else \
+    pip install -r /source/stempy/docker/requirements-normal.txt; \
+    fi                                                                                        && \
+    rm -rf /source/stempy
+
+RUN /sbin/ldconfig
