@@ -34,21 +34,22 @@ void serializeBlocks(std::vector<Block>& blocks, std::ostream* stream)
   archive(blocks);
 }
 
-void receivePartialMap(Events& events, std::vector<char>& recvBuffer)
+void receivePartialMap(Events& events, std::vector<char>& recvBuffer,
+                       int sourceRank)
 {
   MPI_Status status;
 
-  // First get the message size
+  // First get msg size using the source rank
   size_t msgSize;
-  MPI_Recv(&msgSize, 1, MPI_UINT64_T, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD,
+  MPI_Recv(&msgSize, 1, MPI_UINT64_T, sourceRank, 0, MPI_COMM_WORLD,
            MPI_STATUS_IGNORE);
 
   // Resize our buffer
   recvBuffer.resize(msgSize);
 
   // Now receive the data using BigMPI
-  MPIX_Recv_x(recvBuffer.data(), recvBuffer.size(), MPI_BYTE, MPI_ANY_SOURCE, 0,
-              MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  MPIX_Recv_x(recvBuffer.data(), recvBuffer.size(), MPI_BYTE, sourceRank,
+              0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
   StreamView view(recvBuffer.data(), recvBuffer.size());
   std::istream stream(&view);
@@ -106,8 +107,8 @@ void gatherEvents(int worldSize, int rank, Events& events)
     // We pass this buffer in as we might be able to reduce the reallocations.
     std::vector<char> recvBuffer;
     // One receive for each other rank
-    for (auto i = 0; i < worldSize - 1; i++) {
-      receivePartialMap(events, recvBuffer);
+    for (int sourceRank = 1; sourceRank < worldSize; sourceRank++) {
+      receivePartialMap(events, recvBuffer, sourceRank);
     }
   }
   // Send partial maps to rank 0
