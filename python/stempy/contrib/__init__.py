@@ -148,7 +148,7 @@ def get_scan_path(
     scan_num: Optional[int] = None,
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
-    version: int = 1,
+    version: int = 0,
     file_suffix: FileSuffix = FileSuffix.STANDARD,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """Get the file path for a 4D Camera scan on NERSC using the scan number,
