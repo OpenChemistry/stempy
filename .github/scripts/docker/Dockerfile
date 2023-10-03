@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=quay.io/pypa/manylinux2010_x86_64
+ARG BASE_IMAGE=quay.io/pypa/manylinux2014_x86_64
 FROM ${BASE_IMAGE}
 
 RUN yum install -y \
