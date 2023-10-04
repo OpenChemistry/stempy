@@ -30,6 +30,7 @@ env:
 
   CIBW_TEST_COMMAND: pytest {project}/tests
 
+  CIBW_ARCHS_MACOS: x86_64 arm64
 
 # Use bash by default for the run command
 defaults:
