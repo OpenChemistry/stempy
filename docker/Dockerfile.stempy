@@ -10,7 +10,7 @@ ARG RELEASE_OR_DEBUG
 
 COPY . /source/stempy/
 
-RUN pip install -r /source/stempy/requirements.txt
+RUN pip install -r /source/stempy/requirements.txt cmake
 
 RUN mkdir -p /build/stempy                                                                    && \
     cd /build/stempy                                                                          && \
@@ -22,8 +22,8 @@ RUN mkdir -p /build/stempy                                                      
     /source/stempy .                                                                          && \
     cmake --build .                                                                           && \
     cmake --install .                                                                         && \
-    cp -r -L /build/stempy/lib/stempy \                                                   
-    /usr/local/lib/python${PYTHON_VERSION}/site-packages                                      
+    cp -r -L /build/stempy/lib/stempy \
+    /usr/local/lib/python${PYTHON_VERSION}/site-packages
 
 RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
     pip install -r /source/stempy/docker/requirements-ipykernel.txt; \
@@ -33,5 +33,8 @@ RUN if [ "${IPYKERNEL}" = "ipykernel" ]; then \
     pip install -r /source/stempy/docker/requirements-normal.txt; \
     fi                                                                                        && \
     rm -rf /source/stempy
+
+# Remove cmake package, as its not needed a runtime
+RUN pip uninstall -y cmake
 
 RUN /sbin/ldconfig
