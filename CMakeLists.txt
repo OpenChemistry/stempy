@@ -115,6 +115,16 @@ else()
   add_library(stem ${_src} ${_vtkm_src})
 endif()
 
+# Version 1.12 of HDF5 deprecates the get_info_by_name1(...) interface and
+# the get_info_by_name maps to get_info_by_name3(...) which has a different
+# signature. We pass these compability flags so that we can continue to
+# use the older signature with newer version of HDF5.
+if (stempy_ENABLE_HDF5 AND NOT ("${HDF5_VERSION}" VERSION_LESS 1.12.0))
+  target_compile_options(stem PRIVATE "-DH5Oget_info_by_name_vers=1")
+  target_compile_options(stem PRIVATE "-DH5O_info_t_vers=1")
+  target_compile_options(stem PRIVATE "-DH5Ovisit_vers=1")
+endif()
+
 set_property(TARGET stem PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 target_link_libraries(stem
