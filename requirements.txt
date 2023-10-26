@@ -1,4 +1,3 @@
 numpy
 h5py
 deprecation
-cmake
