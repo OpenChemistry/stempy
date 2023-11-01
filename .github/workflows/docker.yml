@@ -102,6 +102,13 @@ jobs:
           LATEST_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:latest${DEV_TAG}
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
+          JUPYTER_TAG=$(if [[ "${{ matrix.ipykernel }}" == 'ipykernel' ]]; then 
+            echo "${{ env.DOCKERHUB_ORG }}/stempy-jupyterlab:latest${DEV_TAG}"
+          else 
+            echo ''
+          fi)
+          echo "JUPYTER_TAG=${JUPYTER_TAG}" >> $GITHUB_ENV
+
       - name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
         if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
@@ -132,6 +139,7 @@ jobs:
           tags: |
             ${{ env.TAG }}
             ${{ env.LATEST_TAG }}
+            ${{ env.JUPYTER_TAG }}
           target: build
           cache-to: type=gha, mode=max
           cache-from: type=gha, mode=max
