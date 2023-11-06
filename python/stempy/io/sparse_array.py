@@ -194,13 +194,19 @@ class SparseArray:
             frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
             
             if keep_flyback:
-                data = frames[()]
+                data = frames[()] # load the full data set
+                scan_positions = scan_positions_group[()]
             else:
+                # Generate the original scan indices from the scan_shape
                 orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
+                # Remove the indices of the last column 
                 crop_indices = np.delete(orig_indices, orig_indices[::scan_shape[1]])
+                # Load only the data needed
                 data = frames[crop_indices]
+                # Reduce the column shape by 1
                 scan_shape[1] = scan_shape[1] - 1
-
+                # Create the proper scan_positions without the flyback column
+                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
             
             # Load any metadata
             metadata = {}
