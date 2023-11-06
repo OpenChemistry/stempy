@@ -197,24 +197,32 @@ class SparseArray:
                 data = frames[()] # load the full data set
                 scan_positions = scan_positions_group[()]
             else:
+                print(scan_shape)
                 # Generate the original scan indices from the scan_shape
                 orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
+                print(orig_indices.shape)
+                print(orig_indices)
                 # Remove the indices of the last column 
-                crop_indices = np.delete(orig_indices, orig_indices[::scan_shape[1]])
+                crop_indices = np.delete(orig_indices, orig_indices[scan_shape[0]-1::scan_shape[0]])
+                print(crop_indices.shape)
+                print(crop_indices)
                 # Load only the data needed
                 data = frames[crop_indices]
+                print(data.shape)
                 # Reduce the column shape by 1
-                scan_shape[1] = scan_shape[1] - 1
+                scan_shape[0] = scan_shape[0] - 1
                 # Create the proper scan_positions without the flyback column
                 scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
-            
+                
             # Load any metadata
             metadata = {}
             if 'metadata' in f:
                 load_h5_to_dict(f['metadata'], metadata)
 
         scan_shape = scan_shape[::-1]
-
+        
+        print(scan_shape)
+        
         if version >= 3:
             # Convert to int to avoid integer division that results in 
             # a float
