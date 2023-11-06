@@ -170,11 +170,13 @@ class SparseArray:
                     raise Exception(msg)
 
     @classmethod
-    def from_hdf5(cls, filepath, **init_kwargs):
+    def from_hdf5(cls, filepath, keep_flyback=True, **init_kwargs):
         """Create a SparseArray from a stempy HDF5 file
 
         :param filepath: the path to the HDF5 file
         :type filepath: str
+        :param keep_flyback: option to crop the flyback column during loading
+        :type keep_flyback: bool
         :param init_kwargs: any kwargs to forward to SparseArray.__init__()
         :type init_kwargs: dict
 
@@ -188,12 +190,18 @@ class SparseArray:
 
             frames = f['electron_events/frames']
             scan_positions_group = f['electron_events/scan_positions']
-
-            data = frames[()]
             scan_shape = [scan_positions_group.attrs[x] for x in ['Nx', 'Ny']]
             frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
+            
+            if keep_flyback:
+                data = frames[()]
+            else:
+                orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
+                crop_indices = np.delete(orig_indices, orig_indices[::scan_shape[1]])
+                data = frames[crop_indices]
+                scan_shape[1] = scan_shape[1] - 1
 
-            scan_positions = scan_positions_group[()]
+            
             # Load any metadata
             metadata = {}
             if 'metadata' in f:
