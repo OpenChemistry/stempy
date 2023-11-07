@@ -259,16 +259,17 @@ def save_electron_counts(path, array):
     """
     array.write_to_hdf5(path)
 
-def load_electron_counts(path):
+def load_electron_counts(path, keep_flyback=True):
     """Load electron counted data from an HDF5 file.
 
     :param path: path to the HDF5 file.
     :type path: str
-
+    :param keep_flyback: option to crop the flyback column during loading
+    :type keep_flyback: bool
     :return: a SparseArray containing the electron counted data
     :rtype: SparseArray
     """
-    return SparseArray.from_hdf5(path)
+    return SparseArray.from_hdf5(path, keep_flyback=keep_flyback)
 
 def save_stem_images(outputFile, images, names):
     """Save STEM images to an HDF5 file.
