@@ -148,7 +148,6 @@ def get_scan_path(
     scan_num: Optional[int] = None,
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
-    version: int = 0,
     file_suffix: FileSuffix = FileSuffix.STANDARD,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """Get the file path for a 4D Camera scan on NERSC using the scan number,
@@ -168,8 +167,6 @@ def get_scan_path(
         The 4D Camera scan number. Optional
     th : float, optional
         The threshold for counting. This was added to the filename in older files.
-    version : int, optional
-        Version number for file name. 0 -- data_scan... ; 1 -- FOURD_...
 
     Returns
     -------
@@ -177,7 +174,11 @@ def get_scan_path(
         The tuple contains the file that matches the input information and the
         scan_num and scan_id as a tuple.
     """
-    if version == 0:
+    try:
+        return get_scan_path_version_1(
+            directory, scan_num, scan_id, file_suffix=file_suffix
+        )
+    except FileNotFoundError:
         return get_scan_path_version_0(
             directory,
             scan_num=scan_num,
@@ -185,10 +186,3 @@ def get_scan_path(
             th=th,
             file_suffix=file_suffix,
         )
-    elif version == 1:
-        return get_scan_path_version_1(
-            directory, scan_num, scan_id, file_suffix=file_suffix
-        )
-
-    else:
-        raise NotImplementedError("Please enter version 0 or 1.")
