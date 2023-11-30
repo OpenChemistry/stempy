@@ -148,8 +148,8 @@ def get_scan_path(
     scan_num: Optional[int] = None,
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
-    version: int = 0,
     file_suffix: FileSuffix = FileSuffix.STANDARD,
+    version: Optional[int] = None,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """Get the file path for a 4D Camera scan on NERSC using the scan number,
     the Distiller scan id, and/or threshold. scan_id should always
@@ -169,7 +169,8 @@ def get_scan_path(
     th : float, optional
         The threshold for counting. This was added to the filename in older files.
     version : int, optional
-        Version number for file name. 0 -- data_scan... ; 1 -- FOURD_...
+        Version number for file name. If None, tries version 1 then 0.
+
 
     Returns
     -------
@@ -177,18 +178,30 @@ def get_scan_path(
         The tuple contains the file that matches the input information and the
         scan_num and scan_id as a tuple.
     """
-    if version == 0:
-        return get_scan_path_version_0(
+
+    versions_to_try = [1, 0] if version is None else [version]
+    version_functions = {
+        0: lambda: get_scan_path_version_0(
             directory,
             scan_num=scan_num,
             scan_id=scan_id,
             th=th,
             file_suffix=file_suffix,
-        )
-    elif version == 1:
-        return get_scan_path_version_1(
-            directory, scan_num, scan_id, file_suffix=file_suffix
-        )
+        ),
+        1: lambda: get_scan_path_version_1(
+            directory, scan_num=scan_num, scan_id=scan_id, file_suffix=file_suffix
+        ),
+    }
 
-    else:
-        raise NotImplementedError("Please enter version 0 or 1.")
+    for ver in versions_to_try:
+        try:
+            if ver in version_functions:
+                return version_functions[ver]()
+            else:
+                raise NotImplementedError("Version 0 and 1 are implemented.")
+        except FileNotFoundError:
+            continue
+
+    raise FileNotFoundError(
+        "No file with those parameters can be found for any version."
+    )
