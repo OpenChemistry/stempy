@@ -180,24 +180,25 @@ def get_scan_path(
     """
 
     versions_to_try = [1, 0] if version is None else [version]
+    version_functions = {
+        0: lambda: get_scan_path_version_0(
+            directory,
+            scan_num=scan_num,
+            scan_id=scan_id,
+            th=th,
+            file_suffix=file_suffix,
+        ),
+        1: lambda: get_scan_path_version_1(
+            directory, scan_num=scan_num, scan_id=scan_id, file_suffix=file_suffix
+        ),
+    }
 
     for ver in versions_to_try:
         try:
-            if ver == 0:
-                return get_scan_path_version_0(
-                    directory,
-                    scan_num=scan_num,
-                    scan_id=scan_id,
-                    th=th,
-                    file_suffix=file_suffix,
-                )
-            elif ver == 1:
-                return get_scan_path_version_1(
-                    directory, scan_num, scan_id, file_suffix=file_suffix
-                )
+            if ver in version_functions:
+                return version_functions[ver]()
             else:
                 raise NotImplementedError("Version 0 and 1 are implemented.")
-
         except FileNotFoundError:
             continue
 
