@@ -149,6 +149,7 @@ def get_scan_path(
     scan_id: Optional[int] = None,
     th: Optional[int] = None,
     file_suffix: FileSuffix = FileSuffix.STANDARD,
+    version: Optional[int] = None,
 ) -> Tuple[Path, Optional[int], Optional[int]]:
     """Get the file path for a 4D Camera scan on NERSC using the scan number,
     the Distiller scan id, and/or threshold. scan_id should always
@@ -167,6 +168,9 @@ def get_scan_path(
         The 4D Camera scan number. Optional
     th : float, optional
         The threshold for counting. This was added to the filename in older files.
+    version : int, optional
+        Version number for file name. If None, tries version 1 then 0.
+
 
     Returns
     -------
@@ -174,15 +178,29 @@ def get_scan_path(
         The tuple contains the file that matches the input information and the
         scan_num and scan_id as a tuple.
     """
-    try:
-        return get_scan_path_version_1(
-            directory, scan_num, scan_id, file_suffix=file_suffix
-        )
-    except FileNotFoundError:
-        return get_scan_path_version_0(
-            directory,
-            scan_num=scan_num,
-            scan_id=scan_id,
-            th=th,
-            file_suffix=file_suffix,
-        )
+
+    versions_to_try = [1, 0] if version is None else [version]
+
+    for ver in versions_to_try:
+        try:
+            if ver == 0:
+                return get_scan_path_version_0(
+                    directory,
+                    scan_num=scan_num,
+                    scan_id=scan_id,
+                    th=th,
+                    file_suffix=file_suffix,
+                )
+            elif ver == 1:
+                return get_scan_path_version_1(
+                    directory, scan_num, scan_id, file_suffix=file_suffix
+                )
+            else:
+                raise NotImplementedError("Version 0 and 1 are implemented.")
+
+        except FileNotFoundError:
+            continue
+
+    raise FileNotFoundError(
+        "No file with those parameters can be found for any version."
+    )
