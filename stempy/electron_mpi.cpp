@@ -11,6 +11,8 @@
 #include <emp/io/ContiguousStream.hpp>
 #include <mpi.h>
 #include <vector>
+#include <climits>
+#include <numeric>
 
 namespace stempy {
 

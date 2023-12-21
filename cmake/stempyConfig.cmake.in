@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/stempyTargets.cmake")
+
+check_required_components(stempy)
+
+find_package(Python3 REQUIRED COMPONENTS Development)
