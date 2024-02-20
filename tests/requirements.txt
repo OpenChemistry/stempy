@@ -1,2 +1,4 @@
 pytest
+# Pin to older version of urllib3 to avoid https://github.com/urllib3/urllib3/issues/2168
+urllib3==1.26.15
 requests
