@@ -315,6 +315,21 @@ SectorStreamReader::SectorStreamReader(const vector<string>& files,
   m_streamsIterator = m_streams.begin();
 }
 
+SectorStreamReader::SectorStreamReader(uint8_t version) : m_version(version)
+{
+  // Validate version
+  switch (m_version) {
+    case 4:
+    case 5:
+      break;
+    default:
+      std::ostringstream ss;
+      ss << "Unsupported version: ";
+      ss << m_version;
+      throw invalid_argument(ss.str());
+  }
+}
+
 SectorStreamReader::~SectorStreamReader()
 {
   m_streams.clear();
@@ -777,6 +792,13 @@ SectorStreamThreadedReader::SectorStreamThreadedReader(const std::string& path,
 SectorStreamThreadedReader::SectorStreamThreadedReader(
   const std::vector<std::string>& files, uint8_t version, int threads)
   : SectorStreamReader(files, version), m_threads(threads)
+{
+  initNumberOfThreads();
+}
+
+SectorStreamThreadedReader::SectorStreamThreadedReader(uint8_t version,
+                                                       int threads)
+  : SectorStreamReader(version), m_threads(threads)
 {
   initNumberOfThreads();
 }
