@@ -201,17 +201,19 @@ class SparseArray:
                 data = np.empty(((scan_shape[0]-1) * scan_shape[1] * num), dtype=object)
                 new_num_cols = scan_shape[0]-1 # number of columns without flyback
                 for ii in range(scan_shape[1]):
-                    start = ii*new_num_cols*4 # start of cropped data
-                    end = (ii+1)*new_num_cols*4
-                    start2 = ii*new_num_cols*4+4*ii # start of uncropped data
-                    end2 = (ii+1)*new_num_cols*4+4*ii
+                    start = ii*new_num_cols*num # start of cropped data
+                    end = (ii+1)*new_num_cols*num
+                    start2 = ii*new_num_cols*num + num*ii # start of uncropped data
+                    end2 = (ii+1)*new_num_cols*num + num*ii
                     data[start:end] = frames[start2:end2]
-                
+                scan_shape = (scan_shape[0]-1, scan_shape[1]) # update scan shape
+            
             # Load any metadata
             metadata = {}
             if 'metadata' in f:
                 load_h5_to_dict(f['metadata'], metadata)
 
+        # reverse the scan shape to match expected shape
         scan_shape = scan_shape[::-1]
         
         if version >= 3:
