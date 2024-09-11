@@ -348,6 +348,74 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
 
     return array
 
+
+def electron_count_frame(
+    frame: np.ndarray,
+    options=None,
+    darkreference=None,
+    background_threshold=4.0,
+    xray_threshold=2000.0,
+    gain=None,
+):
+    """Generate a list of coordinates of electron hits for a single 2D numpy array.
+
+    :param frame: the frame.
+    :type frame: numpy.ndarray
+    :param options: the options to use for electron counting. If set, all other
+                    parameters are ignored.
+    :type options: stempy.image.ElectronCountOptionsClassic
+    :param darkreference: the dark reference to subtract, potentially generated
+                          via stempy.image.calculate_average().
+    :type darkreference: stempy.image.ImageArray or numpy.ndarray
+    :param background_threshold: the threshold for background
+    :type background_threshold: float
+    :param xray_threshold: the threshold for x-rays
+    :type xray_threshold: float
+    :param gain: the gain mask to apply. Must match the frame dimensions.
+    :type gain: numpy.ndarray (2D)
+
+    :return: the coordinates of the electron hits for the frame.
+    :rtype: numpy.ndarray
+    """
+
+    if gain is not None:
+        # Invert, as we will multiply in C++
+        # It also must be a float32
+        gain = np.power(gain, -1)
+        gain = _safe_cast(gain, np.float32, "gain")
+
+    if options is None:
+        if isinstance(darkreference, np.ndarray):
+            # Must be float32 for correct conversions
+            darkreference = _safe_cast(darkreference, np.float32, "dark reference")
+
+        options = _image.ElectronCountOptionsClassic()
+
+        options.dark_reference = darkreference
+        options.background_threshold = background_threshold
+        options.x_ray_threshold = xray_threshold
+        options.gain = gain
+        options.apply_row_dark_subtraction = False
+        options.optimized_mean = 0.0
+        options.apply_row_dark_use_mean = False
+    else:
+        if options.apply_row_dark_subtraction:
+            print("Warning: apply_row_dark_subtraction is not supported " 
+                  "for single frame electron counting. Ignoring this option.")
+            options.apply_row_dark_subtraction = False
+        options.gain = gain
+
+    electron_counts = _image.electron_count_frame(frame, frame.shape, options)
+    np_data = np.empty((1, 1), dtype=object)
+    np_data[0, 0] = np.array(electron_counts, copy=False)
+    kwargs = {
+        "data": np_data,
+        "scan_shape": (1, 1),
+        "frame_shape": frame.shape,
+    }
+    return SparseArray(**kwargs)
+
+
 def radial_sum(reader, center=(-1, -1), scan_dimensions=(0, 0)):
     """Generate a radial sum from which STEM images can be generated.
 
