@@ -4,7 +4,7 @@ set -ev
 pip install cibuildwheel
 
 if [[ $RUNNER_OS == "Windows" ]]; then
-    git clone --recursive -b 3.3.9 --depth 1 https://gitlab.com/libeigen/eigen /c/eigen
+    .github/scripts/install_eigen_windows.sh
 elif [[ $RUNNER_OS == "macOS" ]]; then
     brew install eigen ninja
 fi
