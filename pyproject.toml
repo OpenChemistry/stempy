@@ -1,2 +1,27 @@
 [build-system]
 requires = ["setuptools", "wheel", "scikit-build==0.14.1", "setuptools_scm[toml]"]
+
+[tool.ruff]
+line-length = 120
+target-version = 'py38'
+extend-exclude = ['thirdparty','examples/**', 'python/stempy/pipeline/**']
+
+[tool.ruff.lint]
+exclude = []
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "B008", # do not perform function calls in argument defaults
+]
+isort = { known-first-party = ['stempy'] }
+pydocstyle = { convention = 'google' }
+
+[tool.ruff.format]
+quote-style = 'double'
