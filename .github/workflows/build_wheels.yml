@@ -20,17 +20,21 @@ env:
 
   # Specify eigen location for windows, and force it to use python in the path...
   CIBW_ENVIRONMENT_WINDOWS: >
-    EXTRA_CMAKE_ARGS="-DEIGEN3_INCLUDE_DIR=C:\\eigen;-Dstempy_ENABLE_HDF5=OFF"
+    EXTRA_CMAKE_ARGS="-DEIGEN3_DIR=C:\\PROGRA~2\\Eigen3\\share\\eigen3\\cmake\\;-Dstempy_ENABLE_HDF5=OFF"
     USE_PYTHON_IN_PATH=1
 
   # Get cmake to use python in the path...
-  CIBW_ENVIRONMENT_MACOS: USE_PYTHON_IN_PATH=1
+  CIBW_ENVIRONMENT_MACOS: >
+    EXTRA_CMAKE_ARGS="-DHDF5_DIR=/usr/local/HDF_Group/HDF5/current/cmake"
+    USE_PYTHON_IN_PATH=1
 
   CIBW_BEFORE_TEST: pip install -r {project}/tests/requirements.txt
 
   CIBW_TEST_COMMAND: pytest {project}/tests
 
   CIBW_ARCHS_MACOS: x86_64 arm64
+
+  CIBW_BEFORE_ALL_MACOS: . .github/scripts/install_hdf5_macos.sh
 
 # Use bash by default for the run command
 defaults:
