@@ -30,7 +30,6 @@ include_directories(
 )
 
 find_package(Eigen3 REQUIRED)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/pybind11)
@@ -39,7 +38,7 @@ set(PYBIND11_CPP_STANDARD "-std=c++14" CACHE STRING "")
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
-set(_libs Threads::Threads)
+set(_libs Threads::Threads Eigen3::Eigen)
 
 option(stempy_ENABLE_MPI "Build with MPI" OFF)
 if (stempy_ENABLE_MPI)
