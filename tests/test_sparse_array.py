@@ -1,12 +1,10 @@
 import os
 import tempfile
 
+import numpy as np
 import pytest
 
-import numpy as np
-
-from stempy.io.sparse_array import FullExpansionDenied
-from stempy.io.sparse_array import SparseArray
+from stempy.io.sparse_array import FullExpansionDenied, SparseArray
 
 
 def test_full_expansion(sparse_array_small, full_array_small):
@@ -56,7 +54,7 @@ def test_dense_slicing(sparse_array_small, full_array_small):
         for i in range(len(slices)):
             # Try using just the first slice, then the first and the second,
             # etc. until using all slices.
-            s = slices[:i + 1]
+            s = slices[: i + 1]
 
             if len(s) == 1 and s[0] == slice(None):
                 # Skip over full expansions
@@ -74,9 +72,24 @@ def test_sparse_slicing(sparse_array_small, full_array_small):
 
     # Just test a few indices
     test_frames = [
-        (0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 7), (0, 9), (0, 11),
-        (1, 0), (1, 3), (2, 2), (3, 1), (8, 4), (9, 6), (10, 13), (17, 17),
-        (14, 16), (18, 15),
+        (0, 0),
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (0, 4),
+        (0, 7),
+        (0, 9),
+        (0, 11),
+        (1, 0),
+        (1, 3),
+        (2, 2),
+        (3, 1),
+        (8, 4),
+        (9, 6),
+        (10, 13),
+        (17, 17),
+        (14, 16),
+        (18, 15),
     ]
     for slices in TEST_SLICES:
         sliced = array[slices]
@@ -113,8 +126,7 @@ def test_frame_slicing(sparse_array_small, full_array_small):
 
     # Now test the dense slicing version
     array.sparse_slicing = False
-    assert np.array_equal(array[:, :, 100:200, 200:300],
-                          full[:, :, 100:200, 200:300])
+    assert np.array_equal(array[:, :, 100:200, 200:300], full[:, :, 100:200, 200:300])
 
 
 def test_scan_axes_arithmetic(sparse_array_small, full_array_small):
@@ -161,9 +173,9 @@ def test_bin_scans(sparse_array_small, full_array_small):
             continue
 
         binned = array.bin_scans(factor)
-        full_binned = full.reshape(shape[0] // factor, factor,
-                                   shape[1] // factor, factor,
-                                   shape[2], shape[3]).sum(axis=(1, 3))
+        full_binned = full.reshape(shape[0] // factor, factor, shape[1] // factor, factor, shape[2], shape[3]).sum(
+            axis=(1, 3)
+        )
 
         assert np.array_equal(binned.to_dense(), full_binned)
 
@@ -192,9 +204,9 @@ def test_bin_frames(sparse_array_small, full_array_small):
             continue
 
         binned = array.bin_frames(factor)
-        full_binned = full.reshape(shape[0], shape[1], shape[2] // factor,
-                                   factor, shape[3] // factor,
-                                   factor).sum(axis=(3, 5))
+        full_binned = full.reshape(shape[0], shape[1], shape[2] // factor, factor, shape[3] // factor, factor).sum(
+            axis=(3, 5)
+        )
 
         assert np.array_equal(binned.to_dense(), full_binned)
 
@@ -295,21 +307,16 @@ def test_slice_sum(sparse_array_small, full_array_small):
     data = sparse_array_small
     full = full_array_small
 
-    assert np.array_equal(data[0, 0:1, :, :].sum(axis='scan'),
-                          full[0, 0:1, :, :].sum(axis=0))
-    assert np.array_equal(data[0:1, 0:1, :, :].sum(axis='scan'),
-                          full[0:1, 0:1, :, :].sum(axis=(0, 1)))
-    assert np.array_equal(data[0:2, 0:2, :, :].sum(axis='scan'),
-                          full[0:2, 0:2, :, :].sum(axis=(0, 1)))
-    assert np.array_equal(data[0, 0, :, :].sum(),
-                          full[0, 0, :, :].sum())
+    assert np.array_equal(data[0, 0:1, :, :].sum(axis="scan"), full[0, 0:1, :, :].sum(axis=0))
+    assert np.array_equal(data[0:1, 0:1, :, :].sum(axis="scan"), full[0:1, 0:1, :, :].sum(axis=(0, 1)))
+    assert np.array_equal(data[0:2, 0:2, :, :].sum(axis="scan"), full[0:2, 0:2, :, :].sum(axis=(0, 1)))
+    assert np.array_equal(data[0, 0, :, :].sum(), full[0, 0, :, :].sum())
 
-    assert np.array_equal(data[:, :, 0:1, 0:2].sum(axis='frame'),
-                          full[:, :, 0:1, 0:2].sum(axis=(2, 3)))
-    assert np.array_equal(data[:, :, 100:200, 100:200].sum(axis='frame'),
-                          full[:, :, 100:200, 100:200].sum(axis=(2, 3)))
-    assert np.array_equal(data[:, :, 100:200:-3, 100:200:-3].sum(axis='frame'),
-                          full[:, :, 100:200:-3, 100:200:-3].sum(axis=(2, 3)))
+    assert np.array_equal(data[:, :, 0:1, 0:2].sum(axis="frame"), full[:, :, 0:1, 0:2].sum(axis=(2, 3)))
+    assert np.array_equal(data[:, :, 100:200, 100:200].sum(axis="frame"), full[:, :, 100:200, 100:200].sum(axis=(2, 3)))
+    assert np.array_equal(
+        data[:, :, 100:200:-3, 100:200:-3].sum(axis="frame"), full[:, :, 100:200:-3, 100:200:-3].sum(axis=(2, 3))
+    )
 
 
 def test_scan_ravel(sparse_array_small, full_array_small):
@@ -322,8 +329,7 @@ def test_scan_ravel(sparse_array_small, full_array_small):
 
     # Perform a few simple tests on the raveled SparseArray
     assert np.array_equal(array.sum(axis=0), full.sum(axis=(0, 1)))
-    assert np.array_equal(array.sum(axis=(1, 2)),
-                          full.sum(axis=(2, 3)).ravel())
+    assert np.array_equal(array.sum(axis=(1, 2)), full.sum(axis=(2, 3)).ravel())
 
     full = full.reshape(expected_shape)
     for i in range(expected_shape[0]):
@@ -335,14 +341,16 @@ def test_round_trip_hdf5(sparse_array_small):
     original = sparse_array_small
 
     # Store some metadata that we will test for
-    original.metadata.update({
-        'nested': {
-            'string': 's',
-        },
-        'array1d': np.arange(3, dtype=int),
-        'array2d': np.arange(9, dtype=np.float32).reshape((3, 3)),
-        'float': np.float64(7.21),
-    })
+    original.metadata.update(
+        {
+            "nested": {
+                "string": "s",
+            },
+            "array1d": np.arange(3, dtype=int),
+            "array2d": np.arange(9, dtype=np.float32).reshape((3, 3)),
+            "float": np.float64(7.21),
+        }
+    )
 
     temp = tempfile.NamedTemporaryFile(delete=False)
     try:
@@ -361,7 +369,7 @@ def test_round_trip_hdf5(sparse_array_small):
         for a, b in zip(sfa, sfb):
             assert np.array_equal(a, b)
 
-    original.metadata['float'] = np.float64(6.5)
+    original.metadata["float"] = np.float64(6.5)
     # Now, the metadata shouldn't be equal
     assert not dicts_equal(original.metadata, array.metadata)
 
@@ -373,7 +381,7 @@ def dicts_equal(d1, d2):
     for k, v1 in d1.items():
         v2 = d2[k]
 
-        if type(v1) != type(v2):
+        if type(v1) is not type(v2):
             return False
 
         if isinstance(v1, np.ndarray):
@@ -400,11 +408,11 @@ def test_multiple_frames_per_scan_position():
     data[1][0] = np.array([0])
     data[1][1] = np.array([0, 1])
     kwargs = {
-        'data': data,
-        'scan_shape': (2, 1),
-        'frame_shape': (2, 2),
-        'sparse_slicing': False,
-        'allow_full_expand': True,
+        "data": data,
+        "scan_shape": (2, 1),
+        "frame_shape": (2, 2),
+        "sparse_slicing": False,
+        "allow_full_expand": True,
     }
     array = SparseArray(**kwargs)
 
@@ -447,10 +455,8 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(array[:, :, 0][1, 0], full[:, :, 0][1, 0])
     assert np.array_equal(array[:, :, 0, 1][0, 0], full[:, :, 0, 1][0, 0])
     assert np.array_equal(array[:, :, 0, 1:][0, 0], full[:, :, 0, 1:][0, 0])
-    assert np.array_equal(array[:, :, 0:2, 0:2][0, 0],
-                          full[:, :, 0:2, 0:2][0, 0])
-    assert np.array_equal(array[:, :, 0:2, 0:2][1, 0],
-                          full[:, :, 0:2, 0:2][1, 0])
+    assert np.array_equal(array[:, :, 0:2, 0:2][0, 0], full[:, :, 0:2, 0:2][0, 0])
+    assert np.array_equal(array[:, :, 0:2, 0:2][1, 0], full[:, :, 0:2, 0:2][1, 0])
     assert np.array_equal(array[0, :, :, 0][0], full[0, :, :, 0][0])
     assert np.array_equal(array[0, :, :, 1][0], full[0, :, :, 1][0])
     assert np.array_equal(array[0, :, 0:2, 0:2][0], full[0, :, 0:2, 0:2][0])
@@ -460,13 +466,13 @@ def test_multiple_frames_per_scan_position():
 
     # Test arithmetic
     array.allow_full_expand = False
-    axis = 'scan'
+    axis = "scan"
     assert np.array_equal(array.sum(axis=axis), [[4, 1], [1, 0]])
     assert np.array_equal(array.max(axis=axis), [[2, 1], [1, 0]])
     assert np.array_equal(array.min(axis=axis), [[2, 0], [0, 0]])
     assert np.array_equal(array.mean(axis=axis), [[2, 0.5], [0.5, 0]])
 
-    axis = 'frame'
+    axis = "frame"
     assert np.array_equal(array.sum(axis=axis), full.sum(axis=(2, 3)))
     assert np.array_equal(array.mean(axis=axis), full.mean(axis=(2, 3)))
     assert np.array_equal(array.min(axis=axis), full.min(axis=(2, 3)))
@@ -480,10 +486,10 @@ def test_multiple_frames_per_scan_position():
     data[1][1] = np.array([], dtype=int)
 
     kwargs = {
-        'data': data,
-        'scan_shape': (2, 1),
-        'frame_shape': (4, 4),
-        'sparse_slicing': False,
+        "data": data,
+        "scan_shape": (2, 1),
+        "frame_shape": (4, 4),
+        "sparse_slicing": False,
     }
     test_bin_frames_array = SparseArray(**kwargs)
     binned = test_bin_frames_array.bin_frames(2)
@@ -501,11 +507,11 @@ def test_multiple_frames_per_scan_position():
         data[i] = np.array([i % 4])
 
     kwargs = {
-        'data': data,
-        'scan_shape': (4, 4),
-        'frame_shape': (2, 2),
-        'sparse_slicing': False,
-        'allow_full_expand': True,
+        "data": data,
+        "scan_shape": (4, 4),
+        "frame_shape": (2, 2),
+        "sparse_slicing": False,
+        "allow_full_expand": True,
     }
     test_bin_scans_array = SparseArray(**kwargs)
     binned = test_bin_scans_array.bin_scans(2)
@@ -527,8 +533,7 @@ def test_multiple_frames_per_scan_position():
     assert np.array_equal(binned_4x[:], binned_twice[:])
 
 
-def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2,
-                         cropped_multi_frames_v3):
+def test_data_conversion(cropped_multi_frames_v1, cropped_multi_frames_v2, cropped_multi_frames_v3):
     # These datasets were in older formats, but when they were converted
     # into a SparseArray via the fixture, they should have automatically
     # been converted to the latest version. Confirm this is the case.
@@ -618,7 +623,7 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     rng = np.random.default_rng(0)
 
     num_tries = 3
-    for i in range(num_tries):
+    for _ in range(num_tries):
         scan_mask = rng.choice([True, False], array.scan_shape)
         frame_mask = rng.choice([True, False], array.frame_shape)
 
@@ -653,23 +658,15 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
 
     # Now test a few arithmetic operations combined with the indexing
     array.sparse_slicing = True
-    assert np.array_equal(array[scan_mask].sum(axis='scan'),
-                          full[scan_mask].sum(axis=(0,)))
-    assert np.array_equal(array[scan_mask].min(axis='scan'),
-                          full[scan_mask].min(axis=(0,)))
-    assert np.array_equal(array[scan_mask].max(axis='scan'),
-                          full[scan_mask].max(axis=(0,)))
-    assert np.allclose(array[scan_mask].mean(axis='scan'),
-                       full[scan_mask].mean(axis=(0,)))
+    assert np.array_equal(array[scan_mask].sum(axis="scan"), full[scan_mask].sum(axis=(0,)))
+    assert np.array_equal(array[scan_mask].min(axis="scan"), full[scan_mask].min(axis=(0,)))
+    assert np.array_equal(array[scan_mask].max(axis="scan"), full[scan_mask].max(axis=(0,)))
+    assert np.allclose(array[scan_mask].mean(axis="scan"), full[scan_mask].mean(axis=(0,)))
 
-    assert np.array_equal(array[:, :, frame_mask].sum(axis='frame'),
-                          full[:, :, frame_mask].sum(axis=(2,)))
-    assert np.allclose(array[:, :, frame_mask].mean(axis='frame'),
-                       full[:, :, frame_mask].mean(axis=(2,)))
-    assert np.array_equal(array[:, :, frame_mask].min(axis='frame'),
-                          full[:, :, frame_mask].min(axis=(2,)))
-    assert np.array_equal(array[:, :, frame_mask].max(axis='frame'),
-                          full[:, :, frame_mask].max(axis=(2,)))
+    assert np.array_equal(array[:, :, frame_mask].sum(axis="frame"), full[:, :, frame_mask].sum(axis=(2,)))
+    assert np.allclose(array[:, :, frame_mask].mean(axis="frame"), full[:, :, frame_mask].mean(axis=(2,)))
+    assert np.array_equal(array[:, :, frame_mask].min(axis="frame"), full[:, :, frame_mask].min(axis=(2,)))
+    assert np.array_equal(array[:, :, frame_mask].max(axis="frame"), full[:, :, frame_mask].max(axis=(2,)))
 
     # Now do some basic tests with multiple frames per scan
     data = np.empty((2, 2), dtype=object)
@@ -678,11 +675,11 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     data[1][0] = np.array([0])
     data[1][1] = np.array([0, 1])
     kwargs = {
-        'data': data,
-        'scan_shape': (2, 1),
-        'frame_shape': (2, 2),
-        'sparse_slicing': False,
-        'allow_full_expand': True,
+        "data": data,
+        "scan_shape": (2, 1),
+        "frame_shape": (2, 2),
+        "sparse_slicing": False,
+        "allow_full_expand": True,
     }
     # The multiple frames per scan array
     m_array = SparseArray(**kwargs)
@@ -702,10 +699,8 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     assert np.array_equal(m_array[[1, 0], [0]][0], position_one)
     assert np.array_equal(m_array[[1, 0], [0]][1], position_zero)
     assert np.array_equal(m_array[0, 0, [0, 1], [0, 0]], [2, 1])
-    assert np.array_equal(m_array[0, 0, [[True, False], [True, False]]],
-                          [2, 1])
-    assert np.array_equal(m_array[0, 0, [[False, True], [False, True]]],
-                          [0, 0])
+    assert np.array_equal(m_array[0, 0, [[True, False], [True, False]]], [2, 1])
+    assert np.array_equal(m_array[0, 0, [[False, True], [False, True]]], [0, 0])
     assert np.array_equal(m_array[[True, False], 0][0], position_zero)
     assert np.array_equal(m_array[[False, True], 0][0], position_one)
 
@@ -715,7 +710,8 @@ def test_keep_flyback(electron_data_small):
     assert flyback.scan_shape[1] == 50
     no_flyback = SparseArray.from_hdf5(electron_data_small, keep_flyback=False)
     assert no_flyback.scan_shape[1] == 49
-    
+
+
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
 
@@ -736,10 +732,7 @@ TEST_SLICES = [
     (slice(4), slice(7), slice(3), slice(5)),
     (slice(2, 8), slice(5, 9), slice(2, 20), slice(50, 200)),
     (slice(2, 18, 2), slice(3, 20, 3), slice(2, 50, 2), slice(20, 100)),
-    (slice(None, None, 2), slice(None, None, 3), slice(None, None, 4),
-     slice(None, None, 5)),
-    (slice(3, None, 2), slice(5, None, 5), slice(4, None, 4),
-     slice(20, None, 5)),
-    (slice(20, 4, -2), slice(None, None, -1), slice(4, None, -3),
-     slice(100, 3, -5)),
+    (slice(None, None, 2), slice(None, None, 3), slice(None, None, 4), slice(None, None, 5)),
+    (slice(3, None, 2), slice(5, None, 5), slice(4, None, 4), slice(20, None, 5)),
+    (slice(20, 4, -2), slice(None, None, -1), slice(4, None, -3), slice(100, 3, -5)),
 ]

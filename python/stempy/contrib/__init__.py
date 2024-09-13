@@ -18,9 +18,7 @@ suffix_to_filetype = {
 
 def check_only_one_filepath(file_path):
     if len(file_path) > 1:
-        raise ValueError(
-            "Multiple files match that input. Add scan_id to be more specific."
-        )
+        raise ValueError("Multiple files match that input. Add scan_id to be more specific.")
     elif len(file_path) == 0:
         raise FileNotFoundError("No file with those parameters can be found.")
 
@@ -125,13 +123,9 @@ def get_scan_path_version_1(
         if file_suffix == FileSuffix.STANDARD:
             file_pattern = f"FOURD_*_{str(scan_id).zfill(5)}_?????.{filetype}"
         else:
-            file_pattern = (
-                f"FOURD_*_{str(scan_id).zfill(5)}_?????{file_suffix.value}.{filetype}"
-            )
+            file_pattern = f"FOURD_*_{str(scan_id).zfill(5)}_?????{file_suffix.value}.{filetype}"
     elif scan_num is not None:
-        file_pattern = (
-            f"FOURD_*_*_{str(scan_num).zfill(5)}{file_suffix.value}.{filetype}"
-        )
+        file_pattern = f"FOURD_*_*_{str(scan_num).zfill(5)}{file_suffix.value}.{filetype}"
 
     file_path = list(directory.glob(file_pattern))
     check_only_one_filepath(file_path)
@@ -188,9 +182,7 @@ def get_scan_path(
             th=th,
             file_suffix=file_suffix,
         ),
-        1: lambda: get_scan_path_version_1(
-            directory, scan_num=scan_num, scan_id=scan_id, file_suffix=file_suffix
-        ),
+        1: lambda: get_scan_path_version_1(directory, scan_num=scan_num, scan_id=scan_id, file_suffix=file_suffix),
     }
 
     for ver in versions_to_try:
@@ -202,6 +194,4 @@ def get_scan_path(
         except FileNotFoundError:
             continue
 
-    raise FileNotFoundError(
-        "No file with those parameters can be found for any version."
-    )
+    raise FileNotFoundError("No file with those parameters can be found for any version.")

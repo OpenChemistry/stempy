@@ -1,8 +1,8 @@
-from collections.abc import Sequence
 import copy
-from functools import wraps
 import inspect
 import sys
+from collections.abc import Sequence
+from functools import wraps
 
 import numpy as np
 
@@ -12,9 +12,9 @@ from .compatibility import convert_data_format
 def _format_axis(func):
     @wraps(func)
     def wrapper(self, axis=None, *args, **kwargs):
-        if axis == 'scan':
+        if axis == "scan":
             axis = self.scan_axes
-        elif axis == 'frame':
+        elif axis == "frame":
             axis = self.frame_axes
 
         if axis is None:
@@ -23,6 +23,7 @@ def _format_axis(func):
             axis = (axis,)
         axis = tuple(sorted(axis))
         return func(self, axis, *args, **kwargs)
+
     return wrapper
 
 
@@ -35,7 +36,7 @@ def _default_full_expansion(func):
         if ret is not None:
             return ret
 
-        _warning(f'performing full expansion for {name}')
+        _warning(f"performing full expansion for {name}")
         prev_sparse_slicing = self.sparse_slicing
         self.sparse_slicing = False
         try:
@@ -43,6 +44,7 @@ def _default_full_expansion(func):
         finally:
             self.sparse_slicing = prev_sparse_slicing
         return getattr(expanded, name)(*args, **kwargs)
+
     return wrapper
 
 
@@ -57,6 +59,7 @@ def _warn_unimplemented_kwargs(func):
                 _warning(f'"{key}" is not implemented for {name}')
 
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -86,10 +89,19 @@ class SparseArray:
     and stride. Slicing returns either a new sparse array or a dense
     array depending on the user-defined settings.
     """
+
     VERSION = 3
 
-    def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
-                 sparse_slicing=True, allow_full_expand=False, metadata=None):
+    def __init__(
+        self,
+        data,
+        scan_shape,
+        frame_shape,
+        dtype=np.uint32,
+        sparse_slicing=True,
+        allow_full_expand=False,
+        metadata=None,
+    ):
         """Initialize a sparse array.
 
         :param data: the sparse array data, where the outer array represents
@@ -144,18 +156,18 @@ class SparseArray:
     def _validate(self):
         if self.data.ndim != 2:
             msg = (
-                'The data must have 2 dimensions, but instead has '
-                f'{self.data.ndim}. The outer dimension should be the '
-                'scan position, and the inner dimension should be the '
-                'frame index at that scan position'
+                "The data must have 2 dimensions, but instead has "
+                f"{self.data.ndim}. The outer dimension should be the "
+                "scan position, and the inner dimension should be the "
+                "frame index at that scan position"
             )
             raise Exception(msg)
 
         if len(self.data) != self.num_scans:
             msg = (
-                f'The length of the data array ({len(self.data)}) must be '
-                f'equal to the number of scans ({self.num_scans}), which '
-                f'is computed via np.prod(scan_shape)'
+                f"The length of the data array ({len(self.data)}) must be "
+                f"equal to the number of scans ({self.num_scans}), which "
+                f"is computed via np.prod(scan_shape)"
             )
             raise Exception(msg)
 
@@ -163,9 +175,9 @@ class SparseArray:
             for j, frame in enumerate(scan_frames):
                 if not np.issubdtype(frame.dtype, np.integer):
                     msg = (
-                        f'All frames of data must have integral dtype, but '
-                        f'scan_position={i} frame={j} has a dtype of '
-                        f'{frame.dtype}'
+                        f"All frames of data must have integral dtype, but "
+                        f"scan_position={i} frame={j} has a dtype of "
+                        f"{frame.dtype}"
                     )
                     raise Exception(msg)
 
@@ -185,38 +197,38 @@ class SparseArray:
         """
         import h5py
 
-        with h5py.File(filepath, 'r') as f:
-            version = f.attrs.get('version', 1)
+        with h5py.File(filepath, "r") as f:
+            version = f.attrs.get("version", 1)
 
-            frames = f['electron_events/frames']
-            scan_positions_group = f['electron_events/scan_positions']
-            scan_shape = [scan_positions_group.attrs[x] for x in ['Nx', 'Ny']]
-            frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
-            
+            frames = f["electron_events/frames"]
+            scan_positions_group = f["electron_events/scan_positions"]
+            scan_shape = [scan_positions_group.attrs[x] for x in ["Nx", "Ny"]]
+            frame_shape = [frames.attrs[x] for x in ["Nx", "Ny"]]
+
             if keep_flyback:
-                data = frames[()] # load the full data set
+                data = frames[()]  # load the full data set
                 scan_positions = scan_positions_group[()]
             else:
                 # Generate the original scan indices from the scan_shape
-                orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
-                # Remove the indices of the last column 
-                crop_indices = np.delete(orig_indices, orig_indices[scan_shape[0]-1::scan_shape[0]])
+                orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)], scan_shape)
+                # Remove the indices of the last column
+                crop_indices = np.delete(orig_indices, orig_indices[scan_shape[0] - 1 :: scan_shape[0]])
                 # Load only the data needed
                 data = frames[crop_indices]
                 # Reduce the column shape by 1
                 scan_shape[0] = scan_shape[0] - 1
                 # Create the proper scan_positions without the flyback column
-                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
-                
+                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)], scan_shape)
+
             # Load any metadata
             metadata = {}
-            if 'metadata' in f:
-                load_h5_to_dict(f['metadata'], metadata)
+            if "metadata" in f:
+                load_h5_to_dict(f["metadata"], metadata)
 
         scan_shape = scan_shape[::-1]
-        
+
         if version >= 3:
-            # Convert to int to avoid integer division that results in 
+            # Convert to int to avoid integer division that results in
             # a float
             frames_per_scan = len(data) // np.prod(scan_shape, dtype=int)
             # Need to reshape the data, as it was flattened before saving
@@ -225,20 +237,20 @@ class SparseArray:
         # We may need to convert the version of the data
         if version != cls.VERSION:
             kwargs = {
-                'data': data,
-                'scan_positions': scan_positions,
-                'scan_shape': scan_shape,
-                'frame_shape': frame_shape,
-                'from_version': version,
-                'to_version': cls.VERSION,
+                "data": data,
+                "scan_positions": scan_positions,
+                "scan_shape": scan_shape,
+                "frame_shape": frame_shape,
+                "from_version": version,
+                "to_version": cls.VERSION,
             }
             data = convert_data_format(**kwargs)
 
         kwargs = {
-            'data': data,
-            'scan_shape': scan_shape,
-            'frame_shape': frame_shape,
-            'metadata': metadata,
+            "data": data,
+            "scan_shape": scan_shape,
+            "frame_shape": frame_shape,
+            "metadata": metadata,
         }
         kwargs.update(init_kwargs)
         return cls(**kwargs)
@@ -252,29 +264,27 @@ class SparseArray:
         import h5py
 
         data = self.data
-        with h5py.File(path, 'a') as f:
-            f.attrs['version'] = self.VERSION
+        with h5py.File(path, "a") as f:
+            f.attrs["version"] = self.VERSION
 
-            group = f.require_group('electron_events')
-            scan_positions = group.create_dataset('scan_positions',
-                                                  data=self.scan_positions)
-            scan_positions.attrs['Nx'] = self.scan_shape[1]
-            scan_positions.attrs['Ny'] = self.scan_shape[0]
+            group = f.require_group("electron_events")
+            scan_positions = group.create_dataset("scan_positions", data=self.scan_positions)
+            scan_positions.attrs["Nx"] = self.scan_shape[1]
+            scan_positions.attrs["Ny"] = self.scan_shape[0]
 
             # We can't store a 2D array that contains variable length arrays
             # in h5py currently. So flatten the data, and we will reshape it
             # when we read it back in. See h5py/h5py#876
             coordinates_type = h5py.special_dtype(vlen=np.uint32)
-            frames = group.create_dataset('frames', (np.prod(data.shape),),
-                                          dtype=coordinates_type)
+            frames = group.create_dataset("frames", (np.prod(data.shape),), dtype=coordinates_type)
             # Add the frame dimensions as attributes
-            frames.attrs['Nx'] = self.frame_shape[0]
-            frames.attrs['Ny'] = self.frame_shape[1]
+            frames.attrs["Nx"] = self.frame_shape[0]
+            frames.attrs["Ny"] = self.frame_shape[1]
 
             frames[...] = data.ravel()
 
             # Write out the metadata
-            save_dict_to_h5(self.metadata, f.require_group('metadata'))
+            save_dict_to_h5(self.metadata, f.require_group("metadata"))
 
     def to_dense(self):
         """Create and return a fully dense version of the sparse array
@@ -344,19 +354,17 @@ class SparseArray:
             shape = shape[0]
 
         if len(shape) not in (3, 4):
-            raise ValueError('Shape must be length 3 or 4')
+            raise ValueError("Shape must be length 3 or 4")
 
         scan_shape = shape[:-2]
         frame_shape = shape[-2:]
 
         # Make sure the shapes are valid
         if np.prod(scan_shape) != np.prod(self.scan_shape):
-            raise ValueError('Cannot reshape scan array of size '
-                             f'{self.scan_shape} into shape {scan_shape}')
+            raise ValueError("Cannot reshape scan array of size " f"{self.scan_shape} into shape {scan_shape}")
 
         if np.prod(frame_shape) != np.prod(self.frame_shape):
-            raise ValueError('Cannot reshape frame array of size '
-                             f'{self.frame_shape} into shape {frame_shape}')
+            raise ValueError("Cannot reshape frame array of size " f"{self.frame_shape} into shape {frame_shape}")
 
         # If we made it here, we can perform the reshaping...
         self.scan_shape = scan_shape
@@ -568,18 +576,18 @@ class SparseArray:
         :rtype: SparseArray
         """
         if not all(x % bin_factor == 0 for x in self.scan_shape):
-            raise ValueError(f'scan_shape must be equally divisible by '
-                             f'bin_factor {bin_factor}')
+            raise ValueError(f"scan_shape must be equally divisible by " f"bin_factor {bin_factor}")
 
         # No need to modify the data, just the scan shape and the scan
         # positions.
         new_scan_shape = tuple(x // bin_factor for x in self.scan_shape)
         all_positions = self.scan_positions
-        all_positions_reshaped = all_positions.reshape(
-            new_scan_shape[0], bin_factor, new_scan_shape[1], bin_factor)
+        all_positions_reshaped = all_positions.reshape(new_scan_shape[0], bin_factor, new_scan_shape[1], bin_factor)
 
-        new_data_shape = (np.prod(new_scan_shape),
-                          bin_factor**2 * self.num_frames_per_scan)
+        new_data_shape = (
+            np.prod(new_scan_shape),
+            bin_factor**2 * self.num_frames_per_scan,
+        )
         new_data = np.empty(new_data_shape, dtype=object)
         for i in range(new_scan_shape[0]):
             for j in range(new_scan_shape[1]):
@@ -594,12 +602,12 @@ class SparseArray:
             return self
 
         kwargs = {
-            'data': new_data,
-            'scan_shape': new_scan_shape,
-            'frame_shape': self.frame_shape,
-            'dtype': self.dtype,
-            'sparse_slicing': self.sparse_slicing,
-            'allow_full_expand': self.allow_full_expand,
+            "data": new_data,
+            "scan_shape": new_scan_shape,
+            "frame_shape": self.frame_shape,
+            "dtype": self.dtype,
+            "sparse_slicing": self.sparse_slicing,
+            "allow_full_expand": self.allow_full_expand,
         }
         return SparseArray(**kwargs)
 
@@ -619,8 +627,7 @@ class SparseArray:
         :rtype: SparseArray
         """
         if not all(x % bin_factor == 0 for x in self.frame_shape):
-            raise ValueError(f'frame_shape must be equally divisible by '
-                             f'bin_factor {bin_factor}')
+            raise ValueError(f"frame_shape must be equally divisible by " f"bin_factor {bin_factor}")
 
         # Ravel the data for easier manipulation in this function
         data = self.data.ravel()
@@ -628,13 +635,12 @@ class SparseArray:
         rows = data // self.frame_shape[0] // bin_factor
         cols = data % self.frame_shape[1] // bin_factor
 
-        rows *= (self.frame_shape[0] // bin_factor)
+        rows *= self.frame_shape[0] // bin_factor
         rows += cols
 
         new_data = rows
         frames_per_scan = self.data.shape[1]
-        raveled_scan_positions = np.repeat(self.scan_positions,
-                                           frames_per_scan)
+        raveled_scan_positions = np.repeat(self.scan_positions, frames_per_scan)
         new_scan_positions = raveled_scan_positions
 
         # Place duplicates in separate frames
@@ -655,10 +661,9 @@ class SparseArray:
             # Resize the new data and add on the extra rows
             new_size = rows.shape[0] + len(extra_rows)
             new_data = np.empty(new_size, dtype=object)
-            new_data[:rows.shape[0]] = rows
-            new_data[rows.shape[0]:] = extra_rows
-            new_scan_positions = np.append(new_scan_positions,
-                                           extra_scan_positions)
+            new_data[: rows.shape[0]] = rows
+            new_data[rows.shape[0] :] = extra_rows
+            new_scan_positions = np.append(new_scan_positions, extra_scan_positions)
 
             # Find the max number of extra frames per scan position and use
             # that.
@@ -691,12 +696,12 @@ class SparseArray:
             return self
 
         kwargs = {
-            'data': new_data,
-            'scan_shape': self.scan_shape,
-            'frame_shape': new_frame_shape,
-            'dtype': self.dtype,
-            'sparse_slicing': self.sparse_slicing,
-            'allow_full_expand': self.allow_full_expand,
+            "data": new_data,
+            "scan_shape": self.scan_shape,
+            "frame_shape": new_frame_shape,
+            "dtype": self.dtype,
+            "sparse_slicing": self.sparse_slicing,
+            "allow_full_expand": self.allow_full_expand,
         }
         return SparseArray(**kwargs)
 
@@ -781,6 +786,7 @@ class SparseArray:
 
         Returns `scan_slices, frame_slices`.
         """
+
         def validate_if_advanced_indexing(obj, max_ndim, is_scan):
             """Check if the obj is advanced indexing
                (and convert to ndarray if it is)
@@ -799,12 +805,12 @@ class SparseArray:
                 # If it is a numpy array, it is advanced indexing.
                 # Ensure that there are not too many dimensions.
                 if obj.ndim > max_ndim:
-                    msg = 'Too many advanced indexing dimensions.'
+                    msg = "Too many advanced indexing dimensions."
                     if is_scan:
                         msg += (
-                            ' Cannot perform advanced indexing on both the '
-                            'scan positions and the frame positions '
-                            'simultaneously'
+                            " Cannot perform advanced indexing on both the "
+                            "scan positions and the frame positions "
+                            "simultaneously"
                         )
                     raise IndexError(msg)
 
@@ -816,62 +822,55 @@ class SparseArray:
 
         if not slices:
             # It's an empty tuple
-            return tuple(), tuple()
+            return (), ()
 
         # Figure out which slices belong to which parts.
         # The first slice should definitely be part of the scan.
         first_slice = slices[0]
-        first_slice = validate_if_advanced_indexing(first_slice,
-                                                    len(self.scan_shape),
-                                                    is_scan=True)
+        first_slice = validate_if_advanced_indexing(first_slice, len(self.scan_shape), is_scan=True)
 
         frame_start = 1
         if len(self.scan_shape) > 1:
             # We might have 2 slices for the scan shape
-            if not isinstance(first_slice,
-                              np.ndarray) or first_slice.ndim == 1:
+            if not isinstance(first_slice, np.ndarray) or first_slice.ndim == 1:
                 # We have another scan slice
                 frame_start += 1
 
         if frame_start == 2 and len(slices) > 1:
             # Validate the second scan slice.
-            second_slice = validate_if_advanced_indexing(slices[1], 1,
-                                                         is_scan=True)
+            second_slice = validate_if_advanced_indexing(slices[1], 1, is_scan=True)
             scan_slices = (first_slice, second_slice)
         else:
             scan_slices = (first_slice,)
 
         # If there are frame indices, validate them too
-        frame_slices = tuple()
+        frame_slices = ()
         for i in range(frame_start, len(slices)):
             max_ndim = frame_start + 2 - i
             if max_ndim == 0:
-                raise IndexError('Too many indices for frame positions')
-            frame_slices += (validate_if_advanced_indexing(slices[i], max_ndim,
-                                                           is_scan=False),)
+                raise IndexError("Too many indices for frame positions")
+            frame_slices += (validate_if_advanced_indexing(slices[i], max_ndim, is_scan=False),)
 
         # Verify that we are not doing advanced indexing on both the scan
         # positions and frame positions simultaneously.
-        if (any(isinstance(x, np.ndarray) for x in scan_slices) and
-                any(isinstance(x, np.ndarray) for x in frame_slices)):
-            msg = (
-                'Cannot perform advanced indexing on both scan positions '
-                'and frame positions simultaneously'
-            )
+        if any(isinstance(x, np.ndarray) for x in scan_slices) and any(isinstance(x, np.ndarray) for x in frame_slices):
+            msg = "Cannot perform advanced indexing on both scan positions " "and frame positions simultaneously"
             raise IndexError(msg)
 
         # Verify that if there are any 2D advanced indexing arrays, they
         # must be boolean and of the same shape.
-        first_frame_slice = (slice(None) if not frame_slices
-                             else frame_slices[0])
+        first_frame_slice = slice(None) if not frame_slices else frame_slices[0]
         for i, to_check in enumerate((first_slice, first_frame_slice)):
             req_shape = self.scan_shape if i == 0 else self.frame_shape
-            if (isinstance(to_check, np.ndarray) and to_check.ndim == 2 and
-               (to_check.dtype != np.bool_ or to_check.shape != req_shape)):
+            if (
+                isinstance(to_check, np.ndarray)
+                and to_check.ndim == 2
+                and (to_check.dtype != np.bool_ or to_check.shape != req_shape)
+            ):
                 msg = (
-                    '2D advanced indexing is only allowed for boolean arrays '
-                    'that match either the scan shape or the frame shape '
-                    '(whichever it is indexing into)'
+                    "2D advanced indexing is only allowed for boolean arrays "
+                    "that match either the scan shape or the frame shape "
+                    "(whichever it is indexing into)"
                 )
                 raise IndexError(msg)
 
@@ -882,8 +881,7 @@ class SparseArray:
             indices = (indices,)
 
         if len(indices) != len(self.scan_shape):
-            msg = (f'{indices} shape does not match scan shape'
-                   f'{self.scan_shape}')
+            msg = f"{indices} shape does not match scan shape" f"{self.scan_shape}"
             raise ValueError(msg)
 
         if len(indices) == 1:
@@ -894,15 +892,13 @@ class SparseArray:
         return self.data[scan_ind]
 
     def _slice_dense(self, scan_slices, frame_slices):
-        new_scan_shape = np.empty(self.scan_shape,
-                                  dtype=bool)[scan_slices].shape
-        new_frame_shape = np.empty(self.frame_shape,
-                                   dtype=bool)[frame_slices].shape
+        new_scan_shape = np.empty(self.scan_shape, dtype=bool)[scan_slices].shape
+        new_frame_shape = np.empty(self.frame_shape, dtype=bool)[frame_slices].shape
 
         result_shape = new_scan_shape + new_frame_shape
 
         if result_shape == self.shape and not self.allow_full_expand:
-            raise FullExpansionDenied('Full expansion is not allowed')
+            raise FullExpansionDenied("Full expansion is not allowed")
 
         # Create the result
         result = np.zeros(result_shape, dtype=self.dtype)
@@ -944,10 +940,8 @@ class SparseArray:
             new_frames = self.data
 
         if frame_shape_modified:
-
             # Map old frame indices to new ones. Invalid values will be -1.
-            frame_indices = np.arange(self._frame_shape_flat[0]).reshape(
-                self.frame_shape)
+            frame_indices = np.arange(self._frame_shape_flat[0]).reshape(self.frame_shape)
             sliced = frame_indices[frame_slices]
             new_frame_shape = sliced.shape
 
@@ -975,12 +969,12 @@ class SparseArray:
             new_data = copy.deepcopy(new_frames)
 
         kwargs = {
-            'data': new_data,
-            'scan_shape': new_scan_shape,
-            'frame_shape': new_frame_shape,
-            'dtype': self.dtype,
-            'sparse_slicing': self.sparse_slicing,
-            'allow_full_expand': self.allow_full_expand,
+            "data": new_data,
+            "scan_shape": new_scan_shape,
+            "frame_shape": new_frame_shape,
+            "dtype": self.dtype,
+            "sparse_slicing": self.sparse_slicing,
+            "allow_full_expand": self.allow_full_expand,
         }
         return SparseArray(**kwargs)
 
@@ -989,7 +983,7 @@ class SparseArray:
             indices = (indices,)
 
         if len(indices) >= len(self.scan_shape):
-            scan_indices = indices[:len(self.scan_shape)]
+            scan_indices = indices[: len(self.scan_shape)]
             sparse_frames = self._sparse_frames(scan_indices)
 
         if len(indices) < len(self.scan_shape):
@@ -1019,12 +1013,11 @@ class SparseArray:
         elif len(indices) == len(self.scan_shape) + 2:
             # The last two indices are frame indices
             frame_indices = indices[-2:]
-            flat_frame_index = (frame_indices[0] * self.frame_shape[1] +
-                                frame_indices[1])
+            flat_frame_index = frame_indices[0] * self.frame_shape[1] + frame_indices[1]
             return sum(flat_frame_index in frame for frame in sparse_frames)
 
         max_length = len(self.shape) + 1
-        raise ValueError(f'0 < len(indices) < {max_length} is required')
+        raise ValueError(f"0 < len(indices) < {max_length} is required")
 
     @staticmethod
     def _is_advanced_indexing(obj):
@@ -1053,8 +1046,7 @@ class SparseArray:
             return True
 
         if isinstance(obj, tuple):
-            return any(isinstance(x, Sequence) or is_int_or_bool_ndarray(x)
-                       for x in obj)
+            return any(isinstance(x, Sequence) or is_int_or_bool_ndarray(x) for x in obj)
 
         return False
 
@@ -1064,7 +1056,7 @@ def _is_none_slice(x):
 
 
 def _warning(msg):
-    print(f'Warning: {msg}', file=sys.stderr)
+    print(f"Warning: {msg}", file=sys.stderr)
 
 
 class FullExpansionDenied(Exception):
