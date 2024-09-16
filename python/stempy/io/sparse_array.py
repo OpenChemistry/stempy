@@ -207,7 +207,9 @@ class SparseArray:
                     end2 = (ii+1)*new_num_cols*num + num*ii
                     data[start:end] = frames[start2:end2]
                 scan_shape = (scan_shape[0]-1, scan_shape[1]) # update scan shape
-            
+                # Create the proper scan_positions without the flyback column
+                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)], scan_shape)
+                
             # Load any metadata
             metadata = {}
             if 'metadata' in f:
