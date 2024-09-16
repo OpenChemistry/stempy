@@ -197,7 +197,7 @@ class SparseArray:
                 data = frames[()] # load the full data set
                 scan_positions = scan_positions_group[()]
             else:
-                num = frames.shape[0] // scan_positions_group.shape[0] # number of frames per probe position
+                num = frames.shape[0] // np.prod(scan_shape, dtype=int) # number of frames per probe position
                 data = np.empty(((scan_shape[0]-1) * scan_shape[1] * num), dtype=object)
                 new_num_cols = scan_shape[0]-1 # number of columns without flyback
                 for ii in range(scan_shape[1]):
