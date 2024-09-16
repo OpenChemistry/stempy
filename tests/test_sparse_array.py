@@ -714,11 +714,11 @@ def test_keep_flyback(cropped_multi_frames_v3):
     # Test keeping the flyback
     flyback = SparseArray.from_hdf5(cropped_multi_frames_v3, keep_flyback=True)
     assert flyback.scan_shape[1] == 20
-    assert flyback.num_frames_per_scan = 2
+    assert flyback.num_frames_per_scan == 2
     # Test removing the flyback
     no_flyback = SparseArray.from_hdf5(cropped_multi_frames_v3, keep_flyback=False)
     assert no_flyback.scan_shape[1] == 19
-    assert flyback.num_frames_per_scan = 2
+    assert flyback.num_frames_per_scan == 2
     
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
