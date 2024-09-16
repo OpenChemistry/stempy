@@ -110,6 +110,11 @@ def cropped_multi_frames_v3(cropped_multi_frames_data_v3):
     return SparseArray.from_hdf5(cropped_multi_frames_data_v3, dtype=np.uint16)
 
 @pytest.fixture
+def cropped_multi_frames_v3_noflyback(cropped_multi_frames_data_v3):
+    return SparseArray.from_hdf5(cropped_multi_frames_data_v3, 
+                                            dtype=np.uint16, keep_flyback=False)
+
+@pytest.fixture
 def simulate_sparse_array():
     
     """Make a ndarray with sparse disk.
