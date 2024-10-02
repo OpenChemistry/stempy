@@ -1,8 +1,7 @@
 import numpy as np
 
 
-def convert_data_format(data, scan_positions, scan_shape, frame_shape,
-                        from_version, to_version):
+def convert_data_format(data, scan_positions, scan_shape, frame_shape, from_version, to_version):
     """Convert the data and return new (data, scan_positions) as a tuple"""
     if from_version == to_version:
         if to_version < 3:
@@ -18,7 +17,7 @@ def convert_data_format(data, scan_positions, scan_shape, frame_shape,
 
     key = (from_version, to_version)
     if key not in func_map:
-        msg = f'Conversion not implemented: {from_version} => {to_version}'
+        msg = f"Conversion not implemented: {from_version} => {to_version}"
         raise NotImplementedError(msg)
 
     return func_map[key](data, scan_positions, scan_shape)
@@ -52,10 +51,9 @@ def convert_data_v1_to_v2(data, scan_positions, scan_shape):
         # Resize the data and add on the extra rows
         new_size = ret.shape[0] + len(extra_rows)
         new_data = np.empty(new_size, dtype=object)
-        new_data[:ret.shape[0]] = ret
-        new_data[ret.shape[0]:] = extra_rows
-        new_scan_positions = np.append(scan_positions,
-                                       extra_scan_positions)
+        new_data[: ret.shape[0]] = ret
+        new_data[ret.shape[0] :] = extra_rows
+        new_scan_positions = np.append(scan_positions, extra_scan_positions)
 
         ret = new_data
         scan_positions = new_scan_positions
@@ -64,8 +62,7 @@ def convert_data_v1_to_v2(data, scan_positions, scan_shape):
 
 
 def convert_data_v1_to_v3(data, scan_positions, scan_shape):
-    data, scan_positions = convert_data_v1_to_v2(data, scan_positions,
-                                                 scan_shape)
+    data, scan_positions = convert_data_v1_to_v2(data, scan_positions, scan_shape)
     return convert_data_v2_to_v3(data, scan_positions, scan_shape)
 
 

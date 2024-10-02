@@ -1,26 +1,25 @@
 from collections import namedtuple
-import numpy as np
-import h5py
 
-from stempy._io import (
-    _reader, _sector_reader, _pyreader, _threaded_reader,
-    _threaded_multi_pass_reader
-)
+import h5py
+import numpy as np
+
+from stempy._io import _pyreader, _reader, _sector_reader, _threaded_multi_pass_reader, _threaded_reader
 
 # For exporting SparseArray
 from .sparse_array import SparseArray
 
-COMPILED_WITH_HDF5 = hasattr(_sector_reader, 'H5Format')
+COMPILED_WITH_HDF5 = hasattr(_sector_reader, "H5Format")
 
 
-class FileVersion(object):
+class FileVersion:
     VERSION1 = 1
     VERSION2 = 2
     VERSION3 = 3
     VERSION4 = 4
     VERSION5 = 5
 
-class ReaderMixin(object):
+
+class ReaderMixin:
     def __iter__(self):
         return self
 
@@ -37,16 +36,16 @@ class ReaderMixin(object):
         :return: The block of data that was read. Includes the header also.
         :rtype: Block (named tuple with fields 'header' and 'data')
         """
-        b = super(ReaderMixin, self).read()
+        b = super().read()
 
         # We are at the end of the stream
         if b.header.version == 0:
             return None
 
-        block = namedtuple('Block', ['header', 'data'])
+        block = namedtuple("Block", ["header", "data"])
         block._block = b
         block.header = b.header
-        block.data = np.array(b, copy = False)
+        block.data = np.array(b, copy=False)
 
         return block
 
@@ -54,14 +53,18 @@ class ReaderMixin(object):
 class Reader(ReaderMixin, _reader):
     pass
 
+
 class SectorReader(ReaderMixin, _sector_reader):
     pass
+
 
 class PyReader(ReaderMixin, _pyreader):
     pass
 
+
 class SectorThreadedReader(ReaderMixin, _threaded_reader):
     pass
+
 
 class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
     @property
@@ -100,12 +103,8 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
         if isinstance(scan_position, (list, tuple)):
             # Unravel the scan position
             scan_shape = self.scan_shape
-            if (any(not 0 <= scan_position[i] < scan_shape[i]
-                    for i in range(len(scan_position)))):
-                raise IndexError(
-                    f'Invalid position {scan_position} '
-                    f'for scan_shape {scan_shape}'
-                )
+            if any(not 0 <= scan_position[i] < scan_shape[i] for i in range(len(scan_position))):
+                raise IndexError(f"Invalid position {scan_position} " f"for scan_shape {scan_shape}")
 
             image_number = scan_position[0] * scan_shape[1] + scan_position[1]
         else:
@@ -128,18 +127,15 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
             # Slice into the frames object
             try:
                 frames = frames[frames_slice]
-            except IndexError:
-                msg = (
-                    f'frames_slice "{frames_slice}" is invalid for '
-                    f'num_frames "{num_frames}"'
-                )
-                raise IndexError(msg)
+            except IndexError as e:
+                msg = f'frames_slice "{frames_slice}" is invalid for ' f'num_frames "{num_frames}"'
+                raise IndexError(msg) from e
 
         blocks = []
 
         raw_blocks = self._load_frames(image_number, frames)
         for b in raw_blocks:
-            block = namedtuple('Block', ['header', 'data'])
+            block = namedtuple("Block", ["header", "data"])
             block._block = b
             block.header = b.header
             block.data = np.array(b, copy=False)[0]
@@ -150,22 +146,24 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
 
 def get_hdf5_reader(h5file):
     # the initialization is at the io.cpp
-    dset_frame=h5file['frames']
-    dset_frame_shape=dset_frame.shape
-    totalImgNum=dset_frame_shape[0]
-    scan_dimensions = dset_frame.attrs.get('scan_dimensions')
+    dset_frame = h5file["frames"]
+    dset_frame_shape = dset_frame.shape
+    totalImgNum = dset_frame_shape[0]
+    scan_dimensions = dset_frame.attrs.get("scan_dimensions")
     if scan_dimensions is None:
         # Must be an older file. Give a warning and fall back to the shape.
-        print('WARNING: "scan_dimensions" not found on "/frames"',
-              '(which may imply an older file is being loaded).',
-              'Falling back to the shape of "stem/images"')
-        dset_stem_shape = h5file['stem/images'].shape
+        print(
+            'WARNING: "scan_dimensions" not found on "/frames"',
+            "(which may imply an older file is being loaded).",
+            'Falling back to the shape of "stem/images"',
+        )
+        dset_stem_shape = h5file["stem/images"].shape
         scan_dimensions = (dset_stem_shape[2], dset_stem_shape[1])
 
-    blocksize=32
+    blocksize = 32
     # construct the consecutive image_numbers if there is no scan_positions data set in hdf5 file
-    if("scan_positions" in h5file):
-        image_numbers = h5file['scan_positions']
+    if "scan_positions" in h5file:
+        image_numbers = h5file["scan_positions"]
     else:
         image_numbers = np.arange(totalImgNum)
 
@@ -188,14 +186,14 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
     :rtype: stempy.io.Reader, stempy.io.SectorReader, or stempy.io.PyReader
     """
     # check if the input is the hdf5 dataset
-    if(isinstance(path, h5py._hl.files.File)):
+    if isinstance(path, h5py._hl.files.File):
         reader = get_hdf5_reader(path)
     elif version in [FileVersion.VERSION4, FileVersion.VERSION5]:
-        if backend == 'thread':
+        if backend == "thread":
             reader = SectorThreadedReader(path, version, **options)
-        elif backend == 'multi-pass':
+        elif backend == "multi-pass":
             if version != FileVersion.VERSION5:
-                raise Exception('The multi pass threaded reader only support file verison 5')
+                raise Exception("The multi pass threaded reader only support file verison 5")
 
             reader = SectorThreadedMultiPassReader(path, **options)
         elif backend is None:
@@ -208,8 +206,8 @@ def reader(path, version=FileVersion.VERSION1, backend=None, **options):
 
     return reader
 
-def save_raw_data(path, data, scan_dimensions=None, scan_positions=None,
-                  zip_data=False):
+
+def save_raw_data(path, data, scan_dimensions=None, scan_positions=None, zip_data=False):
     """Save the raw data to an HDF5 file.
 
     :param path: path to the HDF5 file.
@@ -234,20 +232,20 @@ def save_raw_data(path, data, scan_dimensions=None, scan_positions=None,
         if rdcc_nbytes < chunk_size:
             rdcc_nbytes = chunk_size
 
-    with h5py.File(path, 'a', rdcc_nbytes=rdcc_nbytes) as f:
+    with h5py.File(path, "a", rdcc_nbytes=rdcc_nbytes) as f:
         if zip_data:
             # Make each chunk the size of a frame
             chunk_shape = (1, data.shape[1], data.shape[2])
-            frames = f.create_dataset('frames', data=data, compression='gzip',
-                                      chunks=chunk_shape)
+            frames = f.create_dataset("frames", data=data, compression="gzip", chunks=chunk_shape)
         else:
-            frames = f.create_dataset('frames', data=data)
+            frames = f.create_dataset("frames", data=data)
 
         if scan_dimensions is not None:
-            frames.attrs['scan_dimensions'] = scan_dimensions
+            frames.attrs["scan_dimensions"] = scan_dimensions
 
         if scan_positions is not None:
-            f.create_dataset('scan_positions', data=scan_positions)
+            f.create_dataset("scan_positions", data=scan_positions)
+
 
 def save_electron_counts(path, array):
     """Save the electron counted data to an HDF5 file.
@@ -258,6 +256,7 @@ def save_electron_counts(path, array):
     :type array: SparseArray
     """
     array.write_to_hdf5(path)
+
 
 def load_electron_counts(path, keep_flyback=True):
     """Load electron counted data from an HDF5 file.
@@ -271,6 +270,7 @@ def load_electron_counts(path, keep_flyback=True):
     """
     return SparseArray.from_hdf5(path, keep_flyback=keep_flyback)
 
+
 def save_stem_images(outputFile, images, names):
     """Save STEM images to an HDF5 file.
 
@@ -283,15 +283,16 @@ def save_stem_images(outputFile, images, names):
     :type names: a list of strings
     """
     if len(images) != len(names):
-        raise Exception('`images` and `names` must be the same length!')
+        raise Exception("`images` and `names` must be the same length!")
 
-    with h5py.File(outputFile, 'a') as f:
-        stem_group = f.require_group('stem')
-        dataset = stem_group.create_dataset('images', data=images)
-        dataset.attrs['names'] = names
+    with h5py.File(outputFile, "a") as f:
+        stem_group = f.require_group("stem")
+        dataset = stem_group.create_dataset("images", data=images)
+        dataset.attrs["names"] = names
 
 
 if COMPILED_WITH_HDF5:
+
     def write_hdf5(path, reader, format=SectorReader.H5Format.Frame):
         """write_hdf5(path, reader, format=SectorReader.H5Format.Frame)
 
