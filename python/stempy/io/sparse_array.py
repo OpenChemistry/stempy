@@ -192,27 +192,30 @@ class SparseArray:
             scan_positions_group = f['electron_events/scan_positions']
             scan_shape = [scan_positions_group.attrs[x] for x in ['Nx', 'Ny']]
             frame_shape = [frames.attrs[x] for x in ['Nx', 'Ny']]
-            
+
             if keep_flyback:
                 data = frames[()] # load the full data set
                 scan_positions = scan_positions_group[()]
             else:
-                # Generate the original scan indices from the scan_shape
-                orig_indices = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
-                # Remove the indices of the last column 
-                crop_indices = np.delete(orig_indices, orig_indices[scan_shape[0]-1::scan_shape[0]])
-                # Load only the data needed
-                data = frames[crop_indices]
-                # Reduce the column shape by 1
-                scan_shape[0] = scan_shape[0] - 1
+                num = frames.shape[0] // np.prod(scan_shape, dtype=int) # number of frames per probe position
+                data = np.empty(((scan_shape[0]-1) * scan_shape[1] * num), dtype=object)
+                new_num_cols = scan_shape[0]-1 # number of columns without flyback
+                for ii in range(scan_shape[1]):
+                    start = ii*new_num_cols*num # start of cropped data
+                    end = (ii+1)*new_num_cols*num
+                    start2 = ii*new_num_cols*num + num*ii # start of uncropped data
+                    end2 = (ii+1)*new_num_cols*num + num*ii
+                    data[start:end] = frames[start2:end2]
+                scan_shape = (scan_shape[0]-1, scan_shape[1]) # update scan shape
                 # Create the proper scan_positions without the flyback column
-                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)],scan_shape)
+                scan_positions = np.ravel_multi_index([ii.ravel() for ii in np.indices(scan_shape)], scan_shape)
                 
             # Load any metadata
             metadata = {}
             if 'metadata' in f:
                 load_h5_to_dict(f['metadata'], metadata)
 
+        # reverse the scan shape to match expected shape
         scan_shape = scan_shape[::-1]
         
         if version >= 3:
