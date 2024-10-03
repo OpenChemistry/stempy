@@ -202,8 +202,9 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     :param reader: the file reader that has already opened the data.
     :type reader: stempy.io.reader
     :param darkreference: the dark reference to subtract. For an empty dark
-                              use np.zeros((Nx, Ny)).
-    :type darkreference: numpy.ndimage
+                              use np.zeros((Nx, Ny)). Dtype will be cast to
+                              np.float32.
+    :type darkreference: numpy.ndarray
     :param number_of_samples: the number of samples to take when calculating
                               the thresholds.
     :type number_of_samples: int
