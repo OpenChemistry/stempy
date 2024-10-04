@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from stempy.image import com_dense, com_sparse, radial_sum_sparse
+from stempy.image import com_dense, com_sparse, electron_count_frame, radial_sum_sparse
 from stempy.io.sparse_array import SparseArray
 
 
@@ -61,3 +61,70 @@ def test_com_sparse_parameters(simulate_sparse_array):
     # No counts will be in the center so all positions will be np.nan
     com2 = com_sparse(sp, crop_to=(10,10), init_center=(1,1))
     assert np.isnan(com2[0,0,0])
+
+
+def test_electron_count_frame():
+    # Create a synthetic 2D numpy array (frame)
+    frame = np.array(
+        [
+            [2000, 0, 1000, 0, 0],
+            [0, 0, 0, 200, 0],
+            [0, 0, 1000, 0, 0],
+            [0, 200, 0, 200, 0],
+            [0, 0, 1000, 0, 0],
+        ],
+        dtype=np.uint16,
+    )
+
+    dark = np.ones_like(frame) * 100
+
+    # Define expected electron hits (coordinates)
+    expected_hits = np.array(
+        [
+            [
+                [
+                    [1, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                ]
+            ]
+        ]
+    )
+
+    # Electron
+    electron_hits = electron_count_frame(
+        frame, xray_threshold=10000, background_threshold=1, darkreference=dark
+    )
+    assert np.array_equal(
+        electron_hits.to_dense(), expected_hits
+    ), f"Expected {expected_hits}, but got {electron_hits}"
+
+    # Test with no dark reference
+    electron_hits = electron_count_frame(
+        frame, xray_threshold=10000, background_threshold=1
+    )
+
+    # Test where dark reference removes some points
+    dark = np.ones_like(frame) * 1000
+    electron_hits = electron_count_frame(
+        frame, xray_threshold=10000, background_threshold=1, darkreference=dark
+    )
+    expected_hits = np.array(
+        [
+            [
+                [
+                    [1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            ]
+        ]
+    )
+
+    assert np.array_equal(
+        electron_hits.to_dense(), expected_hits
+    ), f"Expected {expected_hits}, but got {electron_hits}"
