@@ -10,7 +10,7 @@ elif [ "$arch" = "aarch64" ]; then
 fi
 
 image_base=quay.io/pypa/manylinux_2_28_${arch}
-tag=samwelborn/stempy_wheel_builder_${arch}
+tag=openchemistry/stempy_wheel_builder_${arch}
 
 docker build . --platform=$platform -t $tag --build-arg BASE_IMAGE=$image_base --build-arg ARCH=$arch
 docker push $tag
