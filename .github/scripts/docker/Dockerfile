@@ -1,14 +1,4 @@
-ARG BASE_IMAGE=quay.io/pypa/manylinux2014_x86_64
+ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 FROM ${BASE_IMAGE}
 
-RUN yum install -y \
-  git \
-  wget \
-  eigen3-devel \
-  hdf5-devel
-
-# Install the latest cmake
-RUN VERSION=3.19.4 && \
-  wget -q https://github.com/Kitware/CMake/releases/download/v$VERSION/cmake-$VERSION-Linux-x86_64.sh && \
-  bash cmake-$VERSION-Linux-x86_64.sh --skip-license --prefix=/usr/local && \
-  rm cmake-$VERSION-Linux-x86_64.sh
+RUN dnf install wget eigen3-devel hdf5-devel cmake -y

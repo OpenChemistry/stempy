@@ -13,7 +13,8 @@ env:
   CIBW_SKIP: "cp36-* pp* *-manylinux_i686 *-musllinux_* *-win32 cp313-*"
 
   # This has some of the software we need pre-installed on it
-  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
+  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder_x86_64
+  CIBW_MANYLINUX_AARCH64_IMAGE: openchemistry/stempy_wheel_builder_aarch64
 
   # Need to do some setup before repairing the wheel on linux...
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash .github/scripts/repair_command_linux.sh
@@ -31,6 +32,8 @@ env:
   CIBW_BEFORE_TEST: pip install -r {project}/tests/requirements.txt
 
   CIBW_TEST_COMMAND: pytest {project}/tests
+
+  CIBW_ARCHS_LINUX: auto aarch64
 
   CIBW_ARCHS_MACOS: x86_64 arm64
 
@@ -63,11 +66,17 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
       - name: Install dependencies
         run: . .github/scripts/install.sh
 
       - name: Build wheels
-        run:  cibuildwheel --output-dir wheelhouse
+        run: cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v3
         with:
