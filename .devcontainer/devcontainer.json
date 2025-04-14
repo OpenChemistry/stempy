@@ -1,0 +1,34 @@
+// devcontainer.json for MPI off
+{
+    "name": "MPI Off",
+    "build": {
+      "context": "..",
+      "dockerfile": "../docker/Dockerfile.stempy",
+      "args": {
+        "PYTHON_VERSION": "3.9",
+        "DEV": "-dev",
+        "MPI": "OFF",
+        "RELEASE_OR_DEBUG": "Debug",
+        "IPYKERNEL": "",
+        "BASE_IMAGE": "openchemistry/stempy:py39-base"
+      }
+    },
+    "features": {
+      "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+            "ms-azuretools.vscode-docker",
+            "ms-python.black-formatter",
+            "ms-python.debugpy",
+            "ms-python.isort",
+            "ms-python.python",
+            "psioniq.psi-header",
+            "ms-vscode.cpptools",
+            "GitHub.copilot",
+            "ms-vscode.cmake-tools"
+        ]
+      }
+    }
+  }
