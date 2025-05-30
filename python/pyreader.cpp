@@ -49,7 +49,7 @@ PyBlock PyReader::read()
     imageNumberForBlock.push_back(m_imageNumbers[i]);
   }
 
-  b.header = Header(frameDimensions, m_imageNumInBlock, m_scanDimensions,
+  b.header = Header(frameDimensions, imageNumberForBlock.size(), m_scanDimensions,
                     imageNumberForBlock);
   b.header.version = 3;
 

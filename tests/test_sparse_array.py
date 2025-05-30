@@ -710,11 +710,13 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     assert np.array_equal(m_array[[False, True], 0][0], position_one)
 
 
-def test_keep_flyback(electron_data_small):
-    flyback = SparseArray.from_hdf5(electron_data_small, keep_flyback=True)
-    assert flyback.scan_shape[1] == 50
-    no_flyback = SparseArray.from_hdf5(electron_data_small, keep_flyback=False)
-    assert no_flyback.scan_shape[1] == 49
+def test_keep_flyback(cropped_multi_frames_v3, cropped_multi_frames_v3_noflyback):
+    # Test keeping the flyback
+    assert cropped_multi_frames_v3.scan_shape[1] == 20
+    assert cropped_multi_frames_v3.num_frames_per_scan == 2
+    # Test removing the flyback
+    assert cropped_multi_frames_v3_noflyback.scan_shape[1] == 19
+    assert cropped_multi_frames_v3_noflyback.num_frames_per_scan == 2
     
 # Test binning until this number
 TEST_BINNING_UNTIL = 33
