@@ -560,6 +560,24 @@ std::vector<uint32_t> electronCount(
   return maximalPoints<FrameType>(frame, frameDimensions);
 }
 
+template <typename FrameType, bool dark>
+std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
+                                    Dimensions2D frameDimensions,
+                                    const ElectronCountOptionsClassic& options)
+{
+  auto* darkReference = options.darkReference;
+  auto backgroundThreshold = options.backgroundThreshold;
+  auto xRayThreshold = options.xRayThreshold;
+  auto* gain = options.gain;
+  auto applyRowDarkSubtraction = options.applyRowDarkSubtraction;
+  auto applyRowDarkUseMean = options.applyRowDarkUseMean;
+  auto optimizedMean = options.optimizedMean;
+
+  return electronCount<FrameType, dark>(
+    frame, frameDimensions, darkReference, backgroundThreshold, xRayThreshold,
+    gain, applyRowDarkSubtraction, optimizedMean, applyRowDarkUseMean);
+}
+
 template <typename Reader, typename FrameType, bool dark>
 ElectronCountedData electronCount(Reader* reader,
                                   const ElectronCountOptions& options)
@@ -873,5 +891,13 @@ template ElectronCountedData electronCount(SectorStreamThreadedReader* reader,
 template ElectronCountedData electronCount(
   SectorStreamMultiPassThreadedReader* reader,
   const ElectronCountOptions& options);
+
+template std::vector<uint32_t> electronCount<uint16_t, true>(
+  std::vector<uint16_t>& frame, Dimensions2D frameDimensions,
+  const ElectronCountOptionsClassic& options);
+
+template std::vector<uint32_t> electronCount<uint16_t, false>(
+  std::vector<uint16_t>& frame, Dimensions2D frameDimensions,
+  const ElectronCountOptionsClassic& options);
 
 } // end namespace stempy
