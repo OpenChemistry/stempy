@@ -68,6 +68,11 @@ template <typename InputIt>
 ElectronCountedData electronCount(InputIt first, InputIt last,
                                   const ElectronCountOptionsClassic& options);
 
+template <typename FrameType, bool dark>
+std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
+                                    Dimensions2D frameDimensions,
+                                    const ElectronCountOptionsClassic& options);
+
 template <typename Reader>
 ElectronCountedData electronCount(Reader* reader,
                                   const ElectronCountOptions& options);
