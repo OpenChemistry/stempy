@@ -78,8 +78,9 @@ jobs:
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   upload_pypi:
@@ -89,10 +90,11 @@ jobs:
     # upload to PyPI on every tag push
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          pattern: wheels-*
           path: dist
+          merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@master
         with:
