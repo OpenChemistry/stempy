@@ -194,6 +194,7 @@ def calculate_average(reader):
 
 
 def electron_count(reader, darkreference=None, number_of_samples=40,
+                   background_threshold=None, xray_threshold=None,
                    background_threshold_n_sigma=4, xray_threshold_n_sigma=10,
                    threshold_num_blocks=1, scan_dimensions=(0, 0),
                    verbose=False, gain=None, apply_row_dark=False,
@@ -209,6 +210,14 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     :param number_of_samples: the number of samples to take when calculating
                               the thresholds.
     :type number_of_samples: int
+    :param background_threshold: The value used as the background threshold.
+                                 If this is not set then the n_sigma is used
+                                 and the value is estimated from the data.
+    :type background_threshold: int
+    :param xray_threshold: The value used as the x-ray threshold.
+                                 If this is not set then the n_sigma is used
+                                 and the value is estimated from the data.
+    :type xray_threshold: int
     :param background_threshold_n_sigma: N-Sigma used for calculating the
                                          background threshold.
     :type background_threshold_n_sigma: int
@@ -287,10 +296,15 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
         if gain is not None:
             args.append(gain)
 
-        res = _image.calculate_thresholds(*args)
-
-        background_threshold = res.background_threshold
-        xray_threshold = res.xray_threshold
+        # Determine the threshold. This is either directly set by the user
+        # or calculated from the data with a Gaussian fit to the noise and
+        # the threshold is a set number of sigma of that Gaussian.
+        if background_threshold is None or xray_threshold is None:
+            res = _image.calculate_thresholds(*args)
+            if background_threshold is None:
+                background_threshold = res.background_threshold
+            if xray_threshold is None:
+                xray_threshold = res.xray_threshold
 
         if verbose:
             print('****Statistics for calculating electron thresholds****')
