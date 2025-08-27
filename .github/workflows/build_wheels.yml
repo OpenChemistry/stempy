@@ -42,20 +42,16 @@ defaults:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} (${{ matrix.arch }})
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-20.04
-            arch: x86_64
-          - os: ubuntu-22.04-arm
-            arch: aarch64
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
           - os: macos-latest
-            arch: x86_64 arm64
-          - os: windows-2022
-            arch: x86_64
+          - os: windows-2025
 
     steps:
       - uses: actions/checkout@v3
@@ -78,7 +74,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   upload_pypi:
