@@ -33,10 +33,6 @@ env:
 
   CIBW_TEST_COMMAND: pytest {project}/tests
 
-  CIBW_ARCHS_LINUX: auto aarch64
-
-  CIBW_ARCHS_MACOS: x86_64 arm64
-
   CIBW_BEFORE_ALL_MACOS: . .github/scripts/install_hdf5_macos.sh
 
 # Use bash by default for the run command
@@ -46,12 +42,20 @@ defaults:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-latest, windows-2019]
+        include:
+          - os: ubuntu-20.04
+            arch: x86_64
+          - os: ubuntu-22.04-arm
+            arch: aarch64
+          - os: macos-latest
+            arch: x86_64 arm64
+          - os: windows-2019
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v3
@@ -66,12 +70,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: all
-
       - name: Install dependencies
         run: . .github/scripts/install.sh
 
@@ -80,7 +78,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
           path: ./wheelhouse/*.whl
 
   upload_pypi:
