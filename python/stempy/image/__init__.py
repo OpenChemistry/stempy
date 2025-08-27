@@ -6,6 +6,7 @@ from stempy.io import (
     get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader,
     SectorThreadedMultiPassReader, SparseArray
 )
+from stempy.utils import safe_array
 
 import h5py
 import numpy as np
@@ -118,8 +119,8 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         raise Exception('Type of input, ' + str(type(input)) +
                         ', is not known to stempy.image.create_stem_images()')
 
-    images = [np.array(img, copy=False) for img in imgs]
-    return np.array(images, copy=False)
+    images = [safe_array(img, copy=False) for img in imgs]
+    return safe_array(images, copy=False)
 
 def create_stem_histogram(numBins, reader, inner_radii,
                           outer_radii, scan_dimensions=(0, 0),
@@ -158,8 +159,8 @@ def create_stem_histogram(numBins, reader, inner_radii,
     for inImage in imgs:
         bins = _image.get_container(inImage, numBins)
         freq = _image.create_stem_histogram(inImage, numBins, bins)
-        bins = np.array(bins, copy=False)
-        freq = np.array(freq, copy=False)
+        bins = safe_array(bins, copy=False)
+        freq = safe_array(freq, copy=False)
         allBins.append(bins)
         allFreqs.append(freq)
 
@@ -186,7 +187,7 @@ def calculate_average(reader):
     :rtype: stempy.image.ImageArray
     """
     image =  _image.calculate_average(reader.begin(), reader.end())
-    img = ImageArray(np.array(image, copy = False))
+    img = ImageArray(safe_array(image, copy=False))
     img._image = image
 
     return img
@@ -332,7 +333,7 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     np_data = np.empty((num_scans, frames_per_scan), dtype=object)
     for i, scan_frames in enumerate(data.data):
         for j, sparse_frame in enumerate(scan_frames):
-            np_data[i, j] = np.array(sparse_frame, copy=False)
+            np_data[i, j] = safe_array(sparse_frame, copy=False)
 
     metadata = _electron_counted_metadata_to_dict(data.metadata)
 
@@ -371,7 +372,7 @@ def radial_sum(reader, center=(-1, -1), scan_dimensions=(0, 0)):
     sum =  _image.radial_sum(reader.begin(), reader.end(), scan_dimensions,
                              center)
 
-    return np.array(sum, copy=False)
+    return safe_array(sum, copy=False)
 
 
 def maximum_diffraction_pattern(reader, darkreference=None):
@@ -391,7 +392,7 @@ def maximum_diffraction_pattern(reader, darkreference=None):
         image = _image.maximum_diffraction_pattern(reader.begin(), reader.end(), darkreference)
     else:
         image = _image.maximum_diffraction_pattern(reader.begin(), reader.end())
-    img = ImageArray(np.array(image, copy=False))
+    img = ImageArray(safe_array(image, copy=False))
     img._image = image
 
     return img
