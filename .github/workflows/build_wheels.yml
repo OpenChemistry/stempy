@@ -13,7 +13,8 @@ env:
   CIBW_SKIP: "cp36-* pp* *-manylinux_i686 *-musllinux_* *-win32 cp313-*"
 
   # This has some of the software we need pre-installed on it
-  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder
+  CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder_x86_64
+  CIBW_MANYLINUX_AARCH64_IMAGE: openchemistry/stempy_wheel_builder_aarch64
 
   # Need to do some setup before repairing the wheel on linux...
   CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash .github/scripts/repair_command_linux.sh
@@ -32,8 +33,6 @@ env:
 
   CIBW_TEST_COMMAND: pytest {project}/tests
 
-  CIBW_ARCHS_MACOS: x86_64 arm64
-
   CIBW_BEFORE_ALL_MACOS: . .github/scripts/install_hdf5_macos.sh
 
 # Use bash by default for the run command
@@ -48,7 +47,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-latest, windows-2019]
+        include:
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: macos-latest
+          - os: windows-2025
 
     steps:
       - uses: actions/checkout@v3
@@ -67,10 +70,11 @@ jobs:
         run: . .github/scripts/install.sh
 
       - name: Build wheels
-        run:  cibuildwheel --output-dir wheelhouse
+        run: cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
   upload_pypi:
@@ -80,10 +84,11 @@ jobs:
     # upload to PyPI on every tag push
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          pattern: wheels-*
           path: dist
+          merge-multiple: true
 
       - uses: pypa/gh-action-pypi-publish@master
         with:

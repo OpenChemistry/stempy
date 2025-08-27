@@ -1,3 +1,4 @@
+from typing import Tuple, Union
 import warnings
 
 from stempy import _image
@@ -202,8 +203,9 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     :param reader: the file reader that has already opened the data.
     :type reader: stempy.io.reader
     :param darkreference: the dark reference to subtract. For an empty dark
-                              use np.zeros((Nx, Ny)).
-    :type darkreference: numpy.ndimage
+                              use np.zeros((Nx, Ny)). Dtype will be cast to
+                              np.float32.
+    :type darkreference: numpy.ndarray
     :param number_of_samples: the number of samples to take when calculating
                               the thresholds.
     :type number_of_samples: int
@@ -396,28 +398,138 @@ def maximum_diffraction_pattern(reader, darkreference=None):
     return img
 
 
-def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
-    """Compute center of mass (COM) for counted data directly from sparse (single)
-        electron data. Empty frames will have COM set to NAN. There is an option to crop to a
-        smaller region around the initial full frame COM to improve finding the center of the zero beam. If the
-        cropped region has no counts in it then the frame is considered empty and COM will be NAN.
-        
-        :param array: A SparseArray of the electron counted data
-        :type array: stempy.io.SparseArray
-        :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
-                        the zero beam
-        :type crop_to: tuple of ints of length 2
-        :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applie around 
-                            the center of mass of the each full frame.
-        :type init_center: tuple of ints of length 2
-        :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
-                             of the the entire data set. If this is False they will be set to np.NAN.
-        :type replace_nans: bool
-        :return: The center of mass in X and Y for each scan position. If a position
-                has no data (len(electron_counts) == 0) then the center of the
-                frame is used as the center of mass.
-        :rtype: numpy.ndarray (2D)
-        """
+def com_v1_kernel(
+    all_events_concat: np.ndarray,
+    position_indices: np.ndarray,
+    scan_shape: Tuple[int, int],
+    frame_shape: Tuple[int, int],
+    crop_to: Union[Tuple[int, int], None] = None,
+    init_center: Union[Tuple[int, int], None] = None,
+    replace_nans: bool = True,
+) -> np.ndarray:
+    num_scans = scan_shape[0] * scan_shape[1]
+    frame_x, frame_y = frame_shape
+
+    com = np.full((2, num_scans), np.nan, dtype=np.float32)
+
+    if len(all_events_concat) == 0:
+        return com.reshape((2, *scan_shape))
+
+    # Decode coordinates
+    if frame_x & (frame_x - 1) == 0:  # power of 2
+        shift = int(np.log2(frame_x))
+        x = (all_events_concat >> shift).astype(np.float32)
+    else:
+        x = (all_events_concat // frame_x).astype(np.float32)
+
+    if frame_y & (frame_y - 1) == 0:
+        mask = frame_y - 1
+        y = (all_events_concat & mask).astype(np.float32)
+    else:
+        y = (all_events_concat % frame_y).astype(np.float32)
+
+    # Cropping
+    if crop_to is not None:
+        if init_center is not None:
+            xmin = init_center[0] - crop_to[0]
+            xmax = init_center[0] + crop_to[0]
+            ymin = init_center[1] - crop_to[1]
+            ymax = init_center[1] + crop_to[1]
+
+            mask = (x > xmin) & (x <= xmax) & (y > ymin) & (y <= ymax)
+            position_indices = position_indices[mask]
+            x = x[mask]
+            y = y[mask]
+        else:
+            sum_x_all = np.bincount(position_indices, weights=x, minlength=num_scans)
+            sum_y_all = np.bincount(position_indices, weights=y, minlength=num_scans)
+            counts_all = np.bincount(position_indices, minlength=num_scans)
+
+            valid_pos = counts_all > 0
+            centers_x = np.zeros(num_scans, dtype=np.float32)
+            centers_y = np.zeros(num_scans, dtype=np.float32)
+            centers_x[valid_pos] = sum_x_all[valid_pos] / counts_all[valid_pos]
+            centers_y[valid_pos] = sum_y_all[valid_pos] / counts_all[valid_pos]
+
+            event_center_x = centers_x[position_indices]
+            event_center_y = centers_y[position_indices]
+
+            mask = (
+                (x > event_center_x - crop_to[0])
+                & (x <= event_center_x + crop_to[0])
+                & (y > event_center_y - crop_to[1])
+                & (y <= event_center_y + crop_to[1])
+            )
+            position_indices = position_indices[mask]
+            x = x[mask]
+            y = y[mask]
+
+    # Final COM calculation
+    if len(position_indices) > 0:
+        sum_x = np.bincount(position_indices, weights=x, minlength=num_scans)
+        sum_y = np.bincount(position_indices, weights=y, minlength=num_scans)
+        counts = np.bincount(position_indices, minlength=num_scans)
+
+        valid = counts > 0
+        com[0, valid] = sum_y[valid] / counts[valid]
+        com[1, valid] = sum_x[valid] / counts[valid]
+
+    com = com.reshape((2, *scan_shape))
+
+    if replace_nans:
+        for i in range(2):
+            nans = np.isnan(com[i])
+            if nans.any():
+                com[i, nans] = np.nanmean(com[i])
+
+    return com
+
+
+def _com_sparse_v1(array, crop_to=None, init_center=None, replace_nans=True):
+    scan_shape = array.scan_shape
+    frame_shape = array.frame_shape
+
+    event_counts = []
+    valid_positions = []
+    frames_to_concat = []
+
+    for scan_position, frames in enumerate(array.data):
+        if frames.size > 0:
+            ev = frames[0] if frames.size == 1 else np.concatenate(frames)
+            n_events = len(ev)
+            if n_events > 0:
+                event_counts.append(n_events)
+                valid_positions.append(scan_position)
+                frames_to_concat.append(ev)
+
+    if not event_counts:
+        return com_v1_kernel(
+            np.array([]),
+            np.array([]),
+            scan_shape,
+            frame_shape,
+            crop_to,
+            init_center,
+            replace_nans,
+        )
+
+    position_indices = np.repeat(
+        np.array(valid_positions, dtype=np.int32), event_counts
+    )
+    all_events_concat = np.concatenate(frames_to_concat)
+
+    return com_v1_kernel(
+        all_events_concat,
+        position_indices,
+        scan_shape,
+        frame_shape,
+        crop_to,
+        init_center,
+        replace_nans,
+    )
+
+
+def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
     com = np.zeros((2, array.num_scans), np.float32)
     for scan_position, frames in enumerate(array.data):
         # Combine the sparse arrays into one array.
@@ -470,6 +582,42 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
         np.nan_to_num(com[1,:,:], nan=com_mean[1], copy=False)
     
     return com
+
+def com_sparse(
+    array: SparseArray, crop_to=None, init_center=None, replace_nans=True, version=0
+):
+    """Compute center of mass (COM) for counted data directly from sparse (single)
+    electron data. Empty frames will have COM set to NAN. There is an option to crop to a
+    smaller region around the initial full frame COM to improve finding the center of the zero beam. If the
+    cropped region has no counts in it then the frame is considered empty and COM will be NAN.
+
+    :param array: A SparseArray of the electron counted data
+    :type array: stempy.io.SparseArray
+    :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
+                    the zero beam
+    :type crop_to: tuple of ints of length 2
+    :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applied around
+                        the center of mass of the each full frame.
+    :type init_center: tuple of ints of length 2
+    :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
+                         of the the entire data set. If this is False they will be set to np.NAN.
+    :type replace_nans: bool
+    :param version: Version of the algorithm to use. 0 for original loop-based implementation,
+                   1 for optimized vectorized implementation.
+    :type version: int
+    :return: The center of mass in X and Y for each scan position. If a position
+            has no data (len(electron_counts) == 0) then the center of the
+            frame is used as the center of mass.
+    :rtype: numpy.ndarray (2D)
+    """
+    if version == 1:
+        return _com_sparse_v1(array, crop_to, init_center, replace_nans)
+    elif version == 0:
+        return _com_sparse_v0(array, crop_to, init_center, replace_nans)
+    else:
+        raise ValueError(
+            f"Unsupported version: {version}. Supported versions are 0 and 1."
+        )
 
 
 def filter_bad_sectors(com, cut_off):

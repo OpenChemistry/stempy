@@ -89,7 +89,8 @@ class SparseArray:
     VERSION = 3
 
     def __init__(self, data, scan_shape, frame_shape, dtype=np.uint32,
-                 sparse_slicing=True, allow_full_expand=False, metadata=None):
+                 sparse_slicing=True, allow_full_expand=False, metadata=None,
+                 validate=True):
         """Initialize a sparse array.
 
         :param data: the sparse array data, where the outer array represents
@@ -134,7 +135,8 @@ class SparseArray:
         self.allow_full_expand = allow_full_expand
 
         # Prevent obscure errors later by validating now
-        self._validate()
+        if validate:
+            self._validate()
 
         if metadata is None:
             metadata = {}
