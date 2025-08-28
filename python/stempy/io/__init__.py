@@ -6,6 +6,7 @@ from stempy._io import (
     _reader, _sector_reader, _pyreader, _threaded_reader,
     _threaded_multi_pass_reader
 )
+from stempy.utils import safe_array
 
 # For exporting SparseArray
 from .sparse_array import SparseArray
@@ -46,7 +47,7 @@ class ReaderMixin(object):
         block = namedtuple('Block', ['header', 'data'])
         block._block = b
         block.header = b.header
-        block.data = np.array(b, copy = False)
+        block.data = safe_array(b, copy=False)
 
         return block
 
@@ -142,7 +143,7 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
             block = namedtuple('Block', ['header', 'data'])
             block._block = b
             block.header = b.header
-            block.data = np.array(b, copy=False)[0]
+            block.data = safe_array(b, copy=False)[0]
             blocks.append(block)
 
         return blocks[0] if single_index_frame else blocks
