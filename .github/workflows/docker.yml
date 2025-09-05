@@ -104,7 +104,7 @@ jobs:
 
       - name: Build/push Dockerfile.base
         uses: docker/build-push-action@v3
-        if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
+        # if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
           context: .
           file: ./docker/Dockerfile.base
