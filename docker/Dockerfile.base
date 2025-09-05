@@ -11,18 +11,18 @@ COPY ./docker/apt-packages-common.txt /tmp/apt-packages-common.txt
 # Install dev packages if DEV is set
 COPY ./docker/apt-packages-dev.txt /tmp/apt-packages-dev.txt
 
-#ARG DEV
-#RUN if [ "$DEV" = "dev" ]; then \
-#    cat /tmp/apt-packages-common.txt /tmp/apt-packages-dev.txt > /tmp/apt-packages.txt; \
-#    else \
-#    cp /tmp/apt-packages-common.txt /tmp/apt-packages.txt; \
-#    fi                                                  && \
-#    apt-get update                                      && \
-#    apt-get upgrade --yes                               && \
-#    apt-get install --yes                                  \
-#    $(cat /tmp/apt-packages-common.txt)                 && \
-#    apt-get clean all                                   && \
-#    rm -rf /var/lib/apt/lists/*
+ARG DEV
+RUN if [ "$DEV" = "dev" ]; then \
+    cat /tmp/apt-packages-common.txt /tmp/apt-packages-dev.txt > /tmp/apt-packages.txt; \
+    else \
+    cp /tmp/apt-packages-common.txt /tmp/apt-packages.txt; \
+    fi                                                  && \
+    apt-get update                                      && \
+    apt-get upgrade --yes                               && \
+    apt-get install --yes                                  \
+    $(cat /tmp/apt-packages-common.txt)                 && \
+    apt-get clean all                                   && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM base as mpi
 
