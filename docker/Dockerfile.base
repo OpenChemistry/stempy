@@ -1,3 +1,4 @@
+# update to use python 3.11
 ARG PYTHON_VERSION
 FROM python:${PYTHON_VERSION} as base
 
