@@ -118,6 +118,10 @@ jobs:
           cache-from: type=gha, mode=max
           load: ${{ github.event_name == 'pull_request' }}
 
+      - name: Inspect
+        run: |
+          docker image inspect ${{ env.BASE_TAG }}
+
       - name: Build/push Dockerfile.stempy
         uses: docker/build-push-action@v6
         with:
