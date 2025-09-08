@@ -116,6 +116,7 @@ jobs:
           target: ${{ env.BASE_TARGET }}
           cache-to: type=gha, mode=max
           cache-from: type=gha, mode=max
+          load: ${{ github.event_name == 'pull_request' }}
 
       - name: Build/push Dockerfile.stempy
         uses: docker/build-push-action@v3
