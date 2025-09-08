@@ -114,8 +114,6 @@ jobs:
             DEV=${{ matrix.dev }}
           tags: ${{ env.BASE_TAG }}
           target: ${{ env.BASE_TARGET }}
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max
           load: ${{ github.event_name == 'pull_request' }}
 
       - name: Inspect
@@ -138,5 +136,3 @@ jobs:
             ${{ env.TAG }}
             ${{ env.LATEST_TAG }}
           target: build
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max
