@@ -552,8 +552,8 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
             
             if crop_to is not None:
                 # Crop around the initial center
-                keep = (x > comx0 - crop_to[0]) & (x <= comx0 + crop_to[0]) & (y > comy0 - crop_to[1]) & (
-                        y <= comy0 + crop_to[1])
+                r = np.sqrt((x - init_center[0])**2 + (y - init_center[1])**2)
+                keep = (r < crop_to)
                 x = x[keep]
                 y = y[keep]
                 mm = len(x)
