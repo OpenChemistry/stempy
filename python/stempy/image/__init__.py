@@ -450,7 +450,7 @@ def com_v1_kernel(
 
             event_center_x = centers_x[position_indices]
             event_center_y = centers_y[position_indices]
-            r = np.sqrt((x - event_center_x[0])**2 + (y - event_center_y[1])**2)
+            r = np.sqrt((x - event_center_x)**2 + (y - event_center_y)**2)
             mask = (r < crop_to)
             position_indices = position_indices[mask]
             x = x[mask]
@@ -543,7 +543,7 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
             
             if crop_to is not None:
                 # Crop around the initial center
-                r = np.sqrt((x - comx0[0])**2 + (y - comy0[1])**2)
+                r = np.sqrt((x - comx0)**2 + (y - comy0)**2)
                 keep = (r < crop_to)
                 x = x[keep]
                 y = y[keep]
