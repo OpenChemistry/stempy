@@ -58,12 +58,12 @@ def test_com_sparse_parameters(simulate_sparse_array, version):
     assert round(com0[0,].mean()) == 30
     
     # Test crop_to input. Initial COM should be full frame COM
-    com1 = com_sparse(sp, crop_to=(10, 10), version=version)
+    com1 = com_sparse(sp, crop_to=10, version=version)
     assert round(com1[0,].mean()) == 30
     
     # Test crop_to and init_center input.
     # No counts will be in the center so all positions will be np.nan
-    com2 = com_sparse(sp, crop_to=(10, 10), init_center=(1, 1), version=version)
+    com2 = com_sparse(sp, crop_to=10, init_center=(1, 1), version=version)
     assert np.isnan(com2[0,0,0])
 
 
@@ -75,17 +75,22 @@ def test_com_sparse_version_comparison(sparse_array_small):
         {"crop_to": None, "init_center": None, "replace_nans": True},
         {"crop_to": None, "init_center": None, "replace_nans": False},
         {
-            "crop_to": (frame_x // 2, frame_y // 2),
+            "crop_to": frame_x // 2,
             "init_center": None,
             "replace_nans": True,
         },
         {
             "crop_to": (frame_x // 2, frame_y // 2),
+            "init_center": None,
+            "replace_nans": True,
+        },
+        {
+            "crop_to": frame_x // 2,
             "init_center": (frame_x // 2, frame_y // 2),
             "replace_nans": True,
         },
         {
-            "crop_to": (frame_x // 2, frame_y // 2),
+            "crop_to": frame_x // 2,
             "init_center": (frame_x // 2, frame_y // 2),
             "replace_nans": False,
         },
