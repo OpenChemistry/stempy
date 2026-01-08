@@ -10,7 +10,7 @@ on:
 
 env:
   # Only support 64-bit CPython > 3.6
-  CIBW_SKIP: "cp36-* pp* *-manylinux_i686 *-musllinux_* *-win32 cp313-*"
+  CIBW_SKIP: "cp36-* cp37-* cp38-* pp* *-manylinux_i686 *-musllinux_* *-win32 cp314-*"
 
   # This has some of the software we need pre-installed on it
   CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder_x86_64

@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9']
+        python-version: ['3.11']
         mpi: ['ON', 'OFF']
         ipykernel: ['', 'ipykernel']
         dev: ['', 'dev']
@@ -103,8 +103,8 @@ jobs:
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
       - name: Build/push Dockerfile.base
-        uses: docker/build-push-action@v3
-        if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
+        uses: docker/build-push-action@v6
+        # if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
           context: .
           file: ./docker/Dockerfile.base
@@ -114,11 +114,14 @@ jobs:
             DEV=${{ matrix.dev }}
           tags: ${{ env.BASE_TAG }}
           target: ${{ env.BASE_TARGET }}
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max
+          load: ${{ github.event_name == 'pull_request' }}
+
+      - name: Inspect
+        run: |
+          docker image inspect ${{ env.BASE_TAG }}
 
       - name: Build/push Dockerfile.stempy
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/Dockerfile.stempy
@@ -133,5 +136,3 @@ jobs:
             ${{ env.TAG }}
             ${{ env.LATEST_TAG }}
           target: build
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max
