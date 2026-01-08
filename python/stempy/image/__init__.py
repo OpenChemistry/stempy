@@ -602,6 +602,10 @@ def com_sparse(
             frame is used as the center of mass.
     :rtype: numpy.ndarray (2D)
     """
+    # This is for backwards compatibility with previous versions
+    if isinstance(crop_to, tuple) or isinstance(crop_to, list):
+        crop_to = crop_to[0]
+
     if version == 1:
         return _com_sparse_v1(array, crop_to, init_center, replace_nans)
     elif version == 0:
