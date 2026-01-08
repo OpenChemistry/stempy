@@ -80,6 +80,11 @@ def test_com_sparse_version_comparison(sparse_array_small):
             "replace_nans": True,
         },
         {
+            "crop_to": (frame_x // 2, frame_y // 2),
+            "init_center": None,
+            "replace_nans": True,
+        },
+        {
             "crop_to": frame_x // 2,
             "init_center": (frame_x // 2, frame_y // 2),
             "replace_nans": True,
