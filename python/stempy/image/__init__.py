@@ -433,7 +433,7 @@ def com_v1_kernel(
     if crop_to is not None:
         if init_center is not None:
             r = np.sqrt((x - init_center[0])**2 + (y - init_center[1])**2)
-            mask = (r < crop_to)
+            mask = (r <= crop_to)
             position_indices = position_indices[mask]
             x = x[mask]
             y = y[mask]
@@ -544,7 +544,7 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
             if crop_to is not None:
                 # Crop around the initial center
                 r = np.sqrt((x - comx0)**2 + (y - comy0)**2)
-                keep = (r < crop_to)
+                keep = (r <= crop_to)
                 x = x[keep]
                 y = y[keep]
                 mm = len(x)
@@ -585,9 +585,8 @@ def com_sparse(
 
     :param array: A SparseArray of the electron counted data
     :type array: stempy.io.SparseArray
-    :param crop_to: optional; The radius from the center to crop around initial full frame COM for improved COM near
-                    the zero beam
-    :type crop_to: int
+    :param crop_to: optional; The radius of the circular region to crop around initial full frame COM for improved COM near the zero beam
+    :type crop_to: int or tuple of ints (for backwards compatibility)
     :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applied around
                         the center of mass of the each full frame.
     :type init_center: tuple of ints of length 2
@@ -602,9 +601,10 @@ def com_sparse(
             frame is used as the center of mass.
     :rtype: numpy.ndarray (2D)
     """
-    # This is for backwards compatibility with previous versions
+    # Convert tuple/list to scalar using maximum (for backwards compatibility)
+    # We only ever want to use a circular region
     if isinstance(crop_to, tuple) or isinstance(crop_to, list):
-        crop_to = crop_to[0]
+        crop_to = max(crop_to)
 
     if version == 1:
         return _com_sparse_v1(array, crop_to, init_center, replace_nans)
