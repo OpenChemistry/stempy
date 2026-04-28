@@ -451,7 +451,7 @@ def com_v1_kernel(
             event_center_x = centers_x[position_indices]
             event_center_y = centers_y[position_indices]
             r = np.sqrt((x - event_center_x)**2 + (y - event_center_y)**2)
-            mask = (r < crop_to)
+            mask = (r <= crop_to)
             position_indices = position_indices[mask]
             x = x[mask]
             y = y[mask]
