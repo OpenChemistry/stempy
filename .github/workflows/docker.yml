@@ -40,7 +40,7 @@ jobs:
 
       - name: Determine if Dockerfile.base changed
         id: changed-dockerfile-base
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             ./docker/Dockerfile.base
