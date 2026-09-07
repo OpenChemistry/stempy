@@ -197,6 +197,7 @@ public:
   SectorStreamReader(const std::string& path, uint8_t version = 5);
   SectorStreamReader(const std::vector<std::string>& files,
                      uint8_t version = 5);
+  SectorStreamReader(uint8_t version = 5);
   ~SectorStreamReader();
 
   Block read();
@@ -334,6 +335,7 @@ public:
                              int threads = 0);
   SectorStreamThreadedReader(const std::vector<std::string>& files,
                              uint8_t version = 5, int threads = 0);
+  SectorStreamThreadedReader(uint8_t version = 5, int threads = 0);
 
   template <typename Functor>
   std::future<void> readAll(Functor& f);
@@ -348,7 +350,7 @@ protected:
   // The futures associated with the worker threads
   std::vector<std::future<void>> m_futures;
 
-private:
+protected:
   // Protect access to frame cache
   std::mutex m_cacheMutex;
 
