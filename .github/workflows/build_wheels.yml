@@ -54,17 +54,18 @@ jobs:
           - os: windows-2025
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           # Grab the whole history so that setuptools-scm can see the tags and
           # give it a correct version even on non-tag push.
           fetch-depth: 0
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         name: Install Python
         with:
-          python-version: '3.10'
+          # Host Python for cibuildwheel. Wheel targets are selected separately.
+          python-version: '3.12'
 
       - name: Install dependencies
         run: . .github/scripts/install.sh
@@ -72,7 +73,7 @@ jobs:
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -84,7 +85,7 @@ jobs:
     # upload to PyPI on every tag push
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/')
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: wheels-*
           path: dist
