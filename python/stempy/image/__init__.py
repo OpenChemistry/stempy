@@ -38,7 +38,7 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :param center: the center of the images, where the order is (x, y). If set
                    to (-1, -1), the center will be set to
                    (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
+    :type center: pair of ints or floats, or numpy.ndarray of shape (2, 1)
     :param frame_dimensions: the dimensions of each frame, where the order is
                              (width, height). Only used for input of type
                              numpy.ndarray, in which case its presence implies
@@ -52,6 +52,16 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :return: A numpy array of the STEM images.
     :rtype: numpy.ndarray
     """
+    # Extract scalars explicitly, NumPy no longer converts one-element arrays.
+    center_array = np.asarray(center, dtype=np.float64)
+    if center_array.shape not in ((2,), (2, 1)):
+        raise ValueError('center must have shape (2,) or (2, 1) in (x, y) order')
+
+    if not np.all(np.isfinite(center_array)):
+        raise ValueError('center coordinates must be finite')
+
+    center = tuple(float(value) for value in center_array.reshape(2))
+
     # Ensure the inner and outer radii are tuples or lists
     if not isinstance(inner_radii, (tuple, list)):
         inner_radii = [inner_radii]
@@ -532,7 +542,7 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
             x = ev // array.frame_shape[0]
             y = ev % array.frame_shape[1]
             mm0 = len(ev)
-            
+
             if init_center is None:
                 # Initialize center as full frame COM
                 comx0 = np.sum(x) / mm0
@@ -540,7 +550,7 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
             else:
                 comx0 = init_center[0]
                 comy0 = init_center[1]
-            
+
             if crop_to is not None:
                 # Crop around the initial center
                 r = np.sqrt((x - comx0)**2 + (y - comy0)**2)
@@ -561,18 +571,18 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
                 # Center of mass of the full frame
                 comx = np.sum(x) / mm0
                 comy = np.sum(y) / mm0
-            
+
             com[:, scan_position] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
         else:
             com[:, scan_position] = (np.nan, np.nan)  # empty frame
-            
+
     com = com.reshape((2, *array.scan_shape))
-    
+
     if replace_nans:
         com_mean = np.nanmean(com, axis=(1,2))
         np.nan_to_num(com[0,:,:], nan=com_mean[0], copy=False)
         np.nan_to_num(com[1,:,:], nan=com_mean[1], copy=False)
-    
+
     return com
 
 def com_sparse(
@@ -806,28 +816,28 @@ def _electron_counted_metadata_to_dict(metadata):
 def virtual_darkfield(array, centers_x, centers_y, radii):
     """Calculate a virtual dark field image from a set of round virtual apertures in diffraction space.
     Each aperture is defined by a center and radius and the final image is the sum of all of them.
-    
+
     :param array: The SparseArray
     :type array: SparseArray
-    
+
     :param centers_x: The center of each round aperture as the row locations
     :type centers_x: number or iterable
-    
+
     :param centers_y: The center of each round aperture as the column locations
     :type centers_y: number or iterable
-    
+
     :param radii: The radius of each aperture.
     :type radii: number or iterable
-    
+
     :rtype: np.ndarray
-    
+
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
     >>> df2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
     >>> df1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
-    
+
     """
-    
+
     # Change to iterable if single value
     if isinstance(centers_x, (int, float)):
          centers_x = (centers_x,)
@@ -845,30 +855,30 @@ def virtual_darkfield(array, centers_x, centers_y, radii):
                 dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
                 rs_image[ii] += len(np.where(dist < rr)[0])
     rs_image = rs_image.reshape(array.scan_shape)
-    
+
     return rs_image
 
 def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
     This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
-    
+
     :param image: The diffraction pattern to plot over
     :type image: np.ndarray, 2D
-    
+
     :param centers_x: The center of each round aperture as the row locations
     :type centers_x: iterable
-    
+
     :param centers_y: The center of each round aperture as the column locations
     :type centers_y: iterable
-    
+
     :param radii: The radius of each aperture.
     :type radii: iterable
-    
+
     :param axes: A matplotlib axes instance to use for the plotting. If None then a new plot is created.
     :type axes: matplotlib.axes._subplots.AxesSubplot
-    
+
     :rtype: matplotlib.axes._subplots.AxesSubplot
-    
+
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
     >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0, 1), 260, 160, 10) # 1 aperture
@@ -884,28 +894,28 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
          centers_y = (centers_y,)
     if isinstance(radii, (int, float)):
          radii = (radii,)
-    
+
     if not axes:
         fg, axes = plt.subplots(1, 1)
-    
+
     axes.imshow(image, cmap='magma', norm=LogNorm())
-    
+
     # Place a circle at each apertue location
     for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
         C = Circle((cc_0, cc_1), rr, fc='none', ec='c')
         axes.add_patch(C)
-    
+
     return axes
 
 def mask_real_space(array, mask):
     """Calculate a diffraction pattern from an arbitrary set of positions defined in a mask in real space
-    
+
     :param array: The sparse dataset
     :type array: SparseArray
-    
+
     :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in the sum. Must have the same scan shape as array
     :type mask: np.ndarray
-    
+
     :rtype: np.ndarray
     """
     assert array.scan_shape[0] == mask.shape[0] and array.scan_shape[1] == mask.shape[1]

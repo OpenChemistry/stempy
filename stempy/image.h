@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <vector>
+#include <type_traits>
 
 namespace stempy {
 
@@ -48,11 +49,13 @@ namespace stempy {
   using STEMImage = Image<uint64_t>;
 
   // Create STEM Images from raw data
-  template <typename InputIt>
-  std::vector<STEMImage> createSTEMImages(
+  // Only typed double pairs select this overload. Bare brace-initialized centers
+  // cannot deduce Center and continue to use the original integer overload.
+  template <typename InputIt, typename Center>
+  std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                   std::vector<STEMImage>> createSTEMImages(
     InputIt first, InputIt last, const std::vector<int>& innerRadii,
-    const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
-    Coordinates2D center = { -1, -1 });
+    const std::vector<int>& outerRadii, Dimensions2D scanDimensions, Center center);
 
   // Create STEM Images from sparse data
   template <typename T>
@@ -73,12 +76,14 @@ namespace stempy {
     }
   }
 
-  template <typename T>
-  std::vector<STEMImage> createSTEMImages(
+  // Only typed double pairs select this overload. Bare brace-initialized centers
+  // cannot deduce Center and continue to use the original integer overload.
+  template <typename T, typename Center>
+  std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                   std::vector<STEMImage>> createSTEMImages(
     const std::vector<std::vector<T>>& sparseData,
     const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
-    Dimensions2D scanDimensions = { 0, 0 },
-    Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 })
+    Dimensions2D scanDimensions, Dimensions2D frameDimensions, Center center)
   {
     if (innerRadii.empty() || outerRadii.empty()) {
       std::ostringstream msg;
@@ -111,6 +116,34 @@ namespace stempy {
 
   // Create STEM Images from electron counted sparse data
   struct ElectronCountedData;
+  // Only typed double pairs select this overload. Bare brace-initialized centers
+  // cannot deduce Center and continue to use the original integer overload.
+  template <typename Center>
+  std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                   std::vector<STEMImage>> createSTEMImages(
+    const ElectronCountedData& sparseData, const std::vector<int>& innerRadii,
+    const std::vector<int>& outerRadii, Center center);
+
+  // Integer signatures retained for source and binary compatibility. The
+  // constrained overloads above require a typed double pair, leaving bare
+  // brace-initialized centers and default arguments on the integer API.
+  template <typename InputIt>
+  std::vector<STEMImage> createSTEMImages(
+    InputIt first, InputIt last, const std::vector<int>& innerRadii,
+    const std::vector<int>& outerRadii, Dimensions2D scanDimensions = { 0, 0 },
+    Coordinates2D center = { -1, -1 });
+
+  template <typename T>
+  std::vector<STEMImage> createSTEMImages(
+    const std::vector<std::vector<T>>& sparseData,
+    const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
+    Dimensions2D scanDimensions = { 0, 0 },
+    Dimensions2D frameDimensions = { 0, 0 }, Coordinates2D center = { -1, -1 })
+  {
+    return createSTEMImages(sparseData, innerRadii, outerRadii,
+      scanDimensions, frameDimensions, CoordinatesDouble2D(center));
+  }
+
   std::vector<STEMImage> createSTEMImages(
     const ElectronCountedData& sparseData, const std::vector<int>& innerRadii,
     const std::vector<int>& outerRadii, Coordinates2D center = { -1, -1 });
