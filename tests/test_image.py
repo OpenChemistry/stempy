@@ -3,8 +3,65 @@ import time
 
 import numpy as np
 
-from stempy.image import com_dense, com_sparse, radial_sum_sparse
+from stempy.image import com_dense, com_sparse, radial_sum_sparse, create_stem_images
 from stempy.io.sparse_array import SparseArray
+
+
+@pytest.mark.parametrize("center", [
+    (2, 1), (2.0, 1.0), np.array([2, 1]),
+    (2.75, 1.25), np.array([[2.75], [1.25]]), (-1, -1),
+])
+@pytest.mark.parametrize("sparse", [False, True])
+def test_create_stem_images_center(center, sparse):
+    # Unequal coordinates detect x/y swaps, fractional centers must not truncate.
+    frames = np.ones((32, 5, 5), dtype=np.uint16)
+    if sparse:
+        data = np.empty((32, 1), dtype=object)
+        for i in range(32):
+            data[i, 0] = np.arange(25, dtype=np.uint32)
+        source = SparseArray(data=data, scan_shape=(4, 8), frame_shape=(5, 5))
+    else:
+        source = frames
+
+    images = create_stem_images(source, [0, 1], [1, 2],
+                                scan_dimensions=(8, 4), center=center)
+    x, y = np.asarray(center).reshape(2)
+    if x < 0:
+        x = 3  # Preserve the existing rounded default on odd-sized frames.
+    if y < 0:
+        y = 3
+    yy, xx = np.indices((5, 5))
+    distances = (xx - x) ** 2 + (yy - y) ** 2
+    expected = [np.count_nonzero((distances >= lo ** 2) & (distances < hi ** 2))
+                for lo, hi in [(0, 1), (1, 2)]]
+
+    # Sparse integration sums the existing 0xFFFF mask values per electron.
+    if sparse:
+        expected = np.array(expected) * 0xFFFF
+
+    assert images.shape == (2, 4, 8)
+    np.testing.assert_array_equal(images, np.broadcast_to(
+        np.array(expected)[:, None, None], images.shape))
+
+
+def test_create_stem_images_com_dense_center():
+    frame = np.zeros((5, 5), dtype=np.uint16)
+    frame[1, 2] = 1
+    frame[2, 3] = 3
+    center = com_dense(frame)
+    np.testing.assert_array_equal(center, [[2.75], [1.75]])
+    images = create_stem_images(np.repeat(frame[None], 32, axis=0), 0, 1,
+                                scan_dimensions=(8, 4), center=center)
+    np.testing.assert_array_equal(images, np.full((1, 4, 8), 3))
+    np.testing.assert_array_equal(center, [[2.75], [1.75]])
+
+
+@pytest.mark.parametrize("center", [(1,), (1, 2, 3), [[1, 2]],
+                                     (np.nan, 1), (1, np.inf)])
+def test_create_stem_images_invalid_center(center):
+    with pytest.raises(ValueError, match='center'):
+        create_stem_images(np.ones((32, 5, 5), dtype=np.uint16), 0, 1,
+                           scan_dimensions=(8, 4), center=center)
 
 
 @pytest.mark.parametrize("version", [0, 1])

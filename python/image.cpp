@@ -214,7 +214,13 @@ ElectronCountedDataPyArray electronCount(Reader* reader,
   return electronCount(reader, options.toCpp());
 }
 
-// Explicitly instantiate version for py::array_t
+template std::vector<STEMImage> createSTEMImages(
+  const std::vector<std::vector<py::array_t<uint32_t>>>& sparseData,
+  const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
+  Dimensions2D scanDimensions, Dimensions2D frameDimensions,
+  CoordinatesDouble2D center);
+
+// Retain the original exported integer specialization.
 template std::vector<STEMImage> createSTEMImages(
   const std::vector<std::vector<py::array_t<uint32_t>>>& sparseData,
   const std::vector<int>& innerRadii, const std::vector<int>& outerRadii,
@@ -223,13 +229,26 @@ template std::vector<STEMImage> createSTEMImages(
 
 } // namespace stempy
 
+// Only typed double pairs select this overload. Bare brace-initialized centers
+// cannot deduce Center and continue to use the original integer overload.
+template <typename Center>
+std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                 vector<STEMImage>> createSTEMImages(const ElectronCountedDataPyArray& array,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii,
+                                   Center center)
+{
+  return createSTEMImages(array.data, innerRadii, outerRadii,
+                          array.scanDimensions, array.frameDimensions, center);
+}
+
 vector<STEMImage> createSTEMImages(const ElectronCountedDataPyArray& array,
                                    const vector<int>& innerRadii,
                                    const vector<int>& outerRadii,
-                                   Coordinates2D coords)
+                                   Coordinates2D center)
 {
-  return createSTEMImages(array.data, innerRadii, outerRadii,
-                          array.scanDimensions, array.frameDimensions, coords);
+  return createSTEMImages(array, innerRadii, outerRadii,
+                          CoordinatesDouble2D(center));
 }
 
 template <typename... Params>
@@ -392,27 +411,27 @@ PYBIND11_MODULE(_image, m)
   m.def("create_stem_images",
         (vector<STEMImage>(*)(StreamReader::iterator, StreamReader::iterator,
                               const vector<int>&, const vector<int>&,
-                              Dimensions2D, Coordinates2D)) &
+                              Dimensions2D, CoordinatesDouble2D)) &
           createSTEMImages<StreamReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def(
     "create_stem_images",
     (vector<STEMImage>(*)(SectorStreamReader::iterator,
                           SectorStreamReader::iterator, const vector<int>&,
-                          const vector<int>&, Dimensions2D, Coordinates2D)) &
+                          const vector<int>&, Dimensions2D, CoordinatesDouble2D)) &
       createSTEMImages<SectorStreamReader::iterator>,
     py::call_guard<py::gil_scoped_release>());
   m.def("create_stem_images",
         (vector<STEMImage>(*)(
           const std::vector<std::vector<py::array_t<uint32_t>>>&,
           const vector<int>&, const vector<int>&, Dimensions2D, Dimensions2D,
-          Coordinates2D)) &
+          CoordinatesDouble2D)) &
           createSTEMImages,
         py::call_guard<py::gil_scoped_release>());
   m.def(
     "create_stem_images",
     (vector<STEMImage>(*)(const ElectronCountedDataPyArray&, const vector<int>&,
-                          const vector<int>&, Coordinates2D)) &
+                          const vector<int>&, CoordinatesDouble2D)) &
       createSTEMImages,
     py::call_guard<py::gil_scoped_release>());
   m.def("calculate_average", &calculateAverage<StreamReader::iterator>,
@@ -585,7 +604,7 @@ PYBIND11_MODULE(_image, m)
   m.def("create_stem_images",
         (vector<STEMImage>(*)(PyReader::iterator, PyReader::iterator,
                               const vector<int>&, const vector<int>&,
-                              Dimensions2D, Coordinates2D)) &
+                              Dimensions2D, CoordinatesDouble2D)) &
           createSTEMImages<PyReader::iterator>,
         py::call_guard<py::gil_scoped_release>());
   m.def("maximum_diffraction_pattern",

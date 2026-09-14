@@ -38,7 +38,7 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :param center: the center of the images, where the order is (x, y). If set
                    to (-1, -1), the center will be set to
                    (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
+    :type center: pair of ints or floats, or numpy.ndarray of shape (2, 1)
     :param frame_dimensions: the dimensions of each frame, where the order is
                              (width, height). Only used for input of type
                              numpy.ndarray, in which case its presence implies
@@ -52,6 +52,16 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :return: A numpy array of the STEM images.
     :rtype: numpy.ndarray
     """
+    # Extract scalars explicitly, NumPy no longer converts one-element arrays.
+    center_array = np.asarray(center, dtype=np.float64)
+    if center_array.shape not in ((2,), (2, 1)):
+        raise ValueError('center must have shape (2,) or (2, 1) in (x, y) order')
+
+    if not np.all(np.isfinite(center_array)):
+        raise ValueError('center coordinates must be finite')
+
+    center = tuple(float(value) for value in center_array.reshape(2))
+
     # Ensure the inner and outer radii are tuples or lists
     if not isinstance(inner_radii, (tuple, list)):
         inner_radii = [inner_radii]

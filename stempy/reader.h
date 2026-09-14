@@ -31,6 +31,8 @@ namespace stempy {
 // Convention is (x, y)
 using Coordinates2D = std::pair<int, int>;
 
+using CoordinatesDouble2D = std::pair<double, double>;
+
 // Convention is (width, height)
 using Dimensions2D = std::pair<uint32_t, uint32_t>;
 
