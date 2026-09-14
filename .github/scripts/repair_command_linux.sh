@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ev
+set -euv
 
 # FIXME: if the libraries are already inside the wheel, why do we have
 # to provide them to auditwheel again? It would be ideal if we could
@@ -7,15 +7,16 @@ set -ev
 
 # We have to include the stempy library in Linux's LD_LIBRARY_PATH,
 # or auditwheel won't work. These libraries are already in the wheel.
-WHEEL_DIR=/tmp/cibuildwheel/built_wheel
-WHEEL_PATH=$(find $WHEEL_DIR -name "*.whl" | xargs readlink -f)
+WHEEL_PATH=$(realpath "$1")
+DEST_DIR=$(realpath "$2")
+REPAIR_DIR=$(mktemp -d)
+trap 'rm -rf -- "$REPAIR_DIR"' EXIT
 
-cd $WHEEL_DIR
-unzip $WHEEL_PATH
+unzip -q "$WHEEL_PATH" -d "$REPAIR_DIR"
 
-LIBRARY_DIR=$(find $WHEEL_DIR -name "libstem.so" | head -n 1 | xargs readlink -f | xargs dirname)
-export LD_LIBRARY_PATH=$LIBRARY_DIR:$LD_LIBRARY_PATH
+LIBRARY_PATH=$(find "$REPAIR_DIR" -name "libstem.so" -print -quit)
+test -n "$LIBRARY_PATH"
+LIBRARY_DIR=$(dirname "$LIBRARY_PATH")
+export LD_LIBRARY_PATH="$LIBRARY_DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
-auditwheel repair -w /tmp/cibuildwheel/repaired_wheel $WHEEL_PATH
-
-rm -rf /tmp/cibuildwheel/built_wheel
+auditwheel repair -w "$DEST_DIR" "$WHEEL_PATH"

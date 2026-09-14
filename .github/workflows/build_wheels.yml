@@ -9,15 +9,20 @@ on:
   pull_request:
 
 env:
-  # Only support 64-bit CPython > 3.6
-  CIBW_SKIP: "cp36-* cp37-* cp38-* pp* *-manylinux_i686 *-musllinux_* *-win32 cp314-*"
+  CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+  CIBW_SKIP: "*-manylinux_i686 *-musllinux_* *-win32"
 
   # This has some of the software we need pre-installed on it
   CIBW_MANYLINUX_X86_64_IMAGE: openchemistry/stempy_wheel_builder_x86_64
   CIBW_MANYLINUX_AARCH64_IMAGE: openchemistry/stempy_wheel_builder_aarch64
 
   # Need to do some setup before repairing the wheel on linux...
-  CIBW_REPAIR_WHEEL_COMMAND_LINUX: bash .github/scripts/repair_command_linux.sh
+  CIBW_REPAIR_WHEEL_COMMAND_LINUX: >-
+    bash "{project}/.github/scripts/repair_command_linux.sh" "{wheel}" "{dest_dir}"
+
+  # CMake already bundles stem.dll beside the Python extensions.
+  CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
+    delvewheel repair --ignore-existing -w "{dest_dir}" -v "{wheel}"
 
   # Specify eigen location for windows, and force it to use python in the path...
   CIBW_ENVIRONMENT_WINDOWS: >
