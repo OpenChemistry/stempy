@@ -75,7 +75,7 @@ def convert_data_v2_to_v3(data, scan_positions, scan_shape):
     result = np.empty((num_scans, frames_per_scan), dtype=object)
 
     # Now set all of the data in their new locations
-    for datum, pos in zip(data, scan_positions):
+    for datum, pos in zip(data, scan_positions, strict=False):
         current = result[pos]
         for i in range(frames_per_scan):
             if current[i] is None:

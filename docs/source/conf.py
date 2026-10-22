@@ -83,7 +83,7 @@ def autodoc_skip_member_handler(app, what, name, obj, skip, options):
     # Exclude any names that start with a string in this list
     exclude_startswith_list = ["_"]
 
-    if any([name.startswith(x) for x in exclude_startswith_list]):
+    if any(name.startswith(x) for x in exclude_startswith_list):
         return True
 
     # Exclude any names that match a string in this list

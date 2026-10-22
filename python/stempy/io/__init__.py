@@ -128,9 +128,9 @@ class SectorThreadedMultiPassReader(ReaderMixin, _threaded_multi_pass_reader):
             # Slice into the frames object
             try:
                 frames = frames[frames_slice]
-            except IndexError:
+            except IndexError as e:
                 msg = f'frames_slice "{frames_slice}" is invalid for num_frames "{num_frames}"'
-                raise IndexError(msg)
+                raise IndexError(msg) from e
 
         blocks = []
 

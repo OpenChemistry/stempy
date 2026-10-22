@@ -1,10 +1,9 @@
 import warnings
-from typing import Tuple, Union
 
 import h5py
 import numpy as np
 
-from stempy import _image, _io
+from stempy import _image
 from stempy.io import (
     PyReader,
     ReaderMixin,
@@ -91,7 +90,7 @@ def create_stem_images(
         imgs = _image.create_stem_images(
             input.data, inner_radii, outer_radii, input.scan_shape[::-1], input.frame_shape, center
         )
-    elif all([hasattr(input, x) for x in ecd_attrs]):
+    elif all(hasattr(input, x) for x in ecd_attrs):
         # Handle electron counted data without C++ object
         # Assume this is v1 data and that each frame is one scan position
         data = input.data
@@ -285,7 +284,7 @@ def electron_count(
         warnings.warn(deprecation_message, category=DeprecationWarning, stacklevel=2)
 
         blocks = []
-        for i in range(threshold_num_blocks):
+        for _ in range(threshold_num_blocks):
             blocks.append(next(reader))
 
         if darkreference is not None and hasattr(darkreference, "_image"):
@@ -659,13 +658,14 @@ def com_sparse(array: SparseArray, crop_to=None, init_center=None, replace_nans=
 
     :param array: A SparseArray of the electron counted data
     :type array: stempy.io.SparseArray
-    :param crop_to: optional; The radius of the circular region to crop around initial full frame COM for improved COM near the zero beam
+    :param crop_to: optional; The radius of the circular region to crop around initial full frame COM for
+                    improved COM near the zero beam
     :type crop_to: int or tuple of ints (for backwards compatibility)
-    :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applied around
-                        the center of mass of the each full frame.
+    :param init_center: optional; The initial center to use before cropping. If this is not set then cropping
+                        will be applied around the center of mass of the each full frame.
     :type init_center: tuple of ints of length 2
-    :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
-                         of the the entire data set. If this is False they will be set to np.NAN.
+    :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the
+                         center of mass of the the entire data set. If this is False they will be set to np.NAN.
     :type replace_nans: bool
     :param version: Version of the algorithm to use. 0 for original loop-based implementation,
                    1 for optimized vectorized implementation.
@@ -708,7 +708,7 @@ def filter_bad_sectors(com, cut_off):
 
     x, y = np.where(_)
 
-    for ii, jj in zip(x, y):
+    for ii, jj in zip(x, y, strict=False):
         com[0, ii, jj] = np.nanmedian(com[0, ii - 1 : ii + 2, jj - 1 : jj + 2])
         com[1, ii, jj] = np.nanmedian(com[1, ii - 1 : ii + 2, jj - 1 : jj + 2])
     return com
@@ -777,7 +777,7 @@ def radial_sum_sparse(sa, center):
 
     for ii, frames in enumerate(sa.data):
         # Loop over all scan positions
-        for jj, events in enumerate(frames):
+        for _jj, events in enumerate(frames):
             # Loop over all frames in this scan position
             x, y = np.unravel_index(events, sa.frame_shape)
             r = np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
@@ -915,7 +915,7 @@ def virtual_darkfield(array, centers_x, centers_y, radii):
         for ev in events:
             ev_rows = ev // array.frame_shape[0]
             ev_cols = ev % array.frame_shape[1]
-            for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+            for cc_0, cc_1, rr in zip(centers_x, centers_y, radii, strict=False):
                 dist = np.sqrt((ev_rows - cc_1) ** 2 + (ev_cols - cc_0) ** 2)
                 rs_image[ii] += len(np.where(dist < rr)[0])
     rs_image = rs_image.reshape(array.scan_shape)
@@ -925,7 +925,8 @@ def virtual_darkfield(array, centers_x, centers_y, radii):
 
 def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
-    This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
+    This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is
+    physically correct.
 
     :param image: The diffraction pattern to plot over
     :type image: np.ndarray, 2D
@@ -966,7 +967,7 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     axes.imshow(image, cmap="magma", norm=LogNorm())
 
     # Place a circle at each apertue location
-    for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
+    for cc_0, cc_1, rr in zip(centers_x, centers_y, radii, strict=False):
         C = Circle((cc_0, cc_1), rr, fc="none", ec="c")
         axes.add_patch(C)
 
@@ -979,7 +980,8 @@ def mask_real_space(array, mask):
     :param array: The sparse dataset
     :type array: SparseArray
 
-    :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in the sum. Must have the same scan shape as array
+    :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in
+                 the sum. Must have the same scan shape as array
     :type mask: np.ndarray
 
     :rtype: np.ndarray

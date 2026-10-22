@@ -365,8 +365,8 @@ def test_round_trip_hdf5(sparse_array_small):
     assert original.frame_shape == array.frame_shape
     assert dicts_equal(original.metadata, array.metadata)
 
-    for sfa, sfb in zip(original.data, array.data):
-        for a, b in zip(sfa, sfb):
+    for sfa, sfb in zip(original.data, array.data, strict=False):
+        for a, b in zip(sfa, sfb, strict=False):
             assert np.array_equal(a, b)
 
     original.metadata["float"] = np.float64(6.5)
@@ -381,7 +381,7 @@ def dicts_equal(d1, d2):
     for k, v1 in d1.items():
         v2 = d2[k]
 
-        if type(v1) != type(v2):
+        if type(v1) is not type(v2):
             return False
 
         if isinstance(v1, np.ndarray):
@@ -623,7 +623,7 @@ def test_advanced_indexing(sparse_array_small, full_array_small):
     rng = np.random.default_rng(0)
 
     num_tries = 3
-    for i in range(num_tries):
+    for _i in range(num_tries):
         scan_mask = rng.choice([True, False], array.scan_shape)
         frame_mask = rng.choice([True, False], array.frame_shape)
 

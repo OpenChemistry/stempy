@@ -676,7 +676,7 @@ class SparseArray:
         result = np.empty((self.num_scans, frames_per_scan), dtype=object)
 
         # Now set all of the data in their new locations
-        for datum, pos in zip(new_data, new_scan_positions):
+        for datum, pos in zip(new_data, new_scan_positions, strict=False):
             current = result[pos]
             for i in range(frames_per_scan):
                 if current[i] is None:
@@ -824,7 +824,7 @@ class SparseArray:
 
         if not slices:
             # It's an empty tuple
-            return tuple(), tuple()
+            return (), ()
 
         # Figure out which slices belong to which parts.
         # The first slice should definitely be part of the scan.
@@ -846,7 +846,7 @@ class SparseArray:
             scan_slices = (first_slice,)
 
         # If there are frame indices, validate them too
-        frame_slices = tuple()
+        frame_slices = ()
         for i in range(frame_start, len(slices)):
             max_ndim = frame_start + 2 - i
             if max_ndim == 0:
