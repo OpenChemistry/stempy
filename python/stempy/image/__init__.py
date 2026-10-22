@@ -418,7 +418,7 @@ def electron_count_frame(
             options.apply_row_dark_subtraction = False
         options.gain = gain
 
-    electron_counts = _image.electron_count_frame(frame, frame.shape, options)
+    electron_counts = _image.electron_count_frame(frame, frame.shape[::-1], options)
     np_data = np.empty((1, 1), dtype=object)
     np_data[0, 0] = safe_array(electron_counts, copy=False)
     kwargs = {
