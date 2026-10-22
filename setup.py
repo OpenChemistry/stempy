@@ -43,6 +43,7 @@ setup(
     ],
     keywords='',
     packages=['stempy'],
+    python_requires='>=3.10',
     install_requires=install_requires,
     cmake_args=cmake_args,
 )
