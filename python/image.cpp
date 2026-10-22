@@ -229,7 +229,8 @@ py::array_t<uint32_t> electronCount(
       "Input frame must be a 2D array of the correct type.");
   }
 
-  const ElectronCountOptionsClassic cppOptions = options.toCpp();
+  ElectronCountOptionsClassic cppOptions = options.toCpp();
+  cppOptions.applyRowDarkSubtraction = false;
 
   // Convert the buffer to a std::vector
   // TODO: is there a way to avoid this copy? For e.g span impl:

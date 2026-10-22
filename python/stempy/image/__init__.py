@@ -391,13 +391,13 @@ def electron_count_frame(
     :rtype: numpy.ndarray
     """
 
-    if gain is not None:
-        # Invert, as we will multiply in C++
-        # It also must be a float32
-        gain = np.power(gain, -1)
-        gain = _safe_cast(gain, np.float32, "gain")
-
     if options is None:
+        if gain is not None:
+            # Invert, as we will multiply in C++
+            # It also must be a float32
+            gain = np.power(gain, -1)
+            gain = _safe_cast(gain, np.float32, "gain")
+
         if isinstance(darkreference, np.ndarray):
             # Must be float32 for correct conversions
             darkreference = _safe_cast(darkreference, np.float32, "dark reference")
@@ -411,12 +411,9 @@ def electron_count_frame(
         options.apply_row_dark_subtraction = False
         options.optimized_mean = 0.0
         options.apply_row_dark_use_mean = False
-    else:
-        if options.apply_row_dark_subtraction:
-            print("Warning: apply_row_dark_subtraction is not supported " 
-                  "for single frame electron counting. Ignoring this option.")
-            options.apply_row_dark_subtraction = False
-        options.gain = gain
+    elif options.apply_row_dark_subtraction:
+        print("Warning: apply_row_dark_subtraction is not supported "
+              "for single frame electron counting. Ignoring this option.")
 
     electron_counts = _image.electron_count_frame(frame, frame.shape[::-1], options)
     np_data = np.empty((1, 1), dtype=object)
