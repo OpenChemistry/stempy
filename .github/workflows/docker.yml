@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9']
+        python-version: ['3.11']
         mpi: ['ON', 'OFF']
         ipykernel: ['', 'ipykernel']
         dev: ['', 'dev']
@@ -40,7 +40,7 @@ jobs:
 
       - name: Determine if Dockerfile.base changed
         id: changed-dockerfile-base
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             ./docker/Dockerfile.base
@@ -102,16 +102,9 @@ jobs:
           LATEST_TAG=${{ env.DOCKERHUB_ORG }}/stempy${MPI_TAG}${IPYKERNEL_TAG}:latest${DEV_TAG}
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
-          JUPYTER_TAG=$(if [[ "${{ matrix.ipykernel }}" == 'ipykernel' ]]; then 
-            echo "${{ env.DOCKERHUB_ORG }}/stempy-jupyterlab:latest${DEV_TAG}"
-          else 
-            echo ''
-          fi)
-          echo "JUPYTER_TAG=${JUPYTER_TAG}" >> $GITHUB_ENV
-
       - name: Build/push Dockerfile.base
-        uses: docker/build-push-action@v3
-        if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
+        uses: docker/build-push-action@v6
+        # if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
         with:
           context: .
           file: ./docker/Dockerfile.base
@@ -121,11 +114,14 @@ jobs:
             DEV=${{ matrix.dev }}
           tags: ${{ env.BASE_TAG }}
           target: ${{ env.BASE_TARGET }}
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max
+          load: ${{ github.event_name == 'pull_request' }}
+
+      - name: Inspect
+        run: |
+          docker image inspect ${{ env.BASE_TAG }}
 
       - name: Build/push Dockerfile.stempy
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./docker/Dockerfile.stempy
@@ -139,7 +135,4 @@ jobs:
           tags: |
             ${{ env.TAG }}
             ${{ env.LATEST_TAG }}
-            ${{ env.JUPYTER_TAG }}
           target: build
-          cache-to: type=gha, mode=max
-          cache-from: type=gha, mode=max

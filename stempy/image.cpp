@@ -159,12 +159,15 @@ void _runCalculateSTEMValues(const uint16_t data[],
 }
 } // end namespace
 
-template <typename InputIt>
-vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
+// Only typed double pairs select this overload. Bare brace-initialized centers
+// cannot deduce Center and continue to use the original integer overload.
+template <typename InputIt, typename Center>
+std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                 vector<STEMImage>> createSTEMImages(InputIt first, InputIt last,
                                    const vector<int>& innerRadii,
                                    const vector<int>& outerRadii,
                                    Dimensions2D scanDimensions,
-                                   Coordinates2D center)
+                                   Center center)
 {
   if (first == last) {
     ostringstream msg;
@@ -332,10 +335,14 @@ std::vector<int> createSTEMHistogram(const STEMImage& inImage,
   return frequencies;
 }
 
-vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
+// Only typed double pairs select this overload. Bare brace-initialized centers
+// cannot deduce Center and continue to use the original integer overload.
+template <typename Center>
+std::enable_if_t<std::is_same<Center, CoordinatesDouble2D>::value,
+                 vector<STEMImage>> createSTEMImages(const ElectronCountedData& data,
                                    const vector<int>& innerRadii,
                                    const vector<int>& outerRadii,
-                                   Coordinates2D center)
+                                   Center center)
 {
   return createSTEMImages(data.data, innerRadii, outerRadii,
                           data.scanDimensions, data.frameDimensions, center);
@@ -625,7 +632,50 @@ Image<double> maximumDiffractionPattern(InputIt first, InputIt last)
   return maximumDiffractionPattern(first, last, dark);
 }
 
+template <typename InputIt>
+vector<STEMImage> createSTEMImages(InputIt first, InputIt last,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii,
+                                   Dimensions2D scanDimensions,
+                                   Coordinates2D center)
+{
+  return createSTEMImages(first, last, innerRadii, outerRadii,
+    scanDimensions, CoordinatesDouble2D(center));
+}
+
+vector<STEMImage> createSTEMImages(const ElectronCountedData& data,
+                                   const vector<int>& innerRadii,
+                                   const vector<int>& outerRadii,
+                                   Coordinates2D center)
+{
+  return createSTEMImages(data, innerRadii, outerRadii,
+                                         CoordinatesDouble2D(center));
+}
+
+template vector<STEMImage> createSTEMImages(const ElectronCountedData&,
+  const vector<int>&, const vector<int>&, CoordinatesDouble2D);
+
 // Instantiate the ones that can be used
+template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
+  StreamReader::iterator first, StreamReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, CoordinatesDouble2D center);
+
+template vector<STEMImage> createSTEMImages<PyReader::iterator>(
+  PyReader::iterator first, PyReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, CoordinatesDouble2D center);
+
+template vector<STEMImage> createSTEMImages<vector<Block>::iterator>(
+  vector<Block>::iterator first, vector<Block>::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, CoordinatesDouble2D center);
+
+template vector<STEMImage> createSTEMImages<SectorStreamReader::iterator>(
+  SectorStreamReader::iterator first, SectorStreamReader::iterator last,
+  const vector<int>& innerRadii, const vector<int>& outerRadii,
+  Dimensions2D scanDimensions, CoordinatesDouble2D center);
+
 template vector<STEMImage> createSTEMImages<StreamReader::iterator>(
   StreamReader::iterator first, StreamReader::iterator last,
   const vector<int>& innerRadii, const vector<int>& outerRadii,

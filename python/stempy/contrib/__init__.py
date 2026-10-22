@@ -63,7 +63,7 @@ def get_scan_path_version_0(
 
     file_pattern = ""
     if scan_id is not None:
-        file_pattern = f"*_id{scan_id}*{file_suffix.value}.{filetype}"
+        file_pattern = f"*_id{scan_id}*_electrons{file_suffix.value}.{filetype}"
     elif scan_num is not None:
         file_pattern = (
             f"data_scan{scan_num}_th{th}_electrons{file_suffix.value}.{filetype}"

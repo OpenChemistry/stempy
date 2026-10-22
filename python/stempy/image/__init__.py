@@ -1,3 +1,4 @@
+from typing import Tuple, Union
 import warnings
 
 from stempy import _image
@@ -6,6 +7,7 @@ from stempy.io import (
     get_hdf5_reader, ReaderMixin, PyReader, SectorThreadedReader,
     SectorThreadedMultiPassReader, SparseArray
 )
+from stempy.utils import safe_array
 
 import h5py
 import numpy as np
@@ -36,7 +38,7 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :param center: the center of the images, where the order is (x, y). If set
                    to (-1, -1), the center will be set to
                    (scan_dimensions[0] / 2, scan_dimensions[1] / 2).
-    :type center: tuple of ints of length 2
+    :type center: pair of ints or floats, or numpy.ndarray of shape (2, 1)
     :param frame_dimensions: the dimensions of each frame, where the order is
                              (width, height). Only used for input of type
                              numpy.ndarray, in which case its presence implies
@@ -50,6 +52,16 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
     :return: A numpy array of the STEM images.
     :rtype: numpy.ndarray
     """
+    # Extract scalars explicitly, NumPy no longer converts one-element arrays.
+    center_array = np.asarray(center, dtype=np.float64)
+    if center_array.shape not in ((2,), (2, 1)):
+        raise ValueError('center must have shape (2,) or (2, 1) in (x, y) order')
+
+    if not np.all(np.isfinite(center_array)):
+        raise ValueError('center coordinates must be finite')
+
+    center = tuple(float(value) for value in center_array.reshape(2))
+
     # Ensure the inner and outer radii are tuples or lists
     if not isinstance(inner_radii, (tuple, list)):
         inner_radii = [inner_radii]
@@ -118,8 +130,8 @@ def create_stem_images(input, inner_radii, outer_radii, scan_dimensions=(0, 0),
         raise Exception('Type of input, ' + str(type(input)) +
                         ', is not known to stempy.image.create_stem_images()')
 
-    images = [np.array(img, copy=False) for img in imgs]
-    return np.array(images, copy=False)
+    images = [safe_array(img, copy=False) for img in imgs]
+    return safe_array(images, copy=False)
 
 def create_stem_histogram(numBins, reader, inner_radii,
                           outer_radii, scan_dimensions=(0, 0),
@@ -158,8 +170,8 @@ def create_stem_histogram(numBins, reader, inner_radii,
     for inImage in imgs:
         bins = _image.get_container(inImage, numBins)
         freq = _image.create_stem_histogram(inImage, numBins, bins)
-        bins = np.array(bins, copy=False)
-        freq = np.array(freq, copy=False)
+        bins = safe_array(bins, copy=False)
+        freq = safe_array(freq, copy=False)
         allBins.append(bins)
         allFreqs.append(freq)
 
@@ -186,7 +198,7 @@ def calculate_average(reader):
     :rtype: stempy.image.ImageArray
     """
     image =  _image.calculate_average(reader.begin(), reader.end())
-    img = ImageArray(np.array(image, copy = False))
+    img = ImageArray(safe_array(image, copy=False))
     img._image = image
 
     return img
@@ -332,7 +344,7 @@ def electron_count(reader, darkreference=None, number_of_samples=40,
     np_data = np.empty((num_scans, frames_per_scan), dtype=object)
     for i, scan_frames in enumerate(data.data):
         for j, sparse_frame in enumerate(scan_frames):
-            np_data[i, j] = np.array(sparse_frame, copy=False)
+            np_data[i, j] = safe_array(sparse_frame, copy=False)
 
     metadata = _electron_counted_metadata_to_dict(data.metadata)
 
@@ -408,7 +420,7 @@ def electron_count_frame(
 
     electron_counts = _image.electron_count_frame(frame, frame.shape, options)
     np_data = np.empty((1, 1), dtype=object)
-    np_data[0, 0] = np.array(electron_counts, copy=False)
+    np_data[0, 0] = safe_array(electron_counts, copy=False)
     kwargs = {
         "data": np_data,
         "scan_shape": (1, 1),
@@ -439,7 +451,7 @@ def radial_sum(reader, center=(-1, -1), scan_dimensions=(0, 0)):
     sum =  _image.radial_sum(reader.begin(), reader.end(), scan_dimensions,
                              center)
 
-    return np.array(sum, copy=False)
+    return safe_array(sum, copy=False)
 
 
 def maximum_diffraction_pattern(reader, darkreference=None):
@@ -459,34 +471,135 @@ def maximum_diffraction_pattern(reader, darkreference=None):
         image = _image.maximum_diffraction_pattern(reader.begin(), reader.end(), darkreference)
     else:
         image = _image.maximum_diffraction_pattern(reader.begin(), reader.end())
-    img = ImageArray(np.array(image, copy=False))
+    img = ImageArray(safe_array(image, copy=False))
     img._image = image
 
     return img
 
 
-def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
-    """Compute center of mass (COM) for counted data directly from sparse (single)
-        electron data. Empty frames will have COM set to NAN. There is an option to crop to a
-        smaller region around the initial full frame COM to improve finding the center of the zero beam. If the
-        cropped region has no counts in it then the frame is considered empty and COM will be NAN.
-        
-        :param array: A SparseArray of the electron counted data
-        :type array: stempy.io.SparseArray
-        :param crop_to: optional; The size of the region to crop around initial full frame COM for improved COM near
-                        the zero beam
-        :type crop_to: tuple of ints of length 2
-        :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applie around 
-                            the center of mass of the each full frame.
-        :type init_center: tuple of ints of length 2
-        :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
-                             of the the entire data set. If this is False they will be set to np.NAN.
-        :type replace_nans: bool
-        :return: The center of mass in X and Y for each scan position. If a position
-                has no data (len(electron_counts) == 0) then the center of the
-                frame is used as the center of mass.
-        :rtype: numpy.ndarray (2D)
-        """
+def com_v1_kernel(
+    all_events_concat: np.ndarray,
+    position_indices: np.ndarray,
+    scan_shape: Tuple[int, int],
+    frame_shape: Tuple[int, int],
+    crop_to: Union[int, None] = None,
+    init_center: Union[Tuple[int, int], None] = None,
+    replace_nans: bool = True,
+) -> np.ndarray:
+    num_scans = scan_shape[0] * scan_shape[1]
+    frame_x, frame_y = frame_shape
+
+    com = np.full((2, num_scans), np.nan, dtype=np.float32)
+
+    if len(all_events_concat) == 0:
+        return com.reshape((2, *scan_shape))
+
+    # Decode coordinates
+    if frame_x & (frame_x - 1) == 0:  # power of 2
+        shift = int(np.log2(frame_x))
+        x = (all_events_concat >> shift).astype(np.float32)
+    else:
+        x = (all_events_concat // frame_x).astype(np.float32)
+
+    if frame_y & (frame_y - 1) == 0:
+        mask = frame_y - 1
+        y = (all_events_concat & mask).astype(np.float32)
+    else:
+        y = (all_events_concat % frame_y).astype(np.float32)
+
+    # Cropping
+    if crop_to is not None:
+        if init_center is not None:
+            r = np.sqrt((x - init_center[0])**2 + (y - init_center[1])**2)
+            mask = (r <= crop_to)
+            position_indices = position_indices[mask]
+            x = x[mask]
+            y = y[mask]
+        else:
+            sum_x_all = np.bincount(position_indices, weights=x, minlength=num_scans)
+            sum_y_all = np.bincount(position_indices, weights=y, minlength=num_scans)
+            counts_all = np.bincount(position_indices, minlength=num_scans)
+
+            valid_pos = counts_all > 0
+            centers_x = np.zeros(num_scans, dtype=np.float32)
+            centers_y = np.zeros(num_scans, dtype=np.float32)
+            centers_x[valid_pos] = sum_x_all[valid_pos] / counts_all[valid_pos]
+            centers_y[valid_pos] = sum_y_all[valid_pos] / counts_all[valid_pos]
+
+            event_center_x = centers_x[position_indices]
+            event_center_y = centers_y[position_indices]
+            r = np.sqrt((x - event_center_x)**2 + (y - event_center_y)**2)
+            mask = (r <= crop_to)
+            position_indices = position_indices[mask]
+            x = x[mask]
+            y = y[mask]
+
+    # Final COM calculation
+    if len(position_indices) > 0:
+        sum_x = np.bincount(position_indices, weights=x, minlength=num_scans)
+        sum_y = np.bincount(position_indices, weights=y, minlength=num_scans)
+        counts = np.bincount(position_indices, minlength=num_scans)
+
+        valid = counts > 0
+        com[0, valid] = sum_y[valid] / counts[valid]
+        com[1, valid] = sum_x[valid] / counts[valid]
+
+    com = com.reshape((2, *scan_shape))
+
+    if replace_nans:
+        for i in range(2):
+            nans = np.isnan(com[i])
+            if nans.any():
+                com[i, nans] = np.nanmean(com[i])
+
+    return com
+
+
+def _com_sparse_v1(array, crop_to=None, init_center=None, replace_nans=True):
+    scan_shape = array.scan_shape
+    frame_shape = array.frame_shape
+
+    event_counts = []
+    valid_positions = []
+    frames_to_concat = []
+
+    for scan_position, frames in enumerate(array.data):
+        if frames.size > 0:
+            ev = frames[0] if frames.size == 1 else np.concatenate(frames)
+            n_events = len(ev)
+            if n_events > 0:
+                event_counts.append(n_events)
+                valid_positions.append(scan_position)
+                frames_to_concat.append(ev)
+
+    if not event_counts:
+        return com_v1_kernel(
+            np.array([]),
+            np.array([]),
+            scan_shape,
+            frame_shape,
+            crop_to,
+            init_center,
+            replace_nans,
+        )
+
+    position_indices = np.repeat(
+        np.array(valid_positions, dtype=np.int32), event_counts
+    )
+    all_events_concat = np.concatenate(frames_to_concat)
+
+    return com_v1_kernel(
+        all_events_concat,
+        position_indices,
+        scan_shape,
+        frame_shape,
+        crop_to,
+        init_center,
+        replace_nans,
+    )
+
+
+def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
     com = np.zeros((2, array.num_scans), np.float32)
     for scan_position, frames in enumerate(array.data):
         # Combine the sparse arrays into one array.
@@ -497,7 +610,7 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
             x = ev // array.frame_shape[0]
             y = ev % array.frame_shape[1]
             mm0 = len(ev)
-            
+
             if init_center is None:
                 # Initialize center as full frame COM
                 comx0 = np.sum(x) / mm0
@@ -505,11 +618,11 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
             else:
                 comx0 = init_center[0]
                 comy0 = init_center[1]
-            
+
             if crop_to is not None:
                 # Crop around the initial center
-                keep = (x > comx0 - crop_to[0]) & (x <= comx0 + crop_to[0]) & (y > comy0 - crop_to[1]) & (
-                        y <= comy0 + crop_to[1])
+                r = np.sqrt((x - comx0)**2 + (y - comy0)**2)
+                keep = (r <= crop_to)
                 x = x[keep]
                 y = y[keep]
                 mm = len(x)
@@ -526,19 +639,59 @@ def com_sparse(array, crop_to=None, init_center=None, replace_nans=True):
                 # Center of mass of the full frame
                 comx = np.sum(x) / mm0
                 comy = np.sum(y) / mm0
-            
+
             com[:, scan_position] = (comy, comx)  # save the comx and comy. Needs to be reversed (comy, comx)
         else:
             com[:, scan_position] = (np.nan, np.nan)  # empty frame
-            
+
     com = com.reshape((2, *array.scan_shape))
-    
+
     if replace_nans:
         com_mean = np.nanmean(com, axis=(1,2))
         np.nan_to_num(com[0,:,:], nan=com_mean[0], copy=False)
         np.nan_to_num(com[1,:,:], nan=com_mean[1], copy=False)
-    
+
     return com
+
+def com_sparse(
+    array: SparseArray, crop_to=None, init_center=None, replace_nans=True, version=0
+):
+    """Compute center of mass (COM) for counted data directly from sparse (single)
+    electron data. Empty frames will have COM set to NAN. There is an option to crop to a
+    smaller region around the initial full frame COM to improve finding the center of the zero beam. If the
+    cropped region has no counts in it then the frame is considered empty and COM will be NAN.
+
+    :param array: A SparseArray of the electron counted data
+    :type array: stempy.io.SparseArray
+    :param crop_to: optional; The radius of the circular region to crop around initial full frame COM for improved COM near the zero beam
+    :type crop_to: int or tuple of ints (for backwards compatibility)
+    :param init_center: optional; The initial center to use before cropping. If this is not set then cropping will be applied around
+                        the center of mass of the each full frame.
+    :type init_center: tuple of ints of length 2
+    :param replace_nans: If true (default) empty frames will have their center of mass set as the mean of the center of mass
+                         of the the entire data set. If this is False they will be set to np.NAN.
+    :type replace_nans: bool
+    :param version: Version of the algorithm to use. 0 for original loop-based implementation,
+                   1 for optimized vectorized implementation.
+    :type version: int
+    :return: The center of mass in X and Y for each scan position. If a position
+            has no data (len(electron_counts) == 0) then the center of the
+            frame is used as the center of mass.
+    :rtype: numpy.ndarray (2D)
+    """
+    # Convert tuple/list to scalar using maximum (for backwards compatibility)
+    # We only ever want to use a circular region
+    if isinstance(crop_to, tuple) or isinstance(crop_to, list):
+        crop_to = max(crop_to)
+
+    if version == 1:
+        return _com_sparse_v1(array, crop_to, init_center, replace_nans)
+    elif version == 0:
+        return _com_sparse_v0(array, crop_to, init_center, replace_nans)
+    else:
+        raise ValueError(
+            f"Unsupported version: {version}. Supported versions are 0 and 1."
+        )
 
 
 def filter_bad_sectors(com, cut_off):
@@ -731,28 +884,28 @@ def _electron_counted_metadata_to_dict(metadata):
 def virtual_darkfield(array, centers_x, centers_y, radii):
     """Calculate a virtual dark field image from a set of round virtual apertures in diffraction space.
     Each aperture is defined by a center and radius and the final image is the sum of all of them.
-    
+
     :param array: The SparseArray
     :type array: SparseArray
-    
+
     :param centers_x: The center of each round aperture as the row locations
     :type centers_x: number or iterable
-    
+
     :param centers_y: The center of each round aperture as the column locations
     :type centers_y: number or iterable
-    
+
     :param radii: The radius of each aperture.
     :type radii: number or iterable
-    
+
     :rtype: np.ndarray
-    
+
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
     >>> df2 = stempy.image.virtual_darkfield(sp, (288, 260), (288, 160), (10, 10)) # 2 apertures
     >>> df1 = stempy.image.virtual_darkfield(sp, 260, 160, 10) # 1 aperture
-    
+
     """
-    
+
     # Change to iterable if single value
     if isinstance(centers_x, (int, float)):
          centers_x = (centers_x,)
@@ -770,30 +923,30 @@ def virtual_darkfield(array, centers_x, centers_y, radii):
                 dist = np.sqrt((ev_rows - cc_1)**2 + (ev_cols - cc_0)**2)
                 rs_image[ii] += len(np.where(dist < rr)[0])
     rs_image = rs_image.reshape(array.scan_shape)
-    
+
     return rs_image
 
 def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
     """Plot circles on the diffraction pattern corresponding to the position and size of virtual dark field apertures.
     This has the same center and radii inputs as stempy.image.virtual_darkfield so users can check their input is physically correct.
-    
+
     :param image: The diffraction pattern to plot over
     :type image: np.ndarray, 2D
-    
+
     :param centers_x: The center of each round aperture as the row locations
     :type centers_x: iterable
-    
+
     :param centers_y: The center of each round aperture as the column locations
     :type centers_y: iterable
-    
+
     :param radii: The radius of each aperture.
     :type radii: iterable
-    
+
     :param axes: A matplotlib axes instance to use for the plotting. If None then a new plot is created.
     :type axes: matplotlib.axes._subplots.AxesSubplot
-    
+
     :rtype: matplotlib.axes._subplots.AxesSubplot
-    
+
     :example:
     >>> sp = stempy.io.load_electron_counts('file.h5')
     >>> stempy.image.plot_virtual_darkfield(sp.sum(axis=(0, 1), 260, 160, 10) # 1 aperture
@@ -809,28 +962,28 @@ def plot_virtual_darkfield(image, centers_x, centers_y, radii, axes=None):
          centers_y = (centers_y,)
     if isinstance(radii, (int, float)):
          radii = (radii,)
-    
+
     if not axes:
         fg, axes = plt.subplots(1, 1)
-    
+
     axes.imshow(image, cmap='magma', norm=LogNorm())
-    
+
     # Place a circle at each apertue location
     for cc_0, cc_1, rr in zip(centers_x, centers_y, radii):
         C = Circle((cc_0, cc_1), rr, fc='none', ec='c')
         axes.add_patch(C)
-    
+
     return axes
 
 def mask_real_space(array, mask):
     """Calculate a diffraction pattern from an arbitrary set of positions defined in a mask in real space
-    
+
     :param array: The sparse dataset
     :type array: SparseArray
-    
+
     :param mask: The mask to apply with 0 for probe positions to ignore and 1 for probe positions to include in the sum. Must have the same scan shape as array
     :type mask: np.ndarray
-    
+
     :rtype: np.ndarray
     """
     assert array.scan_shape[0] == mask.shape[0] and array.scan_shape[1] == mask.shape[1]

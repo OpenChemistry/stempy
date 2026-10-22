@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -ev
 
-pip install cibuildwheel
+python -m pip install cibuildwheel==4.2.1
 
 if [[ $RUNNER_OS == "Windows" ]]; then
     .github/scripts/install_eigen_windows.sh

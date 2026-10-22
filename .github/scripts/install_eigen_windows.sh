@@ -5,5 +5,5 @@ choco install ninja
 git clone --recursive -b 3.3.9 --depth 1 https://gitlab.com/libeigen/eigen /c/eigen
 mkdir /c/build
 cd /c/build
-cmake -GNinja /c/eigen
+cmake -GNinja -DCMAKE_POLICY_VERSION_MINIMUM=3.5 /c/eigen
 ninja install
