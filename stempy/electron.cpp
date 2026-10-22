@@ -573,6 +573,14 @@ std::vector<uint32_t> electronCount(std::vector<FrameType>& frame,
   auto applyRowDarkUseMean = options.applyRowDarkUseMean;
   auto optimizedMean = options.optimizedMean;
 
+  if (gain && std::is_integral<FrameType>::value) {
+    std::vector<float> floatFrame(frame.begin(), frame.end());
+    return electronCount<float, dark>(
+      floatFrame, frameDimensions, darkReference, backgroundThreshold,
+      xRayThreshold, gain, applyRowDarkSubtraction, optimizedMean,
+      applyRowDarkUseMean);
+  }
+
   return electronCount<FrameType, dark>(
     frame, frameDimensions, darkReference, backgroundThreshold, xRayThreshold,
     gain, applyRowDarkSubtraction, optimizedMean, applyRowDarkUseMean);
