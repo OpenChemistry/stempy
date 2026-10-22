@@ -25,7 +25,8 @@ py::array_t<T> vectorToPyArray(std::vector<T>&& v)
   auto deleter = [](void* v) { delete reinterpret_cast<std::vector<T>*>(v); };
   auto* ptr = new std::vector<T>(std::move(v));
   auto capsule = py::capsule(ptr, deleter);
-  return py::array(ptr->size(), ptr->data(), capsule);
+  py::array_t<T> arr({ ptr->size() }, { sizeof(T) }, ptr->data(), capsule);
+  return arr;
 }
 
 struct ElectronCountedDataPyArray
@@ -213,6 +214,53 @@ ElectronCountedDataPyArray electronCount(Reader* reader,
 {
   return electronCount(reader, options.toCpp());
 }
+
+// Function to process individual frames
+template <typename FrameType>
+py::array_t<uint32_t> electronCount(
+  py::array_t<FrameType>& frame, Dimensions2D frameDimensions,
+  const ElectronCountOptionsClassicPy& options)
+{
+  py::buffer_info frameBufferInfo = frame.request();
+
+  if (frameBufferInfo.ndim != 2 ||
+      frameBufferInfo.format != py::format_descriptor<FrameType>::format()) {
+    throw std::runtime_error(
+      "Input frame must be a 2D array of the correct type.");
+  }
+
+  ElectronCountOptionsClassic cppOptions = options.toCpp();
+  cppOptions.applyRowDarkSubtraction = false;
+
+  // Convert the buffer to a std::vector
+  // TODO: is there a way to avoid this copy? For e.g span impl:
+  // https://github.com/pybind/pybind11/issues/1042#issuecomment-663154709
+  auto input = frame.template unchecked<2>();
+  std::vector<FrameType> frameVec;
+  frameVec.reserve(frameBufferInfo.size);
+  for (py::ssize_t row = 0; row < input.shape(0); ++row) {
+    for (py::ssize_t column = 0; column < input.shape(1); ++column) {
+      frameVec.push_back(input(row, column));
+    }
+  }
+
+  // Call the electronCount function with the std::vector
+  if (!cppOptions.darkReference) {
+    return vectorToPyArray(
+      electronCount<FrameType, false>(frameVec, frameDimensions, cppOptions));
+  } else {
+    return vectorToPyArray(
+      electronCount<FrameType, true>(frameVec, frameDimensions, cppOptions));
+  }
+
+  std::vector<uint32_t> result =
+    electronCount<FrameType, true>(frameVec, frameDimensions, cppOptions);
+
+  return vectorToPyArray(std::move(result));
+}
+
+// Explicitly instantiate version for py::array_t
+
 
 template std::vector<STEMImage> createSTEMImages(
   const std::vector<std::vector<py::array_t<uint32_t>>>& sparseData,
@@ -508,6 +556,12 @@ PYBIND11_MODULE(_image, m)
                                        const ElectronCountOptionsPy&)) &
           electronCount,
         py::call_guard<py::gil_scoped_release>());
+
+  // Count individual frame
+  m.def("electron_count_frame",
+        (py::array_t<uint32_t>(*)(py::array_t<uint16_t>&, Dimensions2D,
+                                  const ElectronCountOptionsClassicPy&)) &
+          electronCount);
 
   // Calculate thresholds, with gain
   m.def(
