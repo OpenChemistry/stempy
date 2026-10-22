@@ -103,6 +103,31 @@ def test_com_sparse(sparse_array_small, full_array_small, version):
     assert np.array_equal(com, full_com)
 
 
+@pytest.mark.parametrize("version", [0, 1])
+def test_com_sparse_non_square_frame(version):
+    """Regression test: com_sparse (both versions) must decode flat hit
+    indices consistently with how SparseArray itself decodes them, i.e.
+    row-major against frame_shape[1]. A square frame can't distinguish a
+    row/column (x/y) axis swap since frame_shape[0] == frame_shape[1], so
+    this uses a rectangular frame where the two previously disagreed.
+    """
+    frame_shape = (10, 20)  # (rows, cols) -- deliberately non-square
+    row, col = 2, 15
+    flat_idx = row * frame_shape[1] + col
+
+    data = np.empty((1, 1), dtype=object)
+    data[0][0] = np.array([flat_idx])
+    array = SparseArray(data=data, scan_shape=(1, 1), frame_shape=frame_shape)
+
+    # Ground truth: com_dense on the array's own dense expansion of this
+    # same flat index.
+    expected = com_dense(array[0, 0].astype(np.float64))
+
+    result = com_sparse(array, version=version)
+
+    assert np.array_equal(result[:, 0, 0], expected[:, 0])
+
+
 def test_radial_sum_sparse(sparse_array_10x10):
 
     rr = radial_sum_sparse(sparse_array_10x10, center=(5, 5))

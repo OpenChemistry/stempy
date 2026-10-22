@@ -492,12 +492,15 @@ def com_v1_kernel(
     if len(all_events_concat) == 0:
         return com.reshape((2, *scan_shape))
 
-    # Decode coordinates
-    if frame_x & (frame_x - 1) == 0:  # power of 2
-        shift = int(np.log2(frame_x))
+    # Decode coordinates. Flat indices are row-major: idx = x * frame_y + y,
+    # so recovering x requires dividing by frame_y (the second dimension),
+    # not frame_x. For square frames (frame_x == frame_y) this distinction
+    # is invisible, which is why the bug went unnoticed.
+    if frame_y & (frame_y - 1) == 0:  # power of 2
+        shift = int(np.log2(frame_y))
         x = (all_events_concat >> shift).astype(np.float32)
     else:
-        x = (all_events_concat // frame_x).astype(np.float32)
+        x = (all_events_concat // frame_y).astype(np.float32)
 
     if frame_y & (frame_y - 1) == 0:
         mask = frame_y - 1
@@ -603,7 +606,9 @@ def _com_sparse_v0(array, crop_to=None, init_center=None, replace_nans=True):
         ev = np.hstack(frames)
 
         if len(ev) > 0:
-            x = ev // array.frame_shape[0]
+            # Flat indices are row-major: idx = x * frame_shape[1] + y, so
+            # recovering x requires dividing by frame_shape[1], not [0].
+            x = ev // array.frame_shape[1]
             y = ev % array.frame_shape[1]
             mm0 = len(ev)
 
