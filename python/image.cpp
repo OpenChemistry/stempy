@@ -234,9 +234,14 @@ py::array_t<uint32_t> electronCount(
   // Convert the buffer to a std::vector
   // TODO: is there a way to avoid this copy? For e.g span impl:
   // https://github.com/pybind/pybind11/issues/1042#issuecomment-663154709
-  std::vector<FrameType> frameVec(static_cast<FrameType*>(frameBufferInfo.ptr),
-                                  static_cast<FrameType*>(frameBufferInfo.ptr) +
-                                    frameBufferInfo.size);
+  auto input = frame.template unchecked<2>();
+  std::vector<FrameType> frameVec;
+  frameVec.reserve(frameBufferInfo.size);
+  for (py::ssize_t row = 0; row < input.shape(0); ++row) {
+    for (py::ssize_t column = 0; column < input.shape(1); ++column) {
+      frameVec.push_back(input(row, column));
+    }
+  }
 
   // Call the electronCount function with the std::vector
   if (!cppOptions.darkReference) {
