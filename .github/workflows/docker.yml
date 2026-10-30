@@ -9,9 +9,9 @@ on:
       - 'master'
 
 jobs:
-  # Builds base image for stempy of various verions if Dockerfile.base has changed
+  # Build the base and stempy images for each supported variant.
   build-stempy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: 'recursive'
@@ -37,15 +37,6 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           DOCKERHUB_ORG: ${{ vars.DOCKERHUB_ORG }}
-
-      - name: Determine if Dockerfile.base changed
-        id: changed-dockerfile-base
-        uses: tj-actions/changed-files@v46
-        with:
-          files: |
-            ./docker/Dockerfile.base
-            ./docker/apt-packages-common.txt
-            ./docker/apt-packages-dev.txt
 
       - name: Set up environment variables for python version
         id: set-conda-env
@@ -103,8 +94,7 @@ jobs:
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
       - name: Build/push Dockerfile.base
-        uses: docker/build-push-action@v6
-        # if: ${{ contains(github.event.head_commit.message, 'trigger-ci') || steps.changed-dockerfile-base.outputs.any_changed == 'true'}}
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: ./docker/Dockerfile.base
@@ -121,7 +111,7 @@ jobs:
           docker image inspect ${{ env.BASE_TAG }}
 
       - name: Build/push Dockerfile.stempy
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: ./docker/Dockerfile.stempy
