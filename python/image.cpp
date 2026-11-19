@@ -1,6 +1,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <limits>
 #include <vector>
 
 #include "pyreader.h"
@@ -98,6 +99,10 @@ struct ElectronCountOptionsPy
   py::array_t<float> darkReference;
   int thresholdNumberOfBlocks = 1;
   int numberOfSamples = 20;
+  // If set (i.e. not NaN), these are used directly instead of the calculated
+  // thresholds.
+  double backgroundThreshold = std::numeric_limits<double>::quiet_NaN();
+  double xRayThreshold = std::numeric_limits<double>::quiet_NaN();
   double backgroundThresholdNSigma = 4;
   double xRayThresholdNSigma = 10;
   py::array_t<float> gain;
@@ -115,6 +120,8 @@ struct ElectronCountOptionsPy
 
     options.thresholdNumberOfBlocks = this->thresholdNumberOfBlocks;
     options.numberOfSamples = this->numberOfSamples;
+    options.backgroundThreshold = this->backgroundThreshold;
+    options.xRayThreshold = this->xRayThreshold;
     options.backgroundThresholdNSigma = this->backgroundThresholdNSigma;
     options.xRayThresholdNSigma = this->xRayThresholdNSigma;
     options.scanDimensions = this->scanDimensions;
@@ -517,6 +524,9 @@ PYBIND11_MODULE(_image, m)
                    &ElectronCountOptionsPy::thresholdNumberOfBlocks)
     .def_readwrite("number_of_samples",
                    &ElectronCountOptionsPy::numberOfSamples)
+    .def_readwrite("background_threshold",
+                   &ElectronCountOptionsPy::backgroundThreshold)
+    .def_readwrite("x_ray_threshold", &ElectronCountOptionsPy::xRayThreshold)
     .def_readwrite("background_threshold_n_sigma",
                    &ElectronCountOptionsPy::backgroundThresholdNSigma)
     .def_readwrite("x_ray_threshold_n_sigma",

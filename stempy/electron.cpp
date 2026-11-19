@@ -13,6 +13,7 @@
 #include <vtkm/worklet/WorkletPointNeighborhood.h>
 #endif
 
+#include <cmath>
 #include <sstream>
 #include <stdexcept>
 
@@ -594,6 +595,8 @@ ElectronCountedData electronCount(Reader* reader,
   auto* darkReference = options.darkReference;
   auto thresholdNumberOfBlocks = options.thresholdNumberOfBlocks;
   auto numberOfSamples = options.numberOfSamples;
+  auto userBackgroundThreshold = options.backgroundThreshold;
+  auto userXRayThreshold = options.xRayThreshold;
   auto backgroundThresholdNSigma = options.backgroundThresholdNSigma;
   auto xRayThresholdNSigma = options.xRayThresholdNSigma;
   auto* gain = options.gain;
@@ -726,7 +729,13 @@ ElectronCountedData electronCount(Reader* reader,
 
   CalculateThresholdsResults<FrameType> threshold;
 
-  if (calculateThreshold) {
+  // The Gaussian fit is only needed if one of the thresholds has not been
+  // provided, or if the row dark algorithm needs the optimized mean.
+  auto fitThresholds = std::isnan(userBackgroundThreshold) ||
+                       std::isnan(userXRayThreshold) ||
+                       applyRowDarkSubtraction;
+
+  if (calculateThreshold && fitThresholds) {
     // Now calculate the threshold
     threshold = calculateThresholds<Block, FrameType, dark>(
       sampleBlocks, darkReference, numberOfSamples, backgroundThresholdNSigma,
@@ -753,6 +762,23 @@ ElectronCountedData electronCount(Reader* reader,
       std::cout << "background threshold:" << threshold.backgroundThreshold
                 << std::endl;
       std::cout << "xray threshold:" << threshold.xRayThreshold << std::endl;
+    }
+  }
+
+  // Thresholds provided by the user take precedence over calculated ones.
+  if (calculateThreshold) {
+    if (!std::isnan(userBackgroundThreshold)) {
+      threshold.backgroundThreshold = userBackgroundThreshold;
+    }
+    if (!std::isnan(userXRayThreshold)) {
+      threshold.xRayThreshold = userXRayThreshold;
+    }
+
+    if (verbose && !fitThresholds) {
+      std::cout << "Using provided thresholds, background threshold: "
+                << threshold.backgroundThreshold
+                << ", xray threshold: " << threshold.xRayThreshold
+                << std::endl;
     }
   }
 
@@ -843,7 +869,7 @@ ElectronCountedData electronCount(Reader* reader,
 
   auto& metadata = ret.metadata;
 
-  metadata.thresholdCalculated = calculateThreshold;
+  metadata.thresholdCalculated = calculateThreshold && fitThresholds;
   metadata.backgroundThreshold = threshold.backgroundThreshold;
   metadata.xRayThreshold = threshold.xRayThreshold;
   metadata.numberOfSamples = threshold.numberOfSamples;

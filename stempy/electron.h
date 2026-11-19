@@ -2,6 +2,7 @@
 #define STEMPY_ELECTRON_H_
 
 #include <cfloat>
+#include <limits>
 
 #include "image.h"
 
@@ -55,6 +56,10 @@ struct ElectronCountOptions
   float* darkReference = nullptr;
   int thresholdNumberOfBlocks = 1;
   int numberOfSamples = 20;
+  // If set (i.e. not NaN), these thresholds are used directly in place of the
+  // ones that would be calculated from the data using the n-sigma values below.
+  double backgroundThreshold = std::numeric_limits<double>::quiet_NaN();
+  double xRayThreshold = std::numeric_limits<double>::quiet_NaN();
   double backgroundThresholdNSigma = 4;
   double xRayThresholdNSigma = 10;
   float* gain = nullptr;
