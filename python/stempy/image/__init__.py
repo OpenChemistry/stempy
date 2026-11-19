@@ -210,6 +210,8 @@ def electron_count(
     gain=None,
     apply_row_dark=False,
     apply_row_dark_use_mean=True,
+    background_threshold=None,
+    xray_threshold=None,
 ):
     """Generate a list of coordinates of electron hits.
 
@@ -245,6 +247,17 @@ def electron_count(
                                     (if False) in the row dark algorith. Only
                                     applicable if apply_row_dark is True.
     :param apply_row_dark_use_mean: bool
+    :param background_threshold: the background threshold to use directly. If
+                                 set, it is used instead of the value that
+                                 would be calculated from the data using
+                                 `background_threshold_n_sigma`.
+    :type background_threshold: float or None
+    :param xray_threshold: the X-Ray threshold to use directly. If set, it is
+                           used instead of the value that would be calculated
+                           from the data using `xray_threshold_n_sigma`. If
+                           both thresholds are set (and `apply_row_dark` is
+                           False), the threshold calculation is skipped.
+    :type xray_threshold: float or None
 
     :return: the coordinates of the electron hits for each frame.
     :rtype: SparseArray
@@ -266,6 +279,10 @@ def electron_count(
         options.dark_reference = darkreference
         options.threshold_number_of_blocks = threshold_num_blocks
         options.number_of_samples = number_of_samples
+        if background_threshold is not None:
+            options.background_threshold = background_threshold
+        if xray_threshold is not None:
+            options.x_ray_threshold = xray_threshold
         options.background_threshold_n_sigma = background_threshold_n_sigma
         options.x_ray_threshold_n_sigma = xray_threshold_n_sigma
         options.gain = gain
@@ -299,24 +316,34 @@ def electron_count(
         if gain is not None:
             args.append(gain)
 
-        res = _image.calculate_thresholds(*args)
+        # The fit is only needed if a threshold is missing, or if the row dark
+        # algorithm needs the optimized mean.
+        optimized_mean = 0.0
+        if background_threshold is None or xray_threshold is None or apply_row_dark:
+            res = _image.calculate_thresholds(*args)
+            optimized_mean = res.optimized_mean
 
-        background_threshold = res.background_threshold
-        xray_threshold = res.xray_threshold
+            if verbose:
+                print("****Statistics for calculating electron thresholds****")
+                print("number of samples:", res.number_of_samples)
+                print("min sample:", res.min_sample)
+                print("max sample:", res.max_sample)
+                print("mean:", res.mean)
+                print("variance:", res.variance)
+                print("std dev:", res.std_dev)
+                print("number of bins:", res.number_of_bins)
+                print("x-ray threshold n sigma:", res.xray_threshold_n_sigma)
+                print("background threshold n sigma:", res.background_threshold_n_sigma)
+                print("optimized mean:", res.optimized_mean)
+                print("optimized std dev:", res.optimized_std_dev)
+
+            # Thresholds provided by the user take precedence over calculated ones
+            if background_threshold is None:
+                background_threshold = res.background_threshold
+            if xray_threshold is None:
+                xray_threshold = res.xray_threshold
 
         if verbose:
-            print("****Statistics for calculating electron thresholds****")
-            print("number of samples:", res.number_of_samples)
-            print("min sample:", res.min_sample)
-            print("max sample:", res.max_sample)
-            print("mean:", res.mean)
-            print("variance:", res.variance)
-            print("std dev:", res.std_dev)
-            print("number of bins:", res.number_of_bins)
-            print("x-ray threshold n sigma:", res.xray_threshold_n_sigma)
-            print("background threshold n sigma:", res.background_threshold_n_sigma)
-            print("optimized mean:", res.optimized_mean)
-            print("optimized std dev:", res.optimized_std_dev)
             print("background threshold:", background_threshold)
             print("xray threshold:", xray_threshold)
 
@@ -332,7 +359,7 @@ def electron_count(
         options.gain = gain
         options.scan_dimensions = scan_dimensions
         options.apply_row_dark_subtraction = apply_row_dark
-        options.optimized_mean = res.optimized_mean
+        options.optimized_mean = optimized_mean
         options.apply_row_dark_use_mean = apply_row_dark_use_mean
 
         data = _image.electron_count(reader.begin(), reader.end(), options)
